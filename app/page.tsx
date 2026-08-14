@@ -23,7 +23,10 @@ function LoginContent() {
     if (latest > 0.85 && !showLoginUI) {
       setShowLoginUI(true);
     } else if (latest <= 0.85 && showLoginUI) {
-      setShowLoginUI(false);
+      // If there's an error, don't hide the UI
+      if (!error) {
+        setShowLoginUI(false);
+      }
     }
   });
 
@@ -31,14 +34,26 @@ function LoginContent() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.history.scrollRestoration = "manual";
-      const timeoutId = setTimeout(() => {
+      
+      const forceScroll = () => {
         if (error) {
-          window.scrollTo(0, document.body.scrollHeight);
+          window.scrollTo({ top: 999999, behavior: "instant" });
         } else {
-          window.scrollTo(0, 0);
+          window.scrollTo({ top: 0, behavior: "instant" });
         }
-      }, 50);
-      return () => clearTimeout(timeoutId);
+      };
+
+      // Next.js client-side navigation can be stubborn. Try multiple times to override it.
+      forceScroll();
+      const t1 = setTimeout(forceScroll, 50);
+      const t2 = setTimeout(forceScroll, 150);
+      const t3 = setTimeout(forceScroll, 300);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
     }
   }, [error]);
 
