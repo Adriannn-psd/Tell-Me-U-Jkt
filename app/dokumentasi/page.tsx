@@ -76,10 +76,17 @@ function DokumentasiContent() {
     }
   ] : (data?.events || []);
   
-  // Filter by category
-  const filteredEvents = activeTab === "Semua" 
-    ? allEvents 
-    : allEvents.filter(e => e.category === activeTab);
+  const searchQuery = searchParams.get('q')?.toLowerCase() || "";
+
+  // Filter by category and search query
+  const filteredEvents = allEvents.filter(e => {
+    const matchesCategory = activeTab === "Semua" || e.category === activeTab;
+    const matchesSearch = !searchQuery || 
+      e.title.toLowerCase().includes(searchQuery) || 
+      e.description.toLowerCase().includes(searchQuery) ||
+      (e.className && e.className.toLowerCase().includes(searchQuery));
+    return matchesCategory && matchesSearch;
+  });
 
   // Sorting
   const sortedEvents = [...filteredEvents].sort((a, b) => {

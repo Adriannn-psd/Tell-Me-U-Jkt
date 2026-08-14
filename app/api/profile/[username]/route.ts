@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     // Fetch user details
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("id, full_name, username, avatar_url, prodi, is_private")
+      .select("id, full_name, username, avatar_url, prodi, is_private, instagram")
       .eq("username", username)
       .single();
 
@@ -89,6 +89,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       followers: followersCount || 0,
       following: followingCount || 0
     };
+
+    if (!canViewPosts) {
+      delete user.instagram;
+    }
 
     return NextResponse.json({
       success: true,

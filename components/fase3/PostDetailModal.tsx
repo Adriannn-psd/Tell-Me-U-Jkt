@@ -85,7 +85,7 @@ export default function PostDetailModal({
   };
 
   const handleFollow = async () => {
-    if (!detail?.author?.discord_id || isFollowLoading) return;
+    if (!detail?.author?.id || isFollowLoading) return;
     setIsFollowLoading(true);
     
     try {
@@ -95,7 +95,7 @@ export default function PostDetailModal({
       const res = await fetch("/api/user/follow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetUserId: detail.author.discord_id, action })
+        body: JSON.stringify({ targetUserId: detail.author.id, action })
       });
       
       const data = await res.json();
@@ -157,8 +157,8 @@ export default function PostDetailModal({
     }
   };
   const handleTouchEnd = () => {
-    if (translateY > 150) {
-      onClose(); // Close if swiped down more than 150px
+    if (translateY > 50) {
+      onClose(); // Close if swiped down more than 50px
     } else {
       setTranslateY(0); // Snap back
     }
@@ -206,7 +206,7 @@ export default function PostDetailModal({
           <div className="flex items-center gap-2">
             {detail && !detail.isOwnPost && (
               <button 
-                onClick={handleFollow}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollow(); }}
                 disabled={isFollowLoading}
                 className={`${followStatus === "accepted" ? "bg-[#2a2a30] text-white" : followStatus === "pending" ? "bg-[var(--color-surface)] text-[var(--color-text-2)] border border-[var(--color-border-color)]" : "bg-[var(--color-brand-red)] text-white"} text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50`}
               >
@@ -270,7 +270,7 @@ export default function PostDetailModal({
             <div className="flex gap-2">
               {detail && !detail.isOwnPost && (
                 <button 
-                  onClick={handleFollow}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollow(); }}
                   disabled={isFollowLoading}
                   className={`${followStatus === "accepted" ? "bg-[#2a2a30] text-white" : followStatus === "pending" ? "bg-[var(--color-surface)] text-[var(--color-text-2)] border border-[var(--color-border-color)]" : "bg-[var(--color-brand-red)] text-white"} text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50`}
                 >

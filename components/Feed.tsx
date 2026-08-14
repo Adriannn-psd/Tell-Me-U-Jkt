@@ -5,6 +5,7 @@ import MasonryGrid, { Post } from "./fase3/MasonryGrid";
 import { useScrollState } from "./ScrollContext";
 import useSWR from "swr";
 import { useGuest } from "@/components/GuestProvider";
+import { useSearchParams } from "next/navigation";
 
 const feedFetcher = async (url: string) => {
   const res = await fetch(url);
@@ -13,6 +14,7 @@ const feedFetcher = async (url: string) => {
     return data.posts.map((p: any) => ({
       id: p.id,
       title: p.title,
+      description: p.description,
       author: p.author?.full_name || "Unknown",
       username: p.author?.username || p.user_id,
       avatar: p.author?.avatar_url || "U",
@@ -31,7 +33,20 @@ const feedFetcher = async (url: string) => {
 export default function Feed() {
   const [activeTab, setActiveTab] = useState<'foryou' | 'following'>('foryou');
   const { isGuest, showLoginPopup } = useGuest();
-  const { data: posts = [], isLoading: loading } = useSWR('/api/posts', feedFetcher, { keepPreviousData: true });
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams?.get('q')?.toLowerCase() || "";
+  
+  const { data: allPosts = [], isLoading: loading } = useSWR('/api/posts', feedFetcher, { keepPreviousData: true });
+  
+  const posts = allPosts.filter((p: any) => {
+    if (!searchQuery) return true;
+    return (
+      (p.title && p.title.toLowerCase().includes(searchQuery)) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery)) ||
+      (p.author && p.author.toLowerCase().includes(searchQuery)) ||
+      (p.username && p.username.toLowerCase().includes(searchQuery))
+    );
+  });
   
   // Optional chaining check, because Feed might be rendered outside ScrollProvider in some tests/other pages
   const scrollContext = useScrollState();

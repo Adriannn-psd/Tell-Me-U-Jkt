@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useGuest } from "@/components/GuestProvider";
 import LoginPanel from "@/components/LoginPanel";
 import Header from "@/components/Header";
@@ -18,7 +18,17 @@ export default function KalenderPage() {
 
   const { data: dbEvents, isLoading } = useSWR('/api/events', fetcher);
   // Fix: Ensure events is always an array
-  const events = Array.isArray(dbEvents) ? dbEvents : (dbEvents?.events || dbEvents?.data || []);
+  let events = Array.isArray(dbEvents) ? dbEvents : (dbEvents?.events || dbEvents?.data || []);
+
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('q')?.toLowerCase();
+
+  if (searchQuery) {
+    events = events.filter((e: any) => 
+      e.title?.toLowerCase().includes(searchQuery) ||
+      e.location?.toLowerCase().includes(searchQuery)
+    );
+  }
 
   // Helpers
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();

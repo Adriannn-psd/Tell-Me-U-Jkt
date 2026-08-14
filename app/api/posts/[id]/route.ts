@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .from("posts")
       .select(`
         *,
-        author:user_id ( full_name, username, avatar_url, prodi, discord_id ),
+        author:user_id ( id, full_name, username, avatar_url, prodi ),
         likes:post_likes ( id, user_id ),
         comments:post_comments (
           id, content, created_at,
@@ -35,17 +35,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       if (post.likes) {
         hasLiked = post.likes.some((like: any) => like.user_id === session.user.discordId);
       }
-      isOwnPost = post.author?.discord_id === session.user.discordId;
+      
+      const { data: currentUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("discord_id", session.user.discordId)
+        .single();
+        
+      if (currentUser && post.author?.id) {
+        isOwnPost = post.author.id === currentUser.id;
 
-      if (!isOwnPost && post.author?.discord_id) {
-        const { data: followData } = await supabase
-          .from("follows")
-          .select("status")
-          .eq("follower_id", session.user.discordId)
-          .eq("following_id", post.author.discord_id)
-          .maybeSingle();
-        if (followData) {
-          followStatus = followData.status;
+        if (!isOwnPost) {
+          const { data: followData } = await supabase
+            .from("user_follows")
+            .select("status")
+            .eq("follower_id", currentUser.id)
+            .eq("following_id", post.author.id)
+            .maybeSingle();
+          if (followData) {
+            followStatus = followData.status;
+          }
         }
       }
     }

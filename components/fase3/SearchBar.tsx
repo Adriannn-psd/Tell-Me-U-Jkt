@@ -44,7 +44,8 @@ export default function SearchBar() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      router.push(`/explore?q=${encodeURIComponent(query.trim())}`);
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+      router.push(`${currentPath}?q=${encodeURIComponent(query.trim())}`);
       setIsFocused(false);
     }
   };

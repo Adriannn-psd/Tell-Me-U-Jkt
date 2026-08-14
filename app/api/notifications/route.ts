@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
       .from("notifications")
       .select(`
         *,
-        actor:actor_id(id, full_name, username, avatar_url)
+        sender:sender_id(id, full_name, username, avatar_url)
       `)
-      .eq("recipient_id", dbUser.id)
+      .eq("user_id", dbUser.id)
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest) {
     const { error } = await supabase
       .from("notifications")
       .update({ is_read: true })
-      .eq("recipient_id", dbUser.id)
+      .eq("user_id", dbUser.id)
       .eq("is_read", false);
 
     if (error) throw error;

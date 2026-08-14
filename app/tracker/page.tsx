@@ -31,7 +31,9 @@ function TrackerContent() {
     }
   }, [searchParams, pathname, router]);
 
-  const tasks: Task[] = data?.success ? data.tasks.map((t: any) => ({
+  const searchQuery = searchParams.get('q')?.toLowerCase() || "";
+
+  let tasks: Task[] = data?.success ? data.tasks.map((t: any) => ({
     id: t.id,
     title: t.title,
     course: t.course,
@@ -41,6 +43,14 @@ function TrackerContent() {
     notes: t.notes,
     status: t.status
   })) : [];
+
+  if (searchQuery) {
+    tasks = tasks.filter(t => 
+      t.title.toLowerCase().includes(searchQuery) ||
+      (t.course && t.course.toLowerCase().includes(searchQuery)) ||
+      (t.notes && t.notes.toLowerCase().includes(searchQuery))
+    );
+  }
 
   const handleTaskAdded = () => {
     setIsAddingTask(false);

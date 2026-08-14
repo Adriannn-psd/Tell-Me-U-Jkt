@@ -23,8 +23,38 @@ export default function Header() {
   const [showAllModal, setShowAllModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showPortal, setShowPortal] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0); // TODO: Fetch actual count
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const { isGuest, showLoginPopup } = useGuest();
+
+  useEffect(() => {
+    if (!session || isGuest) return;
+    
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+        if (data.success) {
+          setNotifications(data.notifications);
+          setNotificationCount(data.notifications.filter((n: any) => !n.is_read).length);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications", err);
+      }
+    };
+    fetchNotifications();
+  }, [session, isGuest]);
+
+  const handleMarkAsRead = async () => {
+    if (notificationCount === 0) return;
+    try {
+      await fetch("/api/notifications", { method: "PUT" });
+      setNotificationCount(0);
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error("Failed to mark notifications as read", err);
+    }
+  };
   
   
   // Search state
@@ -32,6 +62,7 @@ export default function Header() {
   const [isFocused, setIsFocused] = useState(false);
   const [results, setResults] = useState<{ users: any[], posts: any[] }>({ users: [], posts: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -67,7 +98,7 @@ export default function Header() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      router.push(`/dokumentasi?q=${encodeURIComponent(query.trim())}`);
+      router.push(`${pathname}?q=${encodeURIComponent(query.trim())}`);
       setIsFocused(false);
     }
   };
@@ -81,15 +112,37 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-[var(--color-bg)] md:bg-[var(--color-bg)]/80 md:backdrop-blur-md border-b border-[var(--color-border-color)] md:w-[calc(100%-260px)] md:ml-[260px]">
       <div className="w-full px-5 md:px-8 py-4 flex items-center justify-between md:justify-end gap-6">
         
-        {/* Mobile Logo */}
-        <div className="flex items-center gap-3 md:hidden">
-          <div className="w-10 h-10 shrink-0 flex items-center justify-center">
-            <img src="/logo.png" alt="Tell Me U Jkt Logo" className="w-full h-full object-contain drop-shadow-md" />
-          </div>
-          <div className="leading-[1.05]">
-            <span className="text-white font-bold text-[16.5px] block">Tell Me U</span>
-            <span className="text-[var(--color-brand-red)] font-extrabold text-[14.5px] block italic tracking-[0.3px]">Jkt</span>
-          </div>
+        {/* Mobile Search Bar & Logo */}
+        <div className="flex items-center gap-3 md:hidden w-full">
+          {!showMobileSearch ? (
+            <>
+              <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+                <img src="/logo.png" alt="Tell Me U Jkt Logo" className="w-full h-full object-contain drop-shadow-md" />
+              </div>
+              <div className="leading-[1.05]">
+                <span className="text-white font-bold text-[16.5px] block">Tell Me U</span>
+                <span className="text-[var(--color-brand-red)] font-extrabold text-[14.5px] block italic tracking-[0.3px]">Jkt</span>
+              </div>
+            </>
+          ) : (
+            <form onSubmit={(e) => { handleSearchSubmit(e); setShowMobileSearch(false); }} className="flex-1 flex items-center bg-[#1c1c1e] border border-[#2a2a30] rounded-xl px-3 py-2 w-full animate-in slide-in-from-right-4 duration-200 relative">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-2 text-[var(--color-text-3)] shrink-0">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input 
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cari..."
+                readOnly={isGuest}
+                className="bg-transparent border-none outline-none text-white w-full text-sm font-medium placeholder:text-[var(--color-text-3)] min-w-0"
+              />
+              <button type="button" onClick={() => setShowMobileSearch(false)} className="text-[var(--color-text-3)] hover:text-white shrink-0 ml-1 p-1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Desktop Search Bar (Hidden on Mobile) */}
@@ -121,7 +174,7 @@ export default function Header() {
             </form>
 
             {/* Dropdown Suggestions */}
-            {isFocused && query.length > 0 && (
+            {isFocused && query.length > 0 && (pathname === '/' || pathname === '/home' || pathname.startsWith('/dokumentasi') || pathname.startsWith('/explore')) && (
 
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-[#2a2a30] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="p-2 flex flex-col">
@@ -198,10 +251,48 @@ export default function Header() {
             {showNotifications && (
               <>
                 <div className="fixed inset-0 z-40 cursor-default" onClick={(e) => { e.stopPropagation(); setShowNotifications(false); }}></div>
-                <div className="absolute right-0 top-full mt-3 w-64 bg-[#1c1c1e] border border-[#3a3a3d] rounded-xl shadow-xl py-4 px-4 z-50 cursor-default" onClick={e => e.stopPropagation()}>
-                  <h3 className="font-bold text-white mb-2">Notifikasi</h3>
-                  <div className="text-sm text-[var(--color-text-2)] text-center py-4 border-t border-[#3a3a3d]">
-                    Belum ada notifikasi baru.
+                <div className="absolute right-0 top-full mt-3 w-80 bg-[#1c1c1e] border border-[#3a3a3d] rounded-xl shadow-xl py-4 z-50 cursor-default" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-center px-4 mb-2">
+                    <h3 className="font-bold text-white">Notifikasi</h3>
+                    {notificationCount > 0 && (
+                      <button onClick={handleMarkAsRead} className="text-xs text-[var(--color-brand-red)] hover:underline">Tandai sudah dibaca</button>
+                    )}
+                  </div>
+                  <div className="max-h-[350px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="text-sm text-[var(--color-text-2)] text-center py-6 border-t border-[#3a3a3d] mx-4">
+                        Belum ada notifikasi baru.
+                      </div>
+                    ) : (
+                      <div className="flex flex-col border-t border-[#3a3a3d]">
+                        {notifications.map((n) => (
+                          <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : `/dokumentasi?q=${encodeURIComponent(n.post?.title || '')}`} key={n.id} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                            <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
+                              {n.sender?.avatar_url ? (
+                                <img src={n.sender.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                                  {(n.sender?.full_name || n.sender?.username || "?").charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-white line-clamp-2">
+                                <span className="font-bold">{n.sender?.username || "Seseorang"}</span>{' '}
+                                {n.type === 'like' && 'menyukai postingan Anda.'}
+                                {n.type === 'comment' && `berkomentar: "${n.content}"`}
+                                {n.type === 'follow_request' && 'meminta untuk mengikuti Anda.'}
+                                {n.type === 'follow_accept' && 'mulai mengikuti Anda.'}
+                              </p>
+                              <p className="text-xs text-[var(--color-text-3)] mt-1">
+                                {new Date(n.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            {!n.is_read && <div className="w-2 h-2 rounded-full bg-[var(--color-brand-red)] self-center shrink-0"></div>}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
@@ -209,9 +300,20 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-3 md:hidden">
+            {!showMobileSearch && (
+              <button 
+                onClick={() => setShowMobileSearch(true)}
+                className="w-[28px] h-[28px] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+              </button>
+            )}
+            
             {/* Mobile Sticky Action Button */}
             <AnimatePresence>
-              {isScrolledPastHero && (
+              {isScrolledPastHero && !showMobileSearch && (
                 <motion.div 
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -248,10 +350,48 @@ export default function Header() {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40 cursor-default" onClick={(e) => { e.stopPropagation(); setShowNotifications(false); }}></div>
-                  <div className="absolute right-0 top-full mt-3 w-64 bg-[#1c1c1e] border border-[#3a3a3d] rounded-xl shadow-xl py-4 px-4 z-50 cursor-default" onClick={e => e.stopPropagation()}>
-                    <h3 className="font-bold text-white mb-2 text-left">Notifikasi</h3>
-                    <div className="text-sm text-[var(--color-text-2)] text-center py-4 border-t border-[#3a3a3d]">
-                      Belum ada notifikasi baru.
+                  <div className="absolute right-0 top-full mt-3 w-[85vw] max-w-sm bg-[#1c1c1e] border border-[#3a3a3d] rounded-xl shadow-xl py-4 z-50 cursor-default" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center px-4 mb-2">
+                      <h3 className="font-bold text-white text-left">Notifikasi</h3>
+                      {notificationCount > 0 && (
+                        <button onClick={handleMarkAsRead} className="text-xs text-[var(--color-brand-red)] hover:underline">Tandai sudah dibaca</button>
+                      )}
+                    </div>
+                    <div className="max-h-[350px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="text-sm text-[var(--color-text-2)] text-center py-6 border-t border-[#3a3a3d] mx-4">
+                          Belum ada notifikasi baru.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col border-t border-[#3a3a3d]">
+                          {notifications.map((n) => (
+                            <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : `/dokumentasi?q=${encodeURIComponent(n.post?.title || '')}`} key={n.id} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                              <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
+                                {n.sender?.avatar_url ? (
+                                  <img src={n.sender.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                                    {(n.sender?.full_name || n.sender?.username || "?").charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <p className="text-sm text-white line-clamp-2">
+                                  <span className="font-bold">{n.sender?.username || "Seseorang"}</span>{' '}
+                                  {n.type === 'like' && 'menyukai postingan Anda.'}
+                                  {n.type === 'comment' && `berkomentar: "${n.content}"`}
+                                  {n.type === 'follow_request' && 'meminta untuk mengikuti Anda.'}
+                                  {n.type === 'follow_accept' && 'mulai mengikuti Anda.'}
+                                </p>
+                                <p className="text-xs text-[var(--color-text-3)] mt-1">
+                                  {new Date(n.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              {!n.is_read && <div className="w-2 h-2 rounded-full bg-[var(--color-brand-red)] self-center shrink-0"></div>}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>
@@ -376,93 +516,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Search Bar (Universal across all pages) */}
-      <div className="md:hidden px-5 pb-4 w-full">
-        <div className="relative w-full z-20">
-          <form onSubmit={handleSearchSubmit} className={`flex items-center bg-[#1c1c1e] border ${isFocused ? 'border-[var(--color-brand-red)] shadow-[0_0_15px_rgba(229,39,31,0.2)]' : 'border-[#2a2a30]'} rounded-xl px-4 py-2.5 transition-all duration-300`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 mr-3 transition-colors ${isFocused ? 'text-[var(--color-brand-red)]' : 'text-[var(--color-text-3)]'}`}>
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-            </svg>
-            <input 
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => { if (isGuest) { showLoginPopup(); return; } setIsFocused(true); }}
-              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-              placeholder="Cari mahasiswa, karya, atau tag..."
-              readOnly={isGuest}
-              className="bg-transparent border-none outline-none text-white w-full text-sm font-medium placeholder:text-[var(--color-text-3)]"
-            />
-            {query && (
-              <button 
-                type="button"
-                onClick={() => setQuery("")}
-                className="ml-2 text-[var(--color-text-3)] hover:text-white transition"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            )}
-          </form>
 
-          {/* Dropdown Suggestions (Mobile) */}
-          {isFocused && query.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-[#2a2a30] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-2 flex flex-col">
-                {isLoading ? (
-                  <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Mencari...</div>
-                ) : results.users.length === 0 && results.posts.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Tidak ditemukan hasil untuk "{query}"</div>
-                ) : (
-                  <>
-                    {results.posts.map((post: any) => (
-                      <button 
-                        key={post.id} 
-                        onClick={() => {
-                          router.push(`/dokumentasi?q=${encodeURIComponent(post.title)}`);
-                          setIsFocused(false);
-                        }}
-                        className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-[#2a2a30] flex items-center justify-center text-[var(--color-text-2)]">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium line-clamp-1">{post.title}</p>
-                          <p className="text-[var(--color-text-3)] text-xs">Karya</p>
-                        </div>
-                      </button>
-                    ))}
-                    {results.users.map((u: any) => (
-                      <button 
-                        key={u.id} 
-                        onClick={() => {
-                          router.push(`/profile/${u.username}`);
-                          setIsFocused(false);
-                        }}
-                        className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
-                      >
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
-                          {u.avatar_url ? (
-                            <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                              {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
-                          <p className="text-[var(--color-text-3)] text-xs">Mahasiswa</p>
-                        </div>
-                      </button>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </header>
 
     {/* Logout Confirmation Modal */}

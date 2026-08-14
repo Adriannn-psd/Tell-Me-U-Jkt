@@ -363,6 +363,7 @@
 
 @media (min-width: 900px) {
   .login-container {
+    display: grid;
     grid-template-columns: 1.05fr 1fr;
   }
   .brand-panel {

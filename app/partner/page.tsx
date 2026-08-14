@@ -36,7 +36,7 @@ function CariPartnerContent() {
     }
   }, [searchParams, pathname, router]);
 
-  const [requests, setRequests] = useState<PartnerRequest[]>([
+  const [allRequests, setAllRequests] = useState<PartnerRequest[]>([
     // Mock data for UI testing since we don't know if the table exists yet
     { id: "1", course: "Pemrograman Web", role: "Frontend Developer (React)", contact: "wa.me/628123456789", created_at: new Date().toISOString(), user_name: "Budi Santoso" },
     { id: "2", course: "Rekayasa Perangkat Lunak", role: "Sistem Analis / Designer", contact: "Line: @anisa_rpl", created_at: new Date().toISOString(), user_name: "Anisa" }
@@ -45,6 +45,16 @@ function CariPartnerContent() {
   const [role, setRole] = useState("");
   const [contact, setContact] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const searchQuery = searchParams.get('q')?.toLowerCase() || "";
+  const requests = allRequests.filter(r => {
+    if (!searchQuery) return true;
+    return (
+      (r.course && r.course.toLowerCase().includes(searchQuery)) ||
+      (r.role && r.role.toLowerCase().includes(searchQuery)) ||
+      (r.user_name && r.user_name.toLowerCase().includes(searchQuery))
+    );
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +71,7 @@ function CariPartnerContent() {
         created_at: new Date().toISOString(),
         user_name: "Saya (User)"
       };
-      setRequests([newRequest, ...requests]);
+      setAllRequests([newRequest, ...allRequests]);
       setCourse("");
       setRole("");
       setContact("");

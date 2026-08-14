@@ -40,14 +40,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const { data: dbUser } = await supabase.from("users").select("id").eq("discord_id", userId).single();
       
       // Get post author
-      const { data: post } = await supabase.from("posts").select("author_id").eq("id", postId).single();
+      const { data: post } = await supabase.from("posts").select("user_id").eq("id", postId).single();
 
-      if (dbUser && post && dbUser.id !== post.author_id) {
+      if (dbUser && post && dbUser.id !== post.user_id) {
         await supabase.from("notifications").insert({
-          recipient_id: post.author_id,
-          actor_id: dbUser.id,
-          type: "like_post",
-          reference_id: postId,
+          user_id: post.user_id,
+          sender_id: dbUser.id,
+          type: "like",
+          post_id: postId,
           is_read: false
         });
       }
