@@ -120,6 +120,7 @@ function LoginContent() {
         // Redup perlahan saat telkom 1 (mulai 0.5) muncul
         if (latest < 0.5) return 1;
         if (latest >= 0.5 && latest < 0.55) return 1 - ((latest - 0.5) / 0.05) * 0.7; // 1 -> 0.3
+        if (latest >= 0.85) return 0; // Sembunyikan total saat login UI muncul untuk kurangi LAG
         return 0.3; // opacity redup
       },
       className: "!w-[130vw] md:!w-[50vw] !h-[100vh] top-[-15vh] md:top-[-5vh] left-[-35vw] md:left-[-5vw]",
@@ -145,6 +146,7 @@ function LoginContent() {
         // Redup perlahan saat telkom 1 (mulai 0.5) muncul
         if (latest < 0.5) return 1;
         if (latest >= 0.5 && latest < 0.55) return 1 - ((latest - 0.5) / 0.05) * 0.7; // 1 -> 0.3
+        if (latest >= 0.85) return 0; // Sembunyikan total saat login UI muncul untuk kurangi LAG
         return 0.3; // opacity redup
       },
       className: "!w-[130vw] md:!w-[50vw] !h-[100vh] top-[-15vh] md:top-[-5vh] right-[-35vw] md:right-[-5vw]",
@@ -155,15 +157,15 @@ function LoginContent() {
   return (
     <main className="page" style={{ height: "400vh", position: "relative" }}>
       {/* Background elements to ensure smooth blending if needed */}
-      <div 
-        className="fixed inset-0 -z-10" 
+      <div
+        className="fixed inset-0 -z-10"
         style={{
           background: `
             radial-gradient(circle at 12% 8%, rgba(200, 30, 35, 0.16), transparent 38%),
             radial-gradient(circle at 88% 55%, rgba(200, 30, 35, 0.12), transparent 42%),
             #060607
           `
-        }} 
+        }}
       />
 
       {/* The intelligent multi-layer canvas manager */}
@@ -198,20 +200,20 @@ function LoginContent() {
             <div className="decor decor-sphere decor-sphere-1" aria-hidden="true"></div>
             <div className="decor decor-sphere decor-sphere-2" aria-hidden="true"></div>
             <svg className="decor decor-swoosh" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 150 Q150 20 400 90" fill="none" stroke="#c81e2c" strokeWidth="1.5"/>
+              <path d="M0 150 Q150 20 400 90" fill="none" stroke="#c81e2c" strokeWidth="1.5" />
             </svg>
             <div className="decor decor-u" aria-hidden="true">
               <svg viewBox="0 0 240 300" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="uGrad" x1="10%" y1="0%" x2="90%" y2="100%">
-                    <stop offset="0%" stopColor="#4a4a4d"/>
-                    <stop offset="30%" stopColor="#9c161b"/>
-                    <stop offset="65%" stopColor="#d42128"/>
-                    <stop offset="100%" stopColor="#1c0405"/>
+                    <stop offset="0%" stopColor="#4a4a4d" />
+                    <stop offset="30%" stopColor="#9c161b" />
+                    <stop offset="65%" stopColor="#d42128" />
+                    <stop offset="100%" stopColor="#1c0405" />
                   </linearGradient>
                 </defs>
                 <path d="M35 20 L35 170 Q35 265 120 265 Q205 265 205 170 L205 20"
-                      fill="none" stroke="url(#uGrad)" strokeWidth="55" strokeLinecap="round"/>
+                  fill="none" stroke="url(#uGrad)" strokeWidth="55" strokeLinecap="round" />
               </svg>
             </div>
 
@@ -222,7 +224,7 @@ function LoginContent() {
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             </div>
-            
+
             {/* 2. Camera (Galeri/Momen) */}
             <div className="decor decor-icon decor-icon-2" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="url(#uGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
@@ -241,7 +243,7 @@ function LoginContent() {
                 <line x1="10" y1="9" x2="8" y2="9" />
               </svg>
             </div>
-            
+
             <div className="brand-logo">
               <Image src="/logo.png" alt="Tell Me U Logo" width={192} height={210} className="shield-logo object-contain drop-shadow-2xl" />
               <div className="brand-text">
