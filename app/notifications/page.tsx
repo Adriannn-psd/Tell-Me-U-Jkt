@@ -93,14 +93,14 @@ export default function NotificationsPage() {
         actionButtons = (
           <div className="flex gap-2 mt-2">
             <button 
-              onClick={(e) => { e.preventDefault(); handleFollowRequest(notification.actor_id, "accept"); }}
-              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollowRequest(notification.actor_id, "accept"); }}
+              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10"
             >
               Terima
             </button>
             <button 
-              onClick={(e) => { e.preventDefault(); handleFollowRequest(notification.actor_id, "reject"); }}
-              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)]"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollowRequest(notification.actor_id, "reject"); }}
+              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10"
             >
               Tolak
             </button>
@@ -117,14 +117,14 @@ export default function NotificationsPage() {
         actionButtons = (
           <div className="flex gap-2 mt-2">
             <button 
-              onClick={(e) => { e.preventDefault(); handleUploadRequest(notification.actor_id, notification.reference_id, "accept"); }}
-              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUploadRequest(notification.actor_id, notification.reference_id, "accept"); }}
+              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10"
             >
               Izinkan
             </button>
             <button 
-              onClick={(e) => { e.preventDefault(); handleUploadRequest(notification.actor_id, notification.reference_id, "reject"); }}
-              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)]"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUploadRequest(notification.actor_id, notification.reference_id, "reject"); }}
+              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10"
             >
               Tolak
             </button>
@@ -191,7 +191,11 @@ export default function NotificationsPage() {
               const { actorName, actorAvatar, content, link, actionButtons } = getNotificationContent(notif);
               
               return (
-                <Link key={notif.id} href={link} className={`block bg-[var(--color-surface)] border ${notif.is_read ? 'border-[var(--color-border-color)]' : 'border-[var(--color-brand-red)]'} rounded-xl p-4 transition hover:bg-[var(--color-surface-2)]`}>
+                <div 
+                  key={notif.id} 
+                  onClick={() => router.push(link)} 
+                  className={`block bg-[var(--color-surface)] border ${notif.is_read ? 'border-[var(--color-border-color)]' : 'border-[var(--color-brand-red)]'} rounded-xl p-4 transition hover:bg-[var(--color-surface-2)] cursor-pointer`}
+                >
                   <div className="flex gap-4">
                     <div className="w-10 h-10 rounded-full bg-[var(--color-surface-2)] shrink-0 overflow-hidden border border-[var(--color-border-color)]">
                       {actorAvatar ? (
@@ -215,7 +219,7 @@ export default function NotificationsPage() {
                       <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-brand-red)] shrink-0 mt-1"></div>
                     )}
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
