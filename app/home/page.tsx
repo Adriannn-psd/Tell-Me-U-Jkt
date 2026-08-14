@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import SearchBar from "@/components/fase3/SearchBar";
@@ -38,7 +39,9 @@ export default function Home() {
 
           {/* Feed (Order 3 on mobile, Left Col Bottom on desktop) */}
           <div className="order-3 md:col-start-1 md:row-start-2 mt-6 md:mt-2 lg:mt-6">
-            <Feed />
+            <Suspense fallback={<div>Loading Feed...</div>}>
+              <Feed />
+            </Suspense>
           </div>
 
         </div>

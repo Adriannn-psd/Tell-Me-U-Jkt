@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -12,7 +12,7 @@ import BottomNav from "@/components/BottomNav";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function KalenderPage() {
+function KalenderContent() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const { isGuest, showLoginPopup } = useGuest();
@@ -221,5 +221,13 @@ export default function KalenderPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function KalenderPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#111111] flex flex-col items-center justify-center"><div className="w-8 h-8 border-4 border-[var(--color-brand-red)] border-t-transparent rounded-full animate-spin"></div></div>}>
+      <KalenderContent />
+    </Suspense>
   );
 }
