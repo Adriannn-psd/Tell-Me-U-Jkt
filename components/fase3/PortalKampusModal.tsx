@@ -255,6 +255,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
 
         <div 
           className="relative w-full h-[280px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-4"
+          style={{ touchAction: 'pan-y' }}
           onClick={(e) => {
             if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
           }}
@@ -262,6 +263,9 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
           {portalLinks.map((item, index) => {
             const offset = index - continuousIndex;
             const absOffset = Math.abs(offset);
+
+            // Skip rendering cards too far away (performance optimization)
+            if (!isStacked && absOffset > 4) return null;
             const sign = Math.sign(offset);
             
             // Dynamic spread: wider when dragging, tighter when at rest
@@ -295,15 +299,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
             const scale = Math.max(0.65, 1 - (absOffset * 0.25));
             const zIndex = 30 - Math.round(absOffset * 10);
 
-            // Determine transition class based on state
-            let transitionClass = "";
-            if (isStacked) {
-              transitionClass = "transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]";
-            } else if (!isDragging) {
-              transitionClass = "transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]";
-            } else {
-              transitionClass = "transition-transform duration-150 ease-out"; // fast follow while dragging
-            }
+
 
             return (
               <div 
@@ -313,18 +309,24 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
                     setActiveIndex(index);
                   }
                 }}
-                className={`absolute w-[180px] md:w-[320px] h-[260px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer flex flex-col justify-between ${transitionClass}`}
+                className="absolute w-[180px] md:w-[320px] h-[260px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer flex flex-col justify-between"
                 style={{
-                  transform: `translateX(${translateX}px) translateY(${translateY}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+                  transform: `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                   opacity,
                   zIndex,
-                  willChange: 'transform, opacity',
-                  boxShadow: isStacked ? 'none' : '0 10px 30px rgba(0,0,0,0.5)'
+                  willChange: isDragging ? 'transform' : 'auto',
+                  boxShadow: isStacked ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
+                  ...(isStacked
+                    ? { transition: 'all 700ms cubic-bezier(0.2,0.8,0.2,1)' }
+                    : isDragging
+                      ? { transition: 'none' }
+                      : { transition: 'all 400ms cubic-bezier(0.2,0.8,0.2,1)' }
+                  )
                 }}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${item.bgColor} opacity-90 z-0`} />
                 <div 
-                  className="absolute inset-0 bg-cover bg-center opacity-40 z-0"
+                  className={`absolute inset-0 bg-cover bg-center opacity-40 z-0 ${isStacked ? '' : 'transition-transform duration-700'}`}
                   style={{ backgroundImage: `url('${item.image}')` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-0" />

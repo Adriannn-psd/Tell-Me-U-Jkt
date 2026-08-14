@@ -65,6 +65,17 @@ export default function Header() {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const getSearchPlaceholder = (): string => {
+    if (pathname.startsWith('/dokumentasi')) return "Cari kegiatan, kategori...";
+    if (pathname.startsWith('/kalender')) return "Cari jadwal, acara...";
+    if (pathname.startsWith('/tracker')) return "Cari tugas, deadline...";
+    if (pathname.startsWith('/drop-memory')) return "Cari memori, cerita...";
+    if (pathname.startsWith('/partner')) return "Cari partner, mata kuliah...";
+    return "Cari mahasiswa, karya, atau tag...";
+  };
+
+  const searchPlaceholder = getSearchPlaceholder();
+
   useEffect(() => {
     if (query.length < 2) {
       setResults({ users: [], posts: [] });
@@ -134,13 +145,77 @@ export default function Header() {
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cari..."
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                placeholder={searchPlaceholder}
                 readOnly={isGuest}
                 className="bg-transparent border-none outline-none text-white w-full text-sm font-medium placeholder:text-[var(--color-text-3)] min-w-0"
               />
-              <button type="button" onClick={() => setShowMobileSearch(false)} className="text-[var(--color-text-3)] hover:text-white shrink-0 ml-1 p-1">
+              <button type="button" onClick={() => { setShowMobileSearch(false); setQuery(""); }} className="text-[var(--color-text-3)] hover:text-white shrink-0 ml-1 p-1">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
+
+              {/* Mobile Search Results Dropdown */}
+              {isFocused && query.length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-[#2a2a30] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                  <div className="p-2 flex flex-col max-h-[60vh] overflow-y-auto">
+                    {isLoading ? (
+                      <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Mencari...</div>
+                    ) : results.users.length === 0 && results.posts.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Tidak ditemukan hasil untuk &quot;{query}&quot;</div>
+                    ) : (
+                      <>
+                        {results.posts.map((post: any) => (
+                          <button 
+                            key={post.id} 
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              router.push(`${pathname}?q=${encodeURIComponent(post.title)}`);
+                              setIsFocused(false);
+                              setShowMobileSearch(false);
+                            }}
+                            className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-[#2a2a30] flex items-center justify-center text-[var(--color-text-2)]">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            </div>
+                            <div>
+                              <p className="text-white text-sm font-medium line-clamp-1">{post.title}</p>
+                              <p className="text-[var(--color-text-3)] text-xs">Karya</p>
+                            </div>
+                          </button>
+                        ))}
+                        {results.users.map((u: any) => (
+                          <button 
+                            key={u.id} 
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              router.push(`/profile/${u.username}`);
+                              setIsFocused(false);
+                              setShowMobileSearch(false);
+                            }}
+                            className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
+                          >
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
+                              {u.avatar_url ? (
+                                <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                  {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
+                              <p className="text-[var(--color-text-3)] text-xs">Mahasiswa</p>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </form>
           )}
         </div>
@@ -158,14 +233,14 @@ export default function Header() {
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => { if (isGuest) { showLoginPopup(); return; } setIsFocused(true); }}
                 onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                placeholder="Cari mahasiswa, karya, atau tag..."
+                placeholder={searchPlaceholder}
                 readOnly={isGuest}
                 className="bg-transparent border-none outline-none text-white w-full text-sm font-medium placeholder:text-[var(--color-text-3)]"
               />
               {query && (
                 <button 
                   type="button"
-                  onClick={() => setQuery("")}
+                  onClick={() => { setQuery(""); router.push(pathname); }}
                   className="ml-2 text-[var(--color-text-3)] hover:text-white transition"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -173,65 +248,66 @@ export default function Header() {
               )}
             </form>
 
-            {/* Dropdown Suggestions */}
-            {isFocused && query.length > 0 && (pathname === '/' || pathname === '/home' || pathname.startsWith('/dokumentasi') || pathname.startsWith('/explore')) && (
-
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-[#2a2a30] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-2 flex flex-col">
-                {isLoading ? (
-                  <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Mencari...</div>
-                ) : results.users.length === 0 && results.posts.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Tidak ditemukan hasil untuk "{query}"</div>
-                ) : (
-                  <>
-                    {results.posts.map((post: any) => (
-                      <button 
-                        key={post.id} 
-                        onClick={() => {
-                          router.push(`/dokumentasi?q=${encodeURIComponent(post.title)}`);
-                          setIsFocused(false);
-                        }}
-                        className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-[#2a2a30] flex items-center justify-center text-[var(--color-text-2)]">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium line-clamp-1">{post.title}</p>
-                          <p className="text-[var(--color-text-3)] text-xs">Karya</p>
-                        </div>
-                      </button>
-                    ))}
-                    {results.users.map((u: any) => (
-                      <button 
-                        key={u.id} 
-                        onClick={() => {
-                          router.push(`/profile/${u.username}`);
-                          setIsFocused(false);
-                        }}
-                        className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
-                      >
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
-                          {u.avatar_url ? (
-                            <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                              {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
-                          <p className="text-[var(--color-text-3)] text-xs">Mahasiswa</p>
-                        </div>
-                      </button>
-                    ))}
-                  </>
-                )}
+            {/* Desktop Dropdown: Search Results */}
+            {isFocused && query.length >= 2 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1c1c1e] border border-[#2a2a30] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                <div className="p-2 flex flex-col max-h-[400px] overflow-y-auto">
+                  {isLoading ? (
+                    <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Mencari...</div>
+                  ) : results.users.length === 0 && results.posts.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-[var(--color-text-3)]">Tidak ditemukan hasil untuk &quot;{query}&quot;</div>
+                  ) : (
+                    <>
+                      {results.posts.map((post: any) => (
+                        <button 
+                          key={post.id} 
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            router.push(`${pathname}?q=${encodeURIComponent(post.title)}`);
+                            setIsFocused(false);
+                          }}
+                          className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-[#2a2a30] flex items-center justify-center text-[var(--color-text-2)]">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-medium line-clamp-1">{post.title}</p>
+                            <p className="text-[var(--color-text-3)] text-xs">Karya</p>
+                          </div>
+                        </button>
+                      ))}
+                      {results.users.map((u: any) => (
+                        <button 
+                          key={u.id} 
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            router.push(`/profile/${u.username}`);
+                            setIsFocused(false);
+                          }}
+                          className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
+                        >
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
+                            {u.avatar_url ? (
+                              <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
+                            <p className="text-[var(--color-text-3)] text-xs">Mahasiswa</p>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
         )}
 
         {/* Right Actions */}

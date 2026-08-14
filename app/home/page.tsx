@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import SearchBar from "@/components/fase3/SearchBar";
+
 import DynamicWidgets from "@/components/fase3/DynamicWidgets";
 import QuickActions from "@/components/QuickActions";
 import Feed from "@/components/Feed";
