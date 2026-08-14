@@ -347,7 +347,7 @@ export default function Header() {
                     ) : (
                       <div className="flex flex-col border-t border-[#3a3a3d]">
                         {notifications.map((n) => (
-                          <Link href={n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                          <Link href={n.type === 'follow_request' ? '/notifications' : n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                             <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                               {n.actor?.avatar_url ? (
                                 <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -446,7 +446,7 @@ export default function Header() {
                       ) : (
                         <div className="flex flex-col border-t border-[#3a3a3d]">
                           {notifications.map((n) => (
-                            <Link href={n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                            <Link href={n.type === 'follow_request' ? '/notifications' : n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                               <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                                 {n.actor?.avatar_url ? (
                                   <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
