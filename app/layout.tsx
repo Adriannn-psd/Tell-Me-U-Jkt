@@ -5,8 +5,13 @@ import { GuestProvider } from "@/components/GuestProvider";
 import GlobalScrollRestorer from "@/components/GlobalScrollRestorer";
 
 export const metadata: Metadata = {
-  title: "Tell Me U Jkt",
-  description: "Selamat datang di Tell Me U JKT",
+  title: "Tell Me U Jkt - Portal Interaktif Mahasiswa",
+  description: "Platform sosial eksklusif untuk dokumentasi, radar kampus, dan pengalaman digital mahasiswa Telkom University Jakarta.",
+  openGraph: {
+    title: "Tell Me U Jkt",
+    description: "Jelajahi karya, temukan event seru, dan rasakan pengalaman digital tanpa batas bersama mahasiswa Telkom University Jakarta.",
+    siteName: "Tell Me U Jkt",
+  }
 };
 
 export const viewport: Viewport = {
