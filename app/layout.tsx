@@ -5,6 +5,7 @@ import { GuestProvider } from "@/components/GuestProvider";
 import GlobalScrollRestorer from "@/components/GlobalScrollRestorer";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tell-me-u-jkt.vercel.app'),
   title: "Tell Me U Jkt - Portal Interaktif Mahasiswa",
   description: "Platform sosial eksklusif untuk dokumentasi, radar kampus, dan pengalaman digital mahasiswa Telkom University Jakarta.",
   openGraph: {
