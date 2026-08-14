@@ -177,7 +177,7 @@ export default function PostDetailModal({
 
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-5xl h-[90vh] md:h-auto max-h-full bg-[var(--color-surface)] rounded-t-[24px] md:rounded-[24px] border border-[var(--color-border-color)] overflow-hidden flex flex-col md:flex-row shadow-2xl animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 duration-300"
+        className="relative w-full max-w-5xl h-[100dvh] md:h-auto max-h-[100dvh] md:max-h-[85vh] bg-[var(--color-surface)] rounded-none md:rounded-[24px] border border-[var(--color-border-color)] overflow-hidden flex flex-col md:flex-row shadow-2xl animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 duration-300"
         style={{ transform: `translateY(${translateY}px)`, transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none' }}
       >
         {/* Swipe Handle for Mobile */}
@@ -332,7 +332,7 @@ export default function PostDetailModal({
           </div>
 
           {/* Actions & Comment Input */}
-          <div className="p-3 md:p-5 border-t border-[var(--color-border-color)] bg-[var(--color-surface)]">
+          <div className="p-3 pb-8 md:p-5 border-t border-[var(--color-border-color)] bg-[var(--color-surface)]">
             <div className="flex items-center justify-between mb-3">
               <div className="flex gap-4">
                 <button onClick={() => handleLike()} disabled={isLiking} className={`flex items-center gap-1.5 transition group ${hasLiked ? 'text-[var(--color-brand-red)]' : 'text-white hover:text-[var(--color-brand-red)]'}`}>

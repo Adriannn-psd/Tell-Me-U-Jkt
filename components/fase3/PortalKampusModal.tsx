@@ -236,9 +236,12 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
         onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp}
         onMouseLeave={handlePointerUp}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
+        }}
       >
         <div 
-          className="relative w-full h-[280px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-4"
+          className="relative w-full h-[360px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-4"
           style={{ touchAction: 'pan-y' }}
           onClick={(e) => {
             if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
@@ -293,7 +296,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
                     setActiveIndex(index);
                   }
                 }}
-                className="absolute w-[180px] md:w-[320px] h-[260px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer flex flex-col justify-between"
+                className="absolute w-[240px] md:w-[320px] h-[340px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer flex flex-col justify-between"
                 style={{
                   transform: `translate3d(${translateX}px, ${translateY}px, ${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                   opacity,

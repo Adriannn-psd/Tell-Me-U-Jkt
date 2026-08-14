@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, notifications });
+    return NextResponse.json({ success: true, notifications }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0'
+      }
+    });
   } catch (error: any) {
     console.error("Notifications GET Error:", error);
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });

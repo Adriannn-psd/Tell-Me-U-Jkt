@@ -33,7 +33,7 @@ export default function Header() {
     
     const fetchNotifications = async () => {
       try {
-        const res = await fetch("/api/notifications");
+        const res = await fetch(`/api/notifications?t=${Date.now()}`);
         const data = await res.json();
         if (data.success) {
           setNotifications(data.notifications || []);
