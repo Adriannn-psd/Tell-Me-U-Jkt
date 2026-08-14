@@ -50,7 +50,7 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
     const isVideo = post.imageUrl?.match(/\.(mp4|webm|ogg)$/i) || post.imageUrl?.includes('/video/upload/');
     
     return (
-    <div key={post.id} className="relative group animate-in fade-in zoom-in-95 duration-500 w-full">
+    <div key={post.id} className="relative group w-full">
       {/* Post Image Container */}
       <div 
         onClick={() => isGuest ? showLoginPopup() : setSelectedPost(post)}

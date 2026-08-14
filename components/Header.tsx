@@ -78,7 +78,7 @@ export default function Header() {
 
   return (
     <>
-    <header className="sticky top-0 z-50 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border-color)] md:w-[calc(100%-260px)] md:ml-[260px]">
+    <header className="sticky top-0 z-50 bg-[#1c1c1e] md:bg-[var(--color-bg)]/80 md:backdrop-blur-md border-b border-[var(--color-border-color)] md:w-[calc(100%-260px)] md:ml-[260px]">
       <div className="w-full px-5 md:px-8 py-4 flex items-center justify-between md:justify-end gap-6">
         
         {/* Mobile Logo */}
@@ -153,22 +153,22 @@ export default function Header() {
                       <button 
                         key={u.id} 
                         onClick={() => {
-                          router.push(`/profile/${u.id}`);
+                          router.push(`/profile/${u.username}`);
                           setIsFocused(false);
                         }}
                         className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
                       >
                         <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
-                          {u.avatarUrl ? (
-                            <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                              {u.name.charAt(0).toUpperCase()}
+                              {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
                             </div>
                           )}
                         </div>
                         <div>
-                          <p className="text-white text-sm font-medium line-clamp-1">{u.name}</p>
+                          <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
                           <p className="text-[var(--color-text-3)] text-xs">Mahasiswa</p>
                         </div>
                       </button>
@@ -436,22 +436,22 @@ export default function Header() {
                       <button 
                         key={u.id} 
                         onClick={() => {
-                          router.push(`/profile/${u.id}`);
+                          router.push(`/profile/${u.username}`);
                           setIsFocused(false);
                         }}
                         className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
                       >
                         <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
-                          {u.avatarUrl ? (
-                            <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                              {u.name.charAt(0).toUpperCase()}
+                              {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
                             </div>
                           )}
                         </div>
                         <div>
-                          <p className="text-white text-sm font-medium line-clamp-1">{u.name}</p>
+                          <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
                           <p className="text-[var(--color-text-3)] text-xs">Mahasiswa</p>
                         </div>
                       </button>
