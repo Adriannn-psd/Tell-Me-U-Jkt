@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // Routes that don't require authentication
-const publicRoutes = ["/"];
+const publicRoutes = ["/", "/login"];
 const authApiPrefix = "/api/auth";
 
 export default auth((req: NextRequest & { auth: unknown }) => {
@@ -36,7 +36,7 @@ export default auth((req: NextRequest & { auth: unknown }) => {
 
   // Protected routes — if not logged in and not guest, redirect to login
   if (!isLoggedIn && !isGuest) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
+    return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
   return NextResponse.next();

@@ -1,76 +1,47 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
 import "./login.css";
-import { useSearchParams } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import { motion, useScroll, useMotionValueEvent, useTransform } from "framer-motion";
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
-import LoginPanel from "@/components/LoginPanel";
-import "./login.css";
 
-function LoginContent() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
+function LandingContent() {
   const { scrollYProgress } = useScroll();
   const opacityScrollText = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
-  const [showLoginUI, setShowLoginUI] = useState(!!error);
-  const [introFinished, setIntroFinished] = useState(!!error);
+  const [showLoginUI, setShowLoginUI] = useState(false);
+  const [introFinished, setIntroFinished] = useState(false);
 
   // Trigger login UI when scroll reaches 85% (when reverse starts)
   useMotionValueEvent(scrollYProgress, "change", (latest) => {
     if (latest > 0.85 && !showLoginUI) {
       setShowLoginUI(true);
     } else if (latest <= 0.85 && showLoginUI) {
-      // If there's an error, don't hide the UI
-      if (!error) {
-        setShowLoginUI(false);
-      }
+      setShowLoginUI(false);
     }
   });
 
-  // Reset scroll to top on reload so animations play from the start, or scroll to bottom if error
+  // Reset scroll to top on reload so animations play from the start
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.history.scrollRestoration = "manual";
       
       const forceScroll = () => {
-        if (error) {
-          window.scrollTo({ top: 999999, behavior: "instant" });
-        } else {
-          window.scrollTo({ top: 0, behavior: "instant" });
-        }
+        window.scrollTo({ top: 0, behavior: "instant" });
       };
 
       // Next.js client-side navigation can be stubborn. Try multiple times to override it.
       forceScroll();
       const t1 = setTimeout(forceScroll, 50);
       const t2 = setTimeout(forceScroll, 150);
-      const t3 = setTimeout(forceScroll, 300);
 
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
-        clearTimeout(t3);
       };
     }
-  }, [error]);
-
-  const getErrorMessage = () => {
-    if (error === "NotInServer") {
-      return "Kamu harus join server Discord Tel-U JKT terlebih dahulu sebelum bisa login.";
-    }
-    if (error === "ServerError") {
-      return "Terjadi kesalahan saat login. Silakan coba lagi.";
-    }
-    if (error) {
-      return "Login gagal. Silakan coba lagi.";
-    }
-    return null;
-  };
-
-  const errorMessage = getErrorMessage();
+  }, []);
 
   // Intro layers
   const introLayers: AnimationLayer[] = [
@@ -191,7 +162,6 @@ function LoginContent() {
         introLayers={introLayers}
         scrollLayers={scrollLayers}
         onIntroComplete={() => setIntroFinished(true)}
-        skipIntro={!!error}
       />
 
       {/* Scroll Down Indicator */}
@@ -209,80 +179,61 @@ function LoginContent() {
         </motion.div>
       )}
 
-      {/* Floating Login UI Overlay */}
-      <div
-        className={`fixed inset-0 z-50 pointer-events-none transition-opacity duration-700 ease-in-out ${showLoginUI ? "opacity-100" : "opacity-0"}`}
-      >
-        <div className={`login-container pointer-events-auto transform transition-transform duration-700 ease-out ${showLoginUI ? "translate-y-0 scale-100" : "translate-y-10 scale-95"}`}>
-          <section className="brand-panel">
-            <div className="decor decor-ring" aria-hidden="true"></div>
-            <div className="decor decor-sphere decor-sphere-1" aria-hidden="true"></div>
-            <div className="decor decor-sphere decor-sphere-2" aria-hidden="true"></div>
-            <svg className="decor decor-swoosh" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 150 Q150 20 400 90" fill="none" stroke="#c81e2c" strokeWidth="1.5" />
-            </svg>
-            <div className="decor decor-u" aria-hidden="true">
-              <svg viewBox="0 0 240 300" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="uGrad" x1="10%" y1="0%" x2="90%" y2="100%">
-                    <stop offset="0%" stopColor="#4a4a4d" />
-                    <stop offset="30%" stopColor="#9c161b" />
-                    <stop offset="65%" stopColor="#d42128" />
-                    <stop offset="100%" stopColor="#1c0405" />
-                  </linearGradient>
-                </defs>
-                <path d="M35 20 L35 170 Q35 265 120 265 Q205 265 205 170 L205 20"
-                  fill="none" stroke="url(#uGrad)" strokeWidth="55" strokeLinecap="round" />
-              </svg>
+      {/* Go to Login Button Section */}
+      {showLoginUI && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          {/* Subtle backdrop overlay */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto" />
+          
+          <div className="relative z-10 pointer-events-auto flex flex-col items-center gap-6 p-8 sm:p-10 rounded-[2rem] w-[90%] max-w-sm" style={{
+            background: 'rgba(12, 12, 14, 0.7)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)'
+          }}>
+            {/* Subtle top highlight */}
+            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 w-24 h-24 mb-1">
+              <Image src="/logo.png" alt="Tell Me U Logo" fill className="object-contain drop-shadow-2xl" />
             </div>
 
-            {/* Social & Community Icons */}
-            {/* 1. Heart (Mutualan) */}
-            <div className="decor decor-icon decor-icon-1" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="url(#uGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
+            <div className="text-center space-y-2 relative z-10">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">Selamat Datang</h2>
+              <p className="text-white/60 text-sm leading-relaxed max-w-[260px] mx-auto font-medium">Mulai eksplorasi dan bangun relasi bersama mahasiswa Telkom University Jakarta.</p>
             </div>
-
-            {/* 2. Camera (Galeri/Momen) */}
-            <div className="decor decor-icon decor-icon-2" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="url(#uGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-            </div>
-
-            {/* 3. Notepad (Akademik/Catatan) */}
-            <div className="decor decor-icon decor-icon-3" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="url(#uGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <line x1="10" y1="9" x2="8" y2="9" />
-              </svg>
-            </div>
-
-            <div className="brand-logo">
-              <Image src="/logo.png" alt="Tell Me U Logo" width={192} height={210} className="shield-logo object-contain drop-shadow-2xl" />
-              <div className="brand-text">
-                <span className="line1">Tell Me U</span>
-                <span className="line2">Jkt</span>
-              </div>
-            </div>
-          </section>
-
-          <LoginPanel errorMessage={errorMessage} showGuestOption={true} />
-        </div>
-      </div>
+            
+            <Link 
+              href="/login" 
+              className="group relative mt-4 w-full flex items-center justify-center overflow-hidden rounded-xl bg-[#c81e2c] px-8 py-4 font-bold text-white transition-all duration-300 hover:scale-[1.03] hover:bg-[#e62837] shadow-[0_8px_20px_rgba(200,30,44,0.4)]"
+            >
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-in-out" />
+              <span className="relative z-10 flex items-center gap-2 tracking-wide text-[15px]">
+                Lanjutkan ke Login
+                <svg className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </span>
+            </Link>
+          </div>
+        </motion.div>
+      )}
     </main>
   );
 }
 
-export default function LoginPage() {
+export default function LandingPage() {
   return (
-    <Suspense>
-      <LoginContent />
+    <Suspense fallback={<div className="min-h-screen bg-[#060607]" />}>
+      <LandingContent />
     </Suspense>
   );
 }
