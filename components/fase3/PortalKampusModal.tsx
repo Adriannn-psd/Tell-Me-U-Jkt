@@ -171,13 +171,10 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
   if (!mounted) return null;
 
   const handleClose = () => {
-    setIsStacked(true);
+    setIsClosing(true);
     setTimeout(() => {
-      setIsClosing(true);
-      setTimeout(() => {
-        onClose();
-      }, 400); 
-    }, 300); // Wait for stack animation to finish before shrinking
+      onClose();
+    }, 200); // Quick fade out
   };
 
   const handlePointerDown = (e: React.TouchEvent | React.MouseEvent) => {
@@ -221,8 +218,8 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
     >
       {/* Backdrop */}
       <div 
-        className={`absolute inset-0 bg-[#0a0a0c]/95 transition-opacity duration-500 ease-out ${isOpening || isClosing ? 'opacity-0' : 'opacity-100'}`} 
-        style={{ willChange: 'opacity' }}
+        className={`absolute inset-0 bg-[#0a0a0c]/95 ${isOpening || isClosing ? 'opacity-0' : 'opacity-100'}`} 
+        style={{ transition: 'opacity 200ms ease-out' }}
         onClick={() => {
           if (!isStacked && !isDraggingRef.current) handleClose();
         }}
@@ -230,8 +227,8 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
       
       {/* Modal Container */}
       <div 
-        className={`relative w-full max-w-4xl h-full flex flex-col items-center justify-center transition-all duration-500 ease-out ${isOpening || isClosing ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
-        style={{ transformOrigin: `${origin.x} ${origin.y}`, willChange: 'transform, opacity' }}
+        className={`relative w-full max-w-4xl h-full flex flex-col items-center justify-center ${isOpening || isClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+        style={{ transformOrigin: `${origin.x} ${origin.y}`, transition: 'opacity 200ms ease-out, transform 200ms ease-out' }}
         onTouchStart={handlePointerDown}
         onTouchMove={handlePointerMove}
         onTouchEnd={handlePointerUp}
@@ -239,20 +236,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
         onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp}
         onMouseLeave={handlePointerUp}
-        onClick={(e) => {
-          if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
-        }}
       >
-        {/* Close Button */}
-        <button 
-          onClick={(e) => { e.stopPropagation(); if (!isStacked && !isDraggingRef.current) handleClose(); }}
-          className="absolute top-6 right-6 md:top-10 md:right-10 z-[110] p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-colors shadow-xl border border-white/20"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
         <div 
           className="relative w-full h-[280px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-4"
           style={{ touchAction: 'pan-y' }}

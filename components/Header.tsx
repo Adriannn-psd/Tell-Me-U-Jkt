@@ -27,6 +27,7 @@ export default function Header() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const { isGuest, showLoginPopup } = useGuest();
 
+  // Notification polling - fetch every 15 seconds
   useEffect(() => {
     if (!session || isGuest) return;
     
@@ -35,14 +36,18 @@ export default function Header() {
         const res = await fetch("/api/notifications");
         const data = await res.json();
         if (data.success) {
-          setNotifications(data.notifications);
-          setNotificationCount(data.notifications.filter((n: any) => !n.is_read).length);
+          setNotifications(data.notifications || []);
+          setNotificationCount((data.notifications || []).filter((n: any) => !n.is_read).length);
         }
       } catch (err) {
-        console.error("Failed to fetch notifications", err);
+        // Silently fail on polling errors
       }
     };
+    
     fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000); // Poll every 15s
+    
+    return () => clearInterval(interval);
   }, [session, isGuest]);
 
   const handleMarkAsRead = async () => {
@@ -342,7 +347,7 @@ export default function Header() {
                     ) : (
                       <div className="flex flex-col border-t border-[#3a3a3d]">
                         {notifications.map((n) => (
-                          <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : `/dokumentasi?q=${encodeURIComponent(n.post?.title || '')}`} key={n.id} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                          <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                             <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                               {n.sender?.avatar_url ? (
                                 <img src={n.sender.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -441,7 +446,7 @@ export default function Header() {
                       ) : (
                         <div className="flex flex-col border-t border-[#3a3a3d]">
                           {notifications.map((n) => (
-                            <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : `/dokumentasi?q=${encodeURIComponent(n.post?.title || '')}`} key={n.id} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                            <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                               <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                                 {n.sender?.avatar_url ? (
                                   <img src={n.sender.avatar_url} alt="" className="w-full h-full object-cover" />
