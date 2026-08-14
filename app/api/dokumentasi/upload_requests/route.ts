@@ -27,16 +27,18 @@ export async function PUT(req: NextRequest) {
 
     // Update request status
     const status = action === "accept" ? "accepted" : "rejected";
-    const { error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from("dokumentasi_upload_requests")
       .update({ status })
       .eq("event_id", eventId)
-      .eq("requester_id", requesterId);
+      .eq("requester_id", requesterId)
+      .eq("status", "pending")
+      .select();
 
     if (updateError) throw updateError;
 
-    // Send notification to the requester
-    if (action === "accept") {
+    // Send notification to the requester ONLY if we actually updated a pending request
+    if (action === "accept" && updatedRows && updatedRows.length > 0) {
       await supabase.from("notifications").insert({
         recipient_id: requesterId,
         actor_id: dbUser.id,
@@ -45,6 +47,13 @@ export async function PUT(req: NextRequest) {
         is_read: false
       });
     }
+
+    // Delete the upload request notification so it disappears from the UI
+    await supabase.from("notifications").delete()
+      .eq("recipient_id", dbUser.id)
+      .eq("actor_id", requesterId)
+      .eq("type", "upload_request")
+      .eq("reference_id", eventId);
 
     return NextResponse.json({ success: true, status });
   } catch (error: any) {

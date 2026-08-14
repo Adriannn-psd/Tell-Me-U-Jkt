@@ -49,22 +49,31 @@ export async function PUT(req: NextRequest) {
     if (!dbUser) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
 
     if (action === "accept") {
-      const { error } = await supabase
+      const { data: updatedRows, error } = await supabase
         .from("user_follows")
         .update({ status: "accepted" })
         .eq("follower_id", followerId)
         .eq("following_id", dbUser.id)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select();
 
       if (error) throw error;
       
-      // Also notify the follower that their request was accepted
-      await supabase.from("notifications").insert({
-        recipient_id: followerId,
-        actor_id: dbUser.id,
-        type: "follow_accept",
-        reference_id: followerId
-      });
+      // Only notify if we actually accepted a pending request
+      if (updatedRows && updatedRows.length > 0) {
+        await supabase.from("notifications").insert({
+          recipient_id: followerId,
+          actor_id: dbUser.id,
+          type: "follow_accept",
+          reference_id: followerId
+        });
+      }
+
+      // Delete the follow request notification
+      await supabase.from("notifications").delete()
+        .eq("recipient_id", dbUser.id)
+        .eq("actor_id", followerId)
+        .eq("type", "follow_request");
 
     } else if (action === "reject") {
       const { error } = await supabase
@@ -75,6 +84,12 @@ export async function PUT(req: NextRequest) {
         .eq("status", "pending");
 
       if (error) throw error;
+
+      // Delete the follow request notification
+      await supabase.from("notifications").delete()
+        .eq("recipient_id", dbUser.id)
+        .eq("actor_id", followerId)
+        .eq("type", "follow_request");
     }
 
     return NextResponse.json({ success: true, action });
