@@ -156,11 +156,11 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
 
     const timer1 = setTimeout(() => {
       setIsOpening(false);
-    }, 50);
+    }, 10);
 
     const timer2 = setTimeout(() => {
       setIsStacked(false);
-    }, 500); // Wait longer so it shows up stacked for a moment
+    }, 300); // Wait longer so it shows up stacked for a moment
     
     return () => {
       clearTimeout(timer1);
@@ -176,8 +176,8 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
       setIsClosing(true);
       setTimeout(() => {
         onClose();
-      }, 500); 
-    }, 400); // Wait for stack animation to finish before shrinking
+      }, 400); 
+    }, 300); // Wait for stack animation to finish before shrinking
   };
 
   const handlePointerDown = (e: React.TouchEvent | React.MouseEvent) => {
@@ -221,7 +221,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
     >
       {/* Backdrop */}
       <div 
-        className={`absolute inset-0 bg-black/85 backdrop-blur-sm transition-opacity duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpening || isClosing ? 'opacity-0' : 'opacity-100'}`} 
+        className={`absolute inset-0 bg-[#0a0a0c]/95 transition-opacity duration-500 ease-out ${isOpening || isClosing ? 'opacity-0' : 'opacity-100'}`} 
         style={{ willChange: 'opacity' }}
         onClick={() => {
           if (!isStacked && !isDraggingRef.current) handleClose();
@@ -230,8 +230,8 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
       
       {/* Modal Container */}
       <div 
-        className={`relative w-full max-w-4xl h-full flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpening || isClosing ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
-        style={{ transformOrigin: `${origin.x} ${origin.y}` }}
+        className={`relative w-full max-w-4xl h-full flex flex-col items-center justify-center transition-all duration-500 ease-out ${isOpening || isClosing ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
+        style={{ transformOrigin: `${origin.x} ${origin.y}`, willChange: 'transform, opacity' }}
         onTouchStart={handlePointerDown}
         onTouchMove={handlePointerMove}
         onTouchEnd={handlePointerUp}

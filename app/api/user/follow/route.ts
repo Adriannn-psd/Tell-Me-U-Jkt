@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         .select("status")
         .eq("follower_id", currentUserId)
         .eq("following_id", targetUserId)
-        .single();
+        .maybeSingle();
       
       if (!existing) {
         const { error } = await supabase
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         await supabase.from("notifications").insert({
           recipient_id: targetUserId,
           actor_id: currentUserId,
-          type: status === "pending" ? "follow_request" : "follow_accept", // Just 'follow' isn't in our types, 'follow_accept' acts as followed here, wait, maybe 'follow_request' is fine.
+          type: status === "pending" ? "follow_request" : "follow", 
           reference_id: currentUserId
         });
       }
@@ -85,6 +85,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, action });
   } catch (error: any) {
     console.error("Follow API Error:", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || "Internal server error" }, { status: 500 });
   }
 }

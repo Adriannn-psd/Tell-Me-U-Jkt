@@ -58,14 +58,18 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
       >
         {(post.imageUrl && !isGuest) ? (
           isVideo ? (
-            <video 
-              src={optimizeCloudinaryUrl(post.imageUrl, { isVideo: true })}
-              className={`w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 block`}
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
+            <>
+              <img 
+                src={optimizeCloudinaryUrl(post.imageUrl.replace(/\.(mp4|webm|ogg)$/i, '.jpg'), { width: 800 })}
+                alt={post.title}
+                className={`w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 block`}
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white pl-1 shadow-xl border border-white/20">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6"><path d="M5 3l14 9-14 9V3z"/></svg>
+                </div>
+              </div>
+            </>
           ) : (
             <img 
               src={optimizeCloudinaryUrl(post.imageUrl, { width: 800 })}
