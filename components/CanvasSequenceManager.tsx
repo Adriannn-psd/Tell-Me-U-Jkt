@@ -26,14 +26,16 @@ interface CanvasSequenceManagerProps {
   introLayers: AnimationLayer[];
   scrollLayers: AnimationLayer[];
   onIntroComplete?: () => void;
+  skipIntro?: boolean;
 }
 
 export default function CanvasSequenceManager({
   introLayers,
   scrollLayers,
-  onIntroComplete
+  onIntroComplete,
+  skipIntro = false
 }: CanvasSequenceManagerProps) {
-  const [phase, setPhase] = useState<"intro" | "scroll">("intro");
+  const [phase, setPhase] = useState<"intro" | "scroll">(skipIntro ? "scroll" : "intro");
   
   const introImagesRef = useRef<HTMLImageElement[][]>([]);
   const scrollImagesRef = useRef<HTMLImageElement[][]>([]);
@@ -88,7 +90,7 @@ export default function CanvasSequenceManager({
 
   // Intro Auto-play logic
   useEffect(() => {
-    if (introLayers.length === 0) {
+    if (skipIntro || introLayers.length === 0) {
       setPhase("scroll");
       onIntroComplete?.();
       return;

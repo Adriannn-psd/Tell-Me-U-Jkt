@@ -18,7 +18,7 @@ export default function Sidebar() {
   const initial = user?.name ? user.name.charAt(0).toUpperCase() : "U";
 
   const getLinkClass = (path: string) => {
-    const isActive = pathname === path || (path !== "/" && pathname?.startsWith(path + "/"));
+    const isActive = pathname === path || (path !== "/home" && pathname?.startsWith(path + "/"));
     return `flex items-center gap-4 px-4 py-3 rounded-xl transition ${
       isActive 
         ? "bg-[var(--color-brand-red)]/10 text-[var(--color-brand-red)] font-bold" 
@@ -41,19 +41,19 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex flex-col px-4 gap-2 flex-1">
-        <Link href="/" className={getLinkClass("/")} scroll={false} replace={pathname !== "/"}>
+        <Link href="/home" className={getLinkClass("/home")} scroll={false} replace={pathname !== "/home"}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
           Home
         </Link>
-        <Link href="/dokumentasi" className={getLinkClass("/dokumentasi")} scroll={false} replace={pathname !== "/"}>
+        <Link href="/dokumentasi" className={getLinkClass("/dokumentasi")} scroll={false} replace={pathname !== "/home"}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
           Dokumentasi
         </Link>
-        <Link href="/ospek" className={getLinkClass("/ospek")} scroll={false} replace={pathname !== "/"}>
+        <Link href="/ospek" className={getLinkClass("/ospek")} scroll={false} replace={pathname !== "/home"}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
           Ospek
         </Link>
-        <Link href="/tracker" className={getLinkClass("/tracker")} scroll={false} replace={pathname !== "/"}>
+        <Link href="/tracker" className={getLinkClass("/tracker")} scroll={false} replace={pathname !== "/home"}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
           Academic
         </Link>

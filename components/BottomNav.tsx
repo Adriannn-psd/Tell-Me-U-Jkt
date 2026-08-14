@@ -79,7 +79,7 @@ export default function BottomNav() {
     
     // Default / Home / Ospek (Scan QR)
     return (
-      <Link href="/ospek" className="relative flex flex-col items-center justify-end flex-1 cursor-pointer h-[64px] pb-[6px]" scroll={false} replace={pathname !== "/"}>
+      <Link href="/ospek" className="relative flex flex-col items-center justify-end flex-1 cursor-pointer h-[64px] pb-[6px]" scroll={false} replace={pathname !== "/home"}>
         <div className="absolute bottom-[30px] w-[56px] h-[56px] rounded-full bg-[#E5271F] flex items-center justify-center shadow-[0_0_0_8px_var(--color-bg)] transition-transform hover:scale-105 active:scale-95 z-10">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] h-[24px]">
             <path d="M3 7V5a2 2 0 0 1 2-2h2" />
@@ -96,7 +96,7 @@ export default function BottomNav() {
 
   const getLinkClass = (path: string) => {
     // Exact match for home, startsWith for others
-    const isActive = path === "/" ? pathname === path : pathname?.startsWith(path);
+    const isActive = path === "/home" ? pathname === path : pathname?.startsWith(path);
     return `flex flex-col items-center justify-center flex-1 h-full transition-colors ${
       isActive ? "text-white" : "text-[#8e8e93] hover:text-[#d1d1d6]"
     }`;
@@ -112,8 +112,8 @@ export default function BottomNav() {
       <div className="relative mx-4 mb-4 h-[72px] bg-[#1c1c1e]/95 backdrop-blur-xl border border-[#2a2a30] rounded-3xl flex items-center justify-around px-2 shadow-2xl pointer-events-auto">
         
         {/* Home */}
-        <Link href="/" className={getLinkClass("/")} scroll={false} replace={pathname !== "/"}>
-          <svg viewBox="0 0 24 24" fill={pathname === "/" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] h-[24px] mb-1">
+        <Link href="/home" className={getLinkClass("/home")} scroll={false} replace={pathname !== "/home"}>
+          <svg viewBox="0 0 24 24" fill={pathname === "/home" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] h-[24px] mb-1">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
@@ -121,7 +121,7 @@ export default function BottomNav() {
         </Link>
 
         {/* Dokumentasi */}
-        <Link href="/dokumentasi" className={getLinkClass("/dokumentasi")} scroll={false} replace={pathname !== "/"}>
+        <Link href="/dokumentasi" className={getLinkClass("/dokumentasi")} scroll={false} replace={pathname !== "/home"}>
           <svg viewBox="0 0 24 24" fill={pathname?.startsWith("/dokumentasi") ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] h-[24px] mb-1">
             <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
             <path d="M14 3v5h5M16 13H8M16 17H8M10 9H8" />
@@ -132,7 +132,7 @@ export default function BottomNav() {
         {renderSmartButton()}
 
         {/* Academic */}
-        <Link href="/tracker" className={getLinkClass("/tracker")} scroll={false} replace={pathname !== "/"}>
+        <Link href="/tracker" className={getLinkClass("/tracker")} scroll={false} replace={pathname !== "/home"}>
           <svg viewBox="0 0 24 24" fill={pathname?.startsWith("/tracker") ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[24px] h-[24px] mb-1">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
             <line x1="16" y1="2" x2="16" y2="6" />

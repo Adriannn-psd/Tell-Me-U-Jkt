@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // Routes that don't require authentication
-const publicRoutes = ["/login"];
+const publicRoutes = ["/"];
 const authApiPrefix = "/api/auth";
 
 export default auth((req: NextRequest & { auth: unknown }) => {
@@ -27,17 +27,16 @@ export default auth((req: NextRequest & { auth: unknown }) => {
 
   // Public routes — if logged in, redirect to home
   if (publicRoutes.includes(pathname)) {
-    if (isLoggedIn) {
-      return NextResponse.redirect(new URL("/", req.nextUrl));
+    if (isLoggedIn || isGuest) {
+      return NextResponse.redirect(new URL("/home", req.nextUrl));
     }
-    // Also if they are already in guest mode, maybe redirect them to home? Or let them view /login to relogin
-    // Usually it's better to let them stay on /login so they can actually log in, so we do nothing here.
+    // Usually it's better to let them stay on / so they can actually log in, so we do nothing here.
     return NextResponse.next();
   }
 
   // Protected routes — if not logged in and not guest, redirect to login
   if (!isLoggedIn && !isGuest) {
-    return NextResponse.redirect(new URL("/login", req.nextUrl));
+    return NextResponse.redirect(new URL("/", req.nextUrl));
   }
 
   return NextResponse.next();
