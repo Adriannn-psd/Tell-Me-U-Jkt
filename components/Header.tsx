@@ -360,10 +360,12 @@ export default function Header() {
                             <div className="flex-1">
                               <p className="text-sm text-white line-clamp-2">
                                 <span className="font-bold">{n.actor?.username || "Seseorang"}</span>{' '}
-                                {n.type === 'like' && 'menyukai postingan Anda.'}
-                                {n.type === 'comment' && `mengomentari postingan Anda.`}
+                                {(n.type === 'like' || n.type === 'like_post') && 'menyukai postingan Anda.'}
+                                {(n.type === 'comment' || n.type === 'comment_post') && `mengomentari postingan Anda.`}
                                 {n.type === 'follow_request' && 'meminta untuk mengikuti Anda.'}
-                                {n.type === 'follow_accept' && 'mulai mengikuti Anda.'}
+                                {(n.type === 'follow_accept' || n.type === 'follow') && 'mulai mengikuti Anda.'}
+                                {n.type === 'upload_request' && 'meminta izin upload karya.'}
+                                {n.type === 'upload_accept' && 'menerima permintaan upload Anda.'}
                               </p>
                               <p className="text-xs text-[var(--color-text-3)] mt-1">
                                 {new Date(n.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
@@ -459,10 +461,12 @@ export default function Header() {
                               <div className="flex-1 text-left">
                                 <p className="text-sm text-white line-clamp-2">
                                   <span className="font-bold">{n.actor?.username || "Seseorang"}</span>{' '}
-                                  {n.type === 'like' && 'menyukai postingan Anda.'}
-                                  {n.type === 'comment' && `mengomentari postingan Anda.`}
+                                  {(n.type === 'like' || n.type === 'like_post') && 'menyukai postingan Anda.'}
+                                  {(n.type === 'comment' || n.type === 'comment_post') && `mengomentari postingan Anda.`}
                                   {n.type === 'follow_request' && 'meminta untuk mengikuti Anda.'}
-                                  {n.type === 'follow_accept' && 'mulai mengikuti Anda.'}
+                                  {(n.type === 'follow_accept' || n.type === 'follow') && 'mulai mengikuti Anda.'}
+                                  {n.type === 'upload_request' && 'meminta izin upload karya.'}
+                                  {n.type === 'upload_accept' && 'menerima permintaan upload Anda.'}
                                 </p>
                                 <p className="text-xs text-[var(--color-text-3)] mt-1">
                                   {new Date(n.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
