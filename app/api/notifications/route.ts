@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
       .from("notifications")
       .select(`
         *,
-        sender:sender_id(id, full_name, username, avatar_url)
+        actor:actor_id(id, full_name, username, avatar_url)
       `)
-      .eq("user_id", dbUser.id)
+      .eq("recipient_id", dbUser.id)
       .order("created_at", { ascending: false })
       .limit(50);
 

@@ -40,11 +40,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (dbUser && post && dbUser.id !== post.user_id) {
       await supabase.from("notifications").insert({
-        user_id: post.user_id,
-        sender_id: dbUser.id,
+        recipient_id: post.user_id,
+        actor_id: dbUser.id,
         type: "comment",
-        post_id: postId,
-        content: content,
+        reference_id: postId,
         is_read: false
       });
     }

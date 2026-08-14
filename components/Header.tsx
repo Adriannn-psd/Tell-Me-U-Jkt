@@ -347,21 +347,21 @@ export default function Header() {
                     ) : (
                       <div className="flex flex-col border-t border-[#3a3a3d]">
                         {notifications.map((n) => (
-                          <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                          <Link href={n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                             <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
-                              {n.sender?.avatar_url ? (
-                                <img src={n.sender.avatar_url} alt="" className="w-full h-full object-cover" />
+                              {n.actor?.avatar_url ? (
+                                <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                                  {(n.sender?.full_name || n.sender?.username || "?").charAt(0).toUpperCase()}
+                                  {(n.actor?.full_name || n.actor?.username || "?").charAt(0).toUpperCase()}
                                 </div>
                               )}
                             </div>
                             <div className="flex-1">
                               <p className="text-sm text-white line-clamp-2">
-                                <span className="font-bold">{n.sender?.username || "Seseorang"}</span>{' '}
+                                <span className="font-bold">{n.actor?.username || "Seseorang"}</span>{' '}
                                 {n.type === 'like' && 'menyukai postingan Anda.'}
-                                {n.type === 'comment' && `berkomentar: "${n.content}"`}
+                                {n.type === 'comment' && `mengomentari postingan Anda.`}
                                 {n.type === 'follow_request' && 'meminta untuk mengikuti Anda.'}
                                 {n.type === 'follow_accept' && 'mulai mengikuti Anda.'}
                               </p>
@@ -446,21 +446,21 @@ export default function Header() {
                       ) : (
                         <div className="flex flex-col border-t border-[#3a3a3d]">
                           {notifications.map((n) => (
-                            <Link href={n.type.includes('follow') ? `/profile/${n.sender?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                            <Link href={n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                               <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
-                                {n.sender?.avatar_url ? (
-                                  <img src={n.sender.avatar_url} alt="" className="w-full h-full object-cover" />
+                                {n.actor?.avatar_url ? (
+                                  <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                                    {(n.sender?.full_name || n.sender?.username || "?").charAt(0).toUpperCase()}
+                                    {(n.actor?.full_name || n.actor?.username || "?").charAt(0).toUpperCase()}
                                   </div>
                                 )}
                               </div>
                               <div className="flex-1 text-left">
                                 <p className="text-sm text-white line-clamp-2">
-                                  <span className="font-bold">{n.sender?.username || "Seseorang"}</span>{' '}
+                                  <span className="font-bold">{n.actor?.username || "Seseorang"}</span>{' '}
                                   {n.type === 'like' && 'menyukai postingan Anda.'}
-                                  {n.type === 'comment' && `berkomentar: "${n.content}"`}
+                                  {n.type === 'comment' && `mengomentari postingan Anda.`}
                                   {n.type === 'follow_request' && 'meminta untuk mengikuti Anda.'}
                                   {n.type === 'follow_accept' && 'mulai mengikuti Anda.'}
                                 </p>

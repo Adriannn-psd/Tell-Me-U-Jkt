@@ -62,9 +62,10 @@ export async function POST(req: NextRequest) {
         
         // Create notification
         await supabase.from("notifications").insert({
-          user_id: targetUserId,
-          sender_id: currentUserId,
-          type: status === "pending" ? "follow_request" : "follow_accept",
+          recipient_id: targetUserId,
+          actor_id: currentUserId,
+          type: status === "pending" ? "follow_request" : "follow",
+          reference_id: targetUserId,
           is_read: false
         });
       }
