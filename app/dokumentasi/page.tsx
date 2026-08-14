@@ -32,6 +32,7 @@ function DokumentasiContent() {
   const [viewMode, setViewMode] = useState<"featured" | "grid">("featured");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("terbaru");
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const ITEMS_PER_PAGE = 12;
 
   useEffect(() => {
@@ -188,129 +189,103 @@ function DokumentasiContent() {
                   Jelajahi momen-momen terbaik dari berbagai kegiatan kelas dan kampus.
                 </p>
               </div>
-              
-              {/* Mobile Sort Icon */}
-              <div className="relative md:hidden w-8 h-8 mt-1 shrink-0 flex items-center justify-center bg-[#1c1c1e] border border-[#2a2a30] rounded-lg text-[var(--color-text-2)] hover:text-white transition-colors">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                <select
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                >
-                  <option value="terbaru">Terbaru</option>
-                  <option value="terpopuler">Terpopuler</option>
-                  <option value="terlama">Terlama</option>
-                </select>
-              </div>
             </div>
           </div>
 
           {/* Controls Bar */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 md:mb-8 bg-[rgba(28,28,30,0.4)] p-3 md:p-4 rounded-2xl border border-[#3a3a3d]">
+          <div className="flex flex-row items-center justify-between gap-3 mb-4 md:mb-6 bg-[rgba(28,28,30,0.4)] p-2 md:p-3 rounded-2xl border border-[#3a3a3d]">
             
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
-              {/* View Toggle */}
-              <div className="flex bg-[#1c1c1e] p-1 rounded-xl border border-[#3a3a3d] shrink-0">
-                <button 
-                  onClick={() => setViewMode("featured")}
-                  className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    viewMode === "featured" ? "bg-[var(--color-brand-red)] text-white shadow-lg" : "text-[#8e8e93] hover:text-white"
-                  }`}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span className="hidden sm:inline">Featured</span>
-                </button>
-                <button 
-                  onClick={() => setViewMode("grid")}
-                  className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    viewMode === "grid" ? "bg-[#3a3a3d] text-white shadow-lg" : "text-[#8e8e93] hover:text-white"
-                  }`}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                  <span className="hidden sm:inline">Grid All</span>
-                </button>
-              </div>
-
-              {/* Divider */}
-              <div className="hidden sm:block w-[1px] h-8 bg-[#3a3a3d]"></div>
-
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2 text-sm text-[var(--color-text-2)] bg-[#1c1c1e] px-3 py-2 rounded-xl border border-[#3a3a3d] w-full sm:w-auto shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-                <select 
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-transparent text-white outline-none appearance-none cursor-pointer pr-4 font-medium"
-                >
-                  <option value="terbaru">Terbaru</option>
-                  <option value="terpopuler">Terpopuler</option>
-                  <option value="terlama">Terlama</option>
-                </select>
-              </div>
-            </div>
-            
-            {/* Actions Row */}
-            <div className="flex items-center gap-3 w-full md:w-auto mt-1 md:mt-0">
+            {/* View Toggle */}
+            <div className="flex bg-[#1c1c1e] p-1 rounded-xl border border-[#3a3a3d] shrink-0">
               <button 
-                onClick={() => isGuest ? showLoginPopup() : setShowCreateModal(true)}
-                className="hidden md:flex w-full md:w-auto items-center justify-center gap-2 bg-[var(--color-brand-red)] hover:bg-red-600 text-white font-bold py-2 md:py-2.5 px-4 md:px-5 rounded-xl transition text-sm md:text-base"
+                onClick={() => setViewMode("featured")}
+                className={`flex items-center gap-2 px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition ${
+                  viewMode === "featured" ? "bg-[var(--color-brand-red)] text-white shadow-lg" : "text-[#8e8e93] hover:text-white"
+                }`}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 md:w-5 md:h-5">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Buat Kegiatan Baru
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span className="hidden sm:inline">Featured</span>
+              </button>
+              <button 
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-2 px-3 py-1.5 md:py-2 rounded-lg text-sm font-medium transition ${
+                  viewMode === "grid" ? "bg-[#3a3a3d] text-white shadow-lg" : "text-[#8e8e93] hover:text-white"
+                }`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span className="hidden sm:inline">Grid All</span>
               </button>
             </div>
-          </div>
 
-          {/* Filters and Tabs */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex overflow-x-auto custom-scrollbar pb-2 md:pb-0 gap-3 w-full md:w-auto pr-4 md:pr-0">
-              {["Semua", "Kelas", "Prodi", "Kampus", "Organisasi", "Pribadi"].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab)}
-                  className={`flex-shrink-0 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
-                    activeTab === tab 
-                      ? "bg-[var(--color-brand-red)]/10 border-[var(--color-brand-red)] text-[var(--color-brand-red)]" 
-                      : "bg-[#1c1c1e] border-[#2a2a30] text-[var(--color-text-2)] hover:border-[var(--color-text-3)] hover:text-white"
-                  }`}
-                >
-                  {tab === "Semua" && (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-                  )}
-                  {tab === "Kelas" && (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                  )}
-                  {tab === "Prodi" && (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
-                  )}
-                  {tab === "Kampus" && (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
-                  )}
-                  {tab === "Organisasi" && (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  )}
-                  {tab === "Pribadi" && (
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  )}
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            <div className="hidden md:flex items-center gap-3">
-              {/* Desktop Select */}
-              <select 
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                className="bg-[#1c1c1e] border border-[#2a2a30] text-white px-4 py-2.5 rounded-xl text-sm font-medium focus:outline-none focus:border-[var(--color-brand-red)] transition-colors appearance-none pr-8 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23a1a1aa%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-no-repeat bg-[right_12px_center]"
+            {/* Filter Toggle Button */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className={`flex items-center justify-center w-10 h-10 md:w-auto md:px-4 md:py-2 rounded-xl border transition-all ${
+                  showFilterMenu || activeTab !== "Semua" || sortBy !== "terbaru"
+                    ? "bg-[var(--color-brand-red)]/10 border-[var(--color-brand-red)] text-[var(--color-brand-red)]" 
+                    : "bg-[#1c1c1e] border-[#3a3a3d] text-[#8e8e93] hover:text-white hover:border-[#8e8e93]"
+                }`}
               >
-                <option value="terbaru">Terbaru</option>
-                <option value="terpopuler">Terpopuler</option>
-                <option value="terlama">Terlama</option>
-              </select>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span className="hidden md:inline ml-2 text-sm font-medium">Filter & Urutkan</span>
+              </button>
+
+              {/* Filter Menu Dropdown */}
+              {showFilterMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowFilterMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 bg-[#1c1c1e] border border-[#3a3a3d] rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-3 border-b border-[#3a3a3d]">
+                      <h3 className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider mb-2 px-1">Urutkan Berdasarkan</h3>
+                      <div className="flex flex-col gap-1">
+                        {[
+                          { id: "terbaru", label: "Terbaru" },
+                          { id: "terpopuler", label: "Terpopuler" },
+                          { id: "terlama", label: "Terlama" }
+                        ].map(sortOption => (
+                          <button
+                            key={sortOption.id}
+                            onClick={() => { setSortBy(sortOption.id); setShowFilterMenu(false); }}
+                            className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              sortBy === sortOption.id 
+                                ? "bg-[var(--color-brand-red)] text-white" 
+                                : "text-[var(--color-text-2)] hover:bg-[#2a2a30] hover:text-white"
+                            }`}
+                          >
+                            {sortOption.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="p-3">
+                      <h3 className="text-[11px] font-bold text-[#8e8e93] uppercase tracking-wider mb-2 px-1">Kategori</h3>
+                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                        {["Semua", "Kelas", "Prodi", "Kampus", "Organisasi", "Pribadi"].map(tab => (
+                          <button
+                            key={tab}
+                            onClick={() => { handleTabChange(tab); setShowFilterMenu(false); }}
+                            className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between ${
+                              activeTab === tab 
+                                ? "bg-[var(--color-brand-red)] text-white" 
+                                : "text-[var(--color-text-2)] hover:bg-[#2a2a30] hover:text-white"
+                            }`}
+                          >
+                            {tab}
+                            {activeTab === tab && (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

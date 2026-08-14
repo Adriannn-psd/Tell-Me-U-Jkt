@@ -221,7 +221,8 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
     >
       {/* Backdrop */}
       <div 
-        className={`absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpening || isClosing ? 'opacity-0' : 'opacity-100'}`} 
+        className={`absolute inset-0 bg-black/85 backdrop-blur-sm transition-opacity duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpening || isClosing ? 'opacity-0' : 'opacity-100'}`} 
+        style={{ willChange: 'opacity' }}
         onClick={() => {
           if (!isStacked && !isDraggingRef.current) handleClose();
         }}
@@ -253,7 +254,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
         </button>
 
         <div 
-          className="relative w-full h-[340px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-6"
+          className="relative w-full h-[280px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-4"
           onClick={(e) => {
             if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
           }}
@@ -312,16 +313,18 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
                     setActiveIndex(index);
                   }
                 }}
-                className={`absolute w-[220px] md:w-[320px] h-[320px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer shadow-2xl flex flex-col justify-between ${transitionClass}`}
+                className={`absolute w-[180px] md:w-[320px] h-[260px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer flex flex-col justify-between ${transitionClass}`}
                 style={{
                   transform: `translateX(${translateX}px) translateY(${translateY}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                   opacity,
                   zIndex,
+                  willChange: 'transform, opacity',
+                  boxShadow: isStacked ? 'none' : '0 10px 30px rgba(0,0,0,0.5)'
                 }}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${item.bgColor} opacity-90 z-0`} />
                 <div 
-                  className="absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-50 z-0"
+                  className="absolute inset-0 bg-cover bg-center opacity-40 z-0"
                   style={{ backgroundImage: `url('${item.image}')` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-0" />
