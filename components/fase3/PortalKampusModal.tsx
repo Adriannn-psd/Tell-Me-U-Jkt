@@ -229,7 +229,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
       
       {/* Modal Container */}
       <div 
-        className={`relative w-full max-w-4xl h-[70vh] md:h-[80vh] flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpening || isClosing ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
+        className={`relative w-full max-w-4xl h-full flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${isOpening || isClosing ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
         style={{ transformOrigin: `${origin.x} ${origin.y}` }}
         onTouchStart={handlePointerDown}
         onTouchMove={handlePointerMove}
@@ -242,8 +242,18 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
           if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
         }}
       >
+        {/* Close Button */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); if (!isStacked && !isDraggingRef.current) handleClose(); }}
+          className="absolute top-6 right-6 md:top-10 md:right-10 z-[110] p-3 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-colors shadow-xl border border-white/20"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <div 
-          className="relative w-full h-[400px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-8"
+          className="relative w-full h-[340px] md:h-[500px] flex items-center justify-center perspective-[1200px] mb-6"
           onClick={(e) => {
             if (e.target === e.currentTarget && !isStacked && !isDraggingRef.current) handleClose();
           }}
@@ -302,7 +312,7 @@ export default function PortalKampusModal({ onClose }: { onClose: () => void }) 
                     setActiveIndex(index);
                   }
                 }}
-                className={`absolute w-[240px] md:w-[320px] h-[360px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer shadow-2xl flex flex-col justify-between ${transitionClass}`}
+                className={`absolute w-[220px] md:w-[320px] h-[320px] md:h-[460px] rounded-3xl overflow-hidden cursor-pointer shadow-2xl flex flex-col justify-between ${transitionClass}`}
                 style={{
                   transform: `translateX(${translateX}px) translateY(${translateY}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                   opacity,
