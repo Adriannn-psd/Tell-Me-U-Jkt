@@ -71,18 +71,7 @@ function ProfileContent() {
     }
   }, [status, isGuest, router]);
 
-  if (status === "unauthenticated" && isGuest) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Sidebar />
-        <Header />
-        <main className="flex-1 w-full pb-20 md:pb-10 md:pt-6 md:pl-[260px] flex items-center justify-center p-4">
-          <LoginPanel showGuestOption={false} />
-        </main>
-        <BottomNav />
-      </div>
-    );
-  }
+
   
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<"karya" | "tentang">("karya");
@@ -164,6 +153,19 @@ function ProfileContent() {
   };
   const userPosts = profileData.posts;
   const stats = profileData.stats;
+
+  if (status === "unauthenticated" && isGuest) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Sidebar />
+        <Header />
+        <main className="flex-1 w-full pb-20 md:pb-10 md:pt-6 md:pl-[260px] flex items-center justify-center p-4">
+          <LoginPanel showGuestOption={false} showDiscordWidget={false} />
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
 
   if (status === "loading" || status === "unauthenticated") {
     return (
@@ -303,12 +305,12 @@ function ProfileContent() {
           {/* Left Column: Profile Sticky */}
           <div className="w-full lg:w-[450px] shrink-0 lg:sticky lg:top-8">
             {/* Profile Header section */}
-            <div className="mb-8">
+            <div className="mb-4 md:mb-8">
               
-              <div className="flex items-center justify-between mb-4 px-2">
+              <div className="flex items-center justify-between mb-3 md:mb-4 px-2">
                 {/* Avatar */}
                 <div className="relative shrink-0">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 p-[2px]">
+                  <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 p-[2px]">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)]" />
                     ) : (
@@ -326,18 +328,18 @@ function ProfileContent() {
                 </div>
 
                 {/* Stats */}
-                <div className="flex flex-1 justify-around items-center ml-6">
+                <div className="flex flex-1 justify-around items-center ml-4 md:ml-6">
                   <div className="text-center">
-                    <span className="text-white font-bold text-lg md:text-xl block">{userPosts.length}</span>
-                    <span className="text-white text-xs md:text-sm">postingan</span>
+                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{userPosts.length}</span>
+                    <span className="text-white text-[10px] md:text-sm">postingan</span>
                   </div>
                   <div className="text-center">
-                    <span className="text-white font-bold text-lg md:text-xl block">{stats.followers}</span>
-                    <span className="text-white text-xs md:text-sm">pengikut</span>
+                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{stats.followers}</span>
+                    <span className="text-white text-[10px] md:text-sm">pengikut</span>
                   </div>
                   <div className="text-center">
-                    <span className="text-white font-bold text-lg md:text-xl block">{stats.following}</span>
-                    <span className="text-white text-xs md:text-sm">mengikuti</span>
+                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{stats.following}</span>
+                    <span className="text-white text-[10px] md:text-sm">mengikuti</span>
                   </div>
                 </div>
               </div>
@@ -412,10 +414,10 @@ function ProfileContent() {
           <div className="flex-1 w-full min-w-0">
             {/* Onboarding Flow for mobile/tablet */}
             {completedSteps < 3 && (
-              <div className="bg-[var(--color-surface)] rounded-2xl p-5 mb-8 w-full block lg:hidden">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[var(--color-border-color)]">
-                  <h3 className="text-white font-bold text-sm">Status Data Diri & OSPEK</h3>
-                  <span className="text-[var(--color-brand-red)] font-bold text-xs">{completedSteps}/3 Selesai</span>
+              <div className="bg-[var(--color-surface)] rounded-2xl p-3 md:p-5 mb-4 md:mb-8 w-full block lg:hidden">
+                <div className="flex items-center justify-between mb-3 md:mb-6 pb-2 md:pb-4 border-b border-[var(--color-border-color)]">
+                  <h3 className="text-white font-bold text-[12px] md:text-sm">Status Data Diri & OSPEK</h3>
+                  <span className="text-[var(--color-brand-red)] font-bold text-[10px] md:text-xs">{completedSteps}/3 Selesai</span>
                 </div>
 
                 {/* 1. SKL Verification Card */}
@@ -635,10 +637,10 @@ function ProfileContent() {
             )}
 
             {/* Tabs - IG Style */}
-            <div className="flex border-t border-[var(--color-border-color)] mb-2 mt-4 w-full">
+            <div className="flex border-t border-[var(--color-border-color)] mb-2 mt-2 md:mt-4 w-full">
               <button 
                 onClick={() => setActiveTab("karya")}
-                className={`flex-1 py-3 flex justify-center items-center gap-2 transition-all ${activeTab === "karya" ? "border-t-[1px] border-white text-white" : "border-t-[1px] border-transparent text-[var(--color-text-3)] hover:text-white"}`}
+                className={`flex-1 py-2 md:py-3 flex justify-center items-center gap-2 transition-all ${activeTab === "karya" ? "border-t-[1px] border-white text-white" : "border-t-[1px] border-transparent text-[var(--color-text-3)] hover:text-white"}`}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />

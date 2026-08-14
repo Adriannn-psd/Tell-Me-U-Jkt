@@ -61,12 +61,12 @@ export default function DynamicWidgets() {
       <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-7">
         
         {/* Widget Kiri: To-Do & Deadline */}
-        <div className="relative overflow-hidden rounded-[20px] md:rounded-[28px] p-[1px] group transition-transform hover:-translate-y-1 duration-300 h-full">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#ff3b30]/40 via-transparent to-[#ff3b30]/10 rounded-[20px] md:rounded-[28px] opacity-70" />
-          <div className="relative bg-[#111112]/90 backdrop-blur-2xl rounded-[19px] md:rounded-[27px] p-3 md:p-8 flex flex-col h-full min-h-[180px] md:min-h-[340px] border border-white/5 shadow-[0_8px_32px_rgba(255,59,48,0.1)]">
-            <div className="flex flex-col xl:flex-row xl:items-center items-start gap-2.5 md:gap-3.5 mb-3 md:mb-6 relative z-10">
+        <div className="relative overflow-hidden rounded-[16px] md:rounded-[28px] p-[1px] group transition-transform hover:-translate-y-1 duration-300 h-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#ff3b30]/40 via-transparent to-[#ff3b30]/10 rounded-[16px] md:rounded-[28px] opacity-70" />
+          <div className="relative bg-[#111112]/90 backdrop-blur-2xl rounded-[15px] md:rounded-[27px] p-2.5 md:p-8 flex flex-col h-full min-h-[100px] md:min-h-[340px] border border-white/5 shadow-[0_8px_32px_rgba(255,59,48,0.1)]">
+            <div className="flex flex-col xl:flex-row xl:items-center items-start gap-1.5 md:gap-3.5 mb-2 md:mb-6 relative z-10">
               <div className="flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 md:w-7 md:h-7 drop-shadow-[0_2px_10px_rgba(255,59,48,0.4)]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 md:w-7 md:h-7 drop-shadow-[0_2px_10px_rgba(255,59,48,0.4)]">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -74,26 +74,26 @@ export default function DynamicWidgets() {
                   <path d="m9 16 2 2 4-4" />
                 </svg>
               </div>
-              <h3 className="text-[14px] md:text-xl font-bold text-white tracking-wide leading-tight">To-Do & Deadline</h3>
+              <h3 className="text-[12px] md:text-xl font-bold text-white tracking-wide leading-tight">To-Do & Deadline</h3>
             </div>
             
-            <div className="flex flex-col gap-2.5 md:gap-3.5 flex-1 relative z-10 w-full xl:w-[75%]">
+            <div className="flex flex-col gap-1.5 md:gap-3.5 flex-1 relative z-10 w-full xl:w-[75%]">
               {tasks.map(task => (
                 <div 
                   key={task.id} 
-                  className={`flex items-center gap-2.5 md:gap-4 p-2.5 md:p-4 rounded-xl md:rounded-[18px] border backdrop-blur-md transition-all cursor-pointer ${task.done ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#1a1a1c]/80 border-white/10 hover:bg-[#202022] hover:border-[#ff3b30]/40 shadow-sm'}`}
+                  className={`flex items-center gap-2 md:gap-4 p-2 md:p-4 rounded-xl md:rounded-[18px] border backdrop-blur-md transition-all cursor-pointer ${task.done ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#1a1a1c]/80 border-white/10 hover:bg-[#202022] hover:border-[#ff3b30]/40 shadow-sm'}`}
                   onClick={() => toggleTask(task.id)}
                 >
-                  <div className={`w-4 h-4 md:w-5 md:h-5 rounded-full border-[1.5px] md:border-2 flex items-center justify-center shrink-0 transition-colors ${task.done ? 'bg-[#ff3b30] border-[#ff3b30]' : 'border-[#6e6e73]'}`}>
+                  <div className={`w-3.5 h-3.5 md:w-5 md:h-5 rounded-full border-[1.5px] md:border-2 flex items-center justify-center shrink-0 transition-colors ${task.done ? 'bg-[#ff3b30] border-[#ff3b30]' : 'border-[#6e6e73]'}`}>
                     {task.done && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5 md:w-3 md:h-3">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2 h-2 md:w-3 md:h-3">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[10px] md:text-[14px] font-semibold truncate transition-all ${task.done ? 'text-[#8e8e93] line-through' : 'text-[#f5f5f7]'}`}>{task.title}</p>
-                    <p className={`text-[8.5px] md:text-[12px] mt-0.5 font-medium ${task.done ? 'text-[#6e6e73]' : 'text-[#ff3b30]'}`}>{task.deadline}</p>
+                    <p className={`text-[9px] md:text-[14px] font-semibold truncate transition-all ${task.done ? 'text-[#8e8e93] line-through' : 'text-[#f5f5f7]'}`}>{task.title}</p>
+                    <p className={`text-[8px] md:text-[12px] mt-0.5 font-medium ${task.done ? 'text-[#6e6e73]' : 'text-[#ff3b30]'}`}>{task.deadline}</p>
                   </div>
                 </div>
               ))}
@@ -102,9 +102,9 @@ export default function DynamicWidgets() {
             {/* Premium Illustration / Flare */}
             <div className="absolute -right-10 top-5 opacity-40 z-0 pointer-events-none mix-blend-screen w-[200px] h-[200px] bg-[radial-gradient(circle,rgba(255,59,48,0.8)_0%,transparent_70%)] blur-2xl"></div>
             
-            <div className="w-full flex justify-center border-t border-white/10 mt-4 md:mt-6 pt-3 md:pt-5 z-10">
-              <Link href="/tracker" className="text-[10px] md:text-[13px] font-semibold text-[#8e8e93] hover:text-white transition flex items-center gap-1.5 group/link">
-                Lihat Semua Tugas 
+            <div className="w-full flex justify-center border-t border-white/10 mt-2 md:mt-6 pt-2 md:pt-5 z-10">
+              <Link href="/tracker" className="text-[9px] md:text-[13px] font-semibold text-[#8e8e93] hover:text-white transition flex items-center gap-1.5 group/link">
+                Semua Tugas 
                 <span className="transform group-hover/link:translate-x-1 transition-transform">&rarr;</span>
               </Link>
             </div>
@@ -112,22 +112,22 @@ export default function DynamicWidgets() {
         </div>
 
         {/* Widget Kanan: Radar Kampus */}
-        <div className="relative overflow-hidden rounded-[20px] md:rounded-[28px] p-[1px] group transition-transform hover:-translate-y-1 duration-300 h-full">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#30d158]/40 via-transparent to-[#30d158]/10 rounded-[20px] md:rounded-[28px] opacity-70" />
-          <div className="relative bg-[#111112]/90 backdrop-blur-2xl rounded-[19px] md:rounded-[27px] p-3 md:p-8 flex flex-col h-full min-h-[180px] md:min-h-[340px] border border-white/5 shadow-[0_8px_32px_rgba(48,209,88,0.1)]">
-            <div className="flex flex-col xl:flex-row xl:items-center items-start gap-2.5 md:gap-3.5 mb-3 md:mb-5 relative z-10">
+        <div className="relative overflow-hidden rounded-[16px] md:rounded-[28px] p-[1px] group transition-transform hover:-translate-y-1 duration-300 h-full">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#30d158]/40 via-transparent to-[#30d158]/10 rounded-[16px] md:rounded-[28px] opacity-70" />
+          <div className="relative bg-[#111112]/90 backdrop-blur-2xl rounded-[15px] md:rounded-[27px] p-2.5 md:p-8 flex flex-col h-full min-h-[100px] md:min-h-[340px] border border-white/5 shadow-[0_8px_32px_rgba(48,209,88,0.1)]">
+            <div className="flex flex-col xl:flex-row xl:items-center items-start gap-1.5 md:gap-3.5 mb-2 md:mb-5 relative z-10">
               <div className="flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 md:w-7 md:h-7 drop-shadow-[0_2px_10px_rgba(48,209,88,0.4)]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#30d158" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 md:w-7 md:h-7 drop-shadow-[0_2px_10px_rgba(48,209,88,0.4)]">
                   <circle cx="12" cy="12" r="10" />
                   <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
                 </svg>
               </div>
-              <h3 className="text-[14px] md:text-xl font-bold text-white tracking-wide leading-tight">Radar Kampus</h3>
+              <h3 className="text-[12px] md:text-xl font-bold text-white tracking-wide leading-tight">Radar Kampus</h3>
             </div>
 
             <div className="flex-1 flex gap-4 overflow-hidden relative z-10">
               {/* Slider cards wrapper */}
-              <div className="flex gap-2.5 md:gap-4 w-full snap-x snap-mandatory overflow-x-auto pb-4 scrollbar-hide">
+              <div className="flex gap-2.5 md:gap-4 w-full snap-x snap-mandatory overflow-x-auto pb-2 scrollbar-hide">
                 
                 {radarPosts.map((post, idx) => {
                   const cover = post.media_urls?.[0] || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=400&auto=format&fit=crop';
@@ -141,42 +141,41 @@ export default function DynamicWidgets() {
                       <div className={`absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-40 z-0 transform scale-110 group-hover:scale-125 transition-transform duration-700 ${isGuest ? 'blur-md' : ''}`} style={{ backgroundImage: `url('${cover}')` }}></div>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0" />
                       <div className={`relative z-10 ${isGuest ? 'blur-md select-none' : ''}`}>
-                        <div className="flex mb-1.5 md:mb-2.5">
-                          <span className="px-1.5 py-0.5 md:px-2.5 md:py-1 bg-white/20 backdrop-blur-md rounded-md md:rounded-lg text-[7px] md:text-[9px] font-black text-white uppercase tracking-wider border border-white/20">{post.category || 'Info'}</span>
+                        <div className="flex mb-1 md:mb-2.5">
+                          <span className="px-1.5 py-0.5 md:px-2.5 md:py-1 bg-white/20 backdrop-blur-md rounded-md md:rounded-lg text-[6px] md:text-[9px] font-black text-white uppercase tracking-wider border border-white/20">{post.category || 'Info'}</span>
                         </div>
-                        <p className="text-[10px] md:text-[15px] font-extrabold text-white leading-[1.2] mb-1 md:mb-1.5 tracking-wide line-clamp-2">{post.title}</p>
-                        <p className="text-[8px] md:text-[11px] text-[#ebebf5]/80 line-clamp-2 leading-snug">{post.summary}</p>
+                        <p className="text-[9px] md:text-[15px] font-extrabold text-white leading-[1.2] mb-1 md:mb-1.5 tracking-wide line-clamp-2">{post.title}</p>
                       </div>
                       {isGuest && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2 text-center bg-black/20 backdrop-blur-sm">
-                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8 text-white mb-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-white mb-1"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </div>
                       )}
                     </>
                   );
 
                   return isGuest ? (
-                    <div onClick={showLoginPopup} key={post.id} className="w-[120px] md:w-[150px] h-[150px] md:h-[210px] rounded-2xl md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-2.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0 cursor-pointer">
+                    <div onClick={showLoginPopup} key={post.id} className="w-[80px] md:w-[150px] h-[80px] md:h-[210px] rounded-[10px] md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-1.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0 cursor-pointer">
                       {content}
                     </div>
                   ) : (
-                    <Link key={post.id} href={`/radar#post-${post.id}`} className="w-[120px] md:w-[150px] h-[150px] md:h-[210px] rounded-2xl md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-2.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0">
+                    <Link key={post.id} href={`/radar#post-${post.id}`} className="w-[80px] md:w-[150px] h-[80px] md:h-[210px] rounded-[10px] md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-1.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0">
                       {content}
                     </Link>
                   );
                 })}
 
                 {radarPosts.length === 0 && (
-                   <div className="w-full flex items-center justify-center py-10 opacity-60">
-                     <p className="text-[10px] md:text-sm text-white">Sedang memuat data...</p>
+                   <div className="w-full flex items-center justify-center py-5 opacity-60">
+                     <p className="text-[9px] md:text-sm text-white">Memuat...</p>
                    </div>
                 )}
               </div>
             </div>
             
-            <div className="w-full flex justify-center border-t border-white/10 pt-3 md:pt-5 z-10">
-              <Link href="/radar" className="text-[10px] md:text-[13px] font-semibold text-[#8e8e93] hover:text-white transition flex items-center gap-1.5 group/link">
-                Buka Radar Selengkapnya 
+            <div className="w-full flex justify-center border-t border-white/10 pt-2 md:pt-5 z-10 mt-auto">
+              <Link href="/radar" className="text-[9px] md:text-[13px] font-semibold text-[#8e8e93] hover:text-white transition flex items-center gap-1.5 group/link">
+                Buka Radar 
                 <span className="transform group-hover/link:translate-x-1 transition-transform">&rarr;</span>
               </Link>
             </div>

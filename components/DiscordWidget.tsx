@@ -82,7 +82,7 @@ export default function DiscordWidget({ serverId }: { serverId: string }) {
           <strong>{data.name}</strong>
           <span className="online-count">
             <span className="status-dot"></span>
-            {data.presence_count} Anggota Online
+            {data.presence_count} Online
           </span>
         </div>
       </div>

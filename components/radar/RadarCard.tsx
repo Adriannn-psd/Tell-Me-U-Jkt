@@ -84,7 +84,7 @@ export default function RadarCard({ post }: RadarCardProps) {
       )}
       
       {/* Content Area */}
-      <div className="p-6 flex-1 flex flex-col">
+      <div className="p-3 md:p-6 flex-1 flex flex-col">
         {/* Header: Author & Date */}
         <div className="flex items-center gap-3 mb-5">
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[var(--color-brand-red)] to-red-500 flex items-center justify-center shrink-0 shadow-sm border border-red-400/20 overflow-hidden">
@@ -107,12 +107,12 @@ export default function RadarCard({ post }: RadarCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="text-lg font-bold text-white mb-2.5 leading-snug line-clamp-2">
+        <h3 className="text-[14px] md:text-lg font-bold text-white mb-1.5 md:mb-2.5 leading-snug line-clamp-2">
           {post.title}
         </h3>
         
         {/* Summary */}
-        <p className="text-[var(--color-text-2)] text-sm mb-6 line-clamp-4 leading-relaxed flex-1 whitespace-pre-line">
+        <p className="text-[var(--color-text-2)] text-[11px] md:text-sm mb-3 md:mb-6 line-clamp-3 md:line-clamp-4 leading-relaxed flex-1 whitespace-pre-line">
           {post.summary}
         </p>
 

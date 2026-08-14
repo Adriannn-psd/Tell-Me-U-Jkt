@@ -102,14 +102,14 @@ function DropMemoryContent() {
       <main className="flex-1 w-full max-w-[1400px] mx-auto px-5 md:px-8 py-6 pb-28 md:pb-10 md:pt-6 md:pl-[260px] relative">
         {isGuest && (
           <div 
-            className="absolute inset-0 z-50 bg-black/40 flex flex-col items-center justify-center p-6 text-center cursor-pointer"
+            className="fixed inset-0 z-[100] bg-black/40 cursor-pointer flex items-center justify-center p-4"
             onClickCapture={(e) => {
               e.preventDefault();
               e.stopPropagation();
               showLoginPopup();
             }}
           >
-            <div className="bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-300">
+            <div className="bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
               <h3 className="text-lg font-bold text-white mb-1">Pratinjau Mode Tamu</h3>
               <p className="text-[var(--color-text-3)] text-xs leading-relaxed">Ini hanya tampilan contoh. Klik di mana saja untuk Login dan membagikan memori.</p>
             </div>
@@ -152,26 +152,26 @@ function DropMemoryContent() {
         </div>
 
         {/* Feed */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
           {filteredMemories.map(m => (
-            <div key={m.id} className="bg-[#1c1c1e] rounded-2xl border border-[#2a2a30] overflow-hidden shadow-sm">
+            <div key={m.id} className="bg-[#1c1c1e] rounded-xl md:rounded-2xl border border-[#2a2a30] overflow-hidden shadow-sm flex flex-col">
               {m.image_url && (
-                <div className="w-full h-48 bg-[#2a2a30]">
+                <div className="w-full h-24 md:h-48 bg-[#2a2a30]">
                   <img src={m.image_url} alt={m.title} className="w-full h-full object-cover" />
                 </div>
               )}
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <h2 className="text-lg font-bold text-white">{m.title}</h2>
-                  <div className="flex items-center gap-1 bg-[#2a2a30] px-2 py-1 rounded text-xs font-medium text-[var(--color-brand-red)]">
-                    {m.privacy === "Khusus Kelas Saya" && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
-                    {m.privacy === "Khusus Prodi Saya" && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>}
-                    {m.privacy === "Publik" && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                    {m.target_group}
+              <div className="p-3 md:p-5 flex-1 flex flex-col">
+                <div className="flex flex-col md:flex-row md:justify-between items-start mb-2 gap-1 md:gap-0">
+                  <h2 className="text-[14px] md:text-lg font-bold text-white line-clamp-2">{m.title}</h2>
+                  <div className="flex items-center gap-1 bg-[#2a2a30] px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-medium text-[var(--color-brand-red)] shrink-0">
+                    {m.privacy === "Khusus Kelas Saya" && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-2.5 h-2.5 md:w-3 md:h-3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+                    {m.privacy === "Khusus Prodi Saya" && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-2.5 h-2.5 md:w-3 md:h-3"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>}
+                    {m.privacy === "Publik" && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-2.5 h-2.5 md:w-3 md:h-3"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
+                    <span className="truncate max-w-[80px] md:max-w-none">{m.target_group}</span>
                   </div>
                 </div>
                 
-                <p className="text-[var(--color-text-2)] text-sm mb-4 leading-relaxed">
+                <p className="text-[var(--color-text-2)] text-[11px] md:text-sm mb-4 leading-relaxed flex-1 line-clamp-3">
                   {m.description}
                 </p>
                 

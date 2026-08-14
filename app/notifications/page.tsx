@@ -155,14 +155,14 @@ export default function NotificationsPage() {
       <main className="flex-1 w-full max-w-2xl mx-auto md:max-w-3xl md:pl-[260px] px-5 md:px-8 py-6 pb-28 md:pb-10 md:pt-6 relative">
         {isGuest && (
           <div 
-            className="absolute inset-0 z-50 bg-black/40 flex flex-col items-center justify-center p-6 text-center cursor-pointer"
+            className="absolute inset-0 z-40 bg-black/40 cursor-pointer"
             onClickCapture={(e) => {
               e.preventDefault();
               e.stopPropagation();
               showLoginPopup();
             }}
           >
-            <div className="bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-300">
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-[90vw] sm:max-w-sm w-full animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
               <h3 className="text-lg font-bold text-white mb-1">Pratinjau Mode Tamu</h3>
               <p className="text-[var(--color-text-3)] text-xs leading-relaxed">Ini hanya tampilan contoh. Klik di mana saja untuk Login dan melihat notifikasimu.</p>
             </div>

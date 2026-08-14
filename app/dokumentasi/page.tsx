@@ -165,14 +165,14 @@ function DokumentasiContent() {
       <main className="flex-1 w-full max-w-[1400px] mx-auto px-5 md:px-8 py-6 pb-28 md:pb-10 md:pt-6 md:pl-[260px] relative">
         {isGuest && (
           <div 
-            className="absolute inset-0 z-50 bg-black/40 flex flex-col items-center justify-center p-6 text-center cursor-pointer"
+            className="absolute inset-0 z-40 bg-black/40 cursor-pointer"
             onClickCapture={(e) => {
               e.preventDefault();
               e.stopPropagation();
               showLoginPopup();
             }}
           >
-            <div className="bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-300">
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-[90vw] sm:max-w-sm w-full animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
               <h3 className="text-lg font-bold text-white mb-1">Pratinjau Mode Tamu</h3>
               <p className="text-[var(--color-text-3)] text-xs leading-relaxed">Ini hanya tampilan contoh. Klik di mana saja untuk Login dan melihat dokumentasi yang sebenarnya.</p>
             </div>
@@ -352,7 +352,7 @@ function DokumentasiContent() {
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                       {recentEvents.map(event => (
                         <EventCard key={event.id} event={event} />
                       ))}
@@ -371,7 +371,7 @@ function DokumentasiContent() {
                    </div>
                 )}
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
                   {currentGridEvents.map((event) => (
                     <EventCard key={event.id} event={event} />
                   ))}

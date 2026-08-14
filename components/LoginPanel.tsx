@@ -9,9 +9,10 @@ import "@/app/login/login.css";
 interface LoginPanelProps {
   errorMessage?: string | null;
   showGuestOption?: boolean;
+  showDiscordWidget?: boolean;
 }
 
-export default function LoginPanel({ errorMessage, showGuestOption = false }: LoginPanelProps) {
+export default function LoginPanel({ errorMessage, showGuestOption = false, showDiscordWidget = true }: LoginPanelProps) {
   const router = useRouter();
 
   const handleGuestLogin = () => {
@@ -99,7 +100,7 @@ export default function LoginPanel({ errorMessage, showGuestOption = false }: Lo
               <line x1="10" y1="14" x2="21" y2="3"></line>
             </svg>
           </a>
-          <DiscordWidget serverId="1522059025485664326" />
+          {showDiscordWidget && <DiscordWidget serverId="1522059025485664326" />}
         </div>
       </section>
     </div>

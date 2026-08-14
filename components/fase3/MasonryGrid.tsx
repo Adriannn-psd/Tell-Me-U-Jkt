@@ -185,9 +185,9 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
   return (
     <>
       {/* 2 Columns Layout (Mobile & Tablet) */}
-      <div className="flex lg:hidden gap-5 md:gap-7 w-full items-start">
+      <div className="flex lg:hidden gap-2 md:gap-7 w-full items-start">
         {cols2.map((col, idx) => (
-          <div key={idx} className="flex flex-col gap-5 md:gap-7 w-1/2">
+          <div key={idx} className="flex flex-col gap-2 md:gap-7 w-1/2">
             {col.map(post => renderCard(post))}
           </div>
         ))}

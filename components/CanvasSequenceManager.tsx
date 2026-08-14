@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useScroll, useMotionValueEvent } from "framer-motion";
+import { useScroll, useMotionValueEvent, useSpring } from "framer-motion";
 
 export interface AnimationLayer {
   folderPath: string;
@@ -40,13 +40,19 @@ export default function CanvasSequenceManager({
   
   const introCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const scrollCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const targetFrames = useRef<Record<string, number>>({});
 
-  const { scrollYProgress } = useScroll();
+  const { scrollYProgress: rawScrollYProgress } = useScroll();
+  const scrollYProgress = useSpring(rawScrollYProgress, {
+    stiffness: 400,
+    damping: 90,
+    restDelta: 0.001
+  });
 
   const loadImagesForLayer = (layer: AnimationLayer, isIntro: boolean): HTMLImageElement[] => {
     const images: HTMLImageElement[] = [];
     // Assume images might start at 0 or 1, we load up to frameCount
-    for (let i = 0; i <= layer.frameCount; i++) {
+    for (let i = 0; i < layer.frameCount; i++) {
       const img = new Image();
       let filename = "";
       if (layer.filenameFormat) {
@@ -58,9 +64,11 @@ export default function CanvasSequenceManager({
       const url = `${layer.folderPath}/${filename}`;
       (img as any).dataset_src = url;
       
-      // Preload the first 30 frames for both intro and scroll to avoid network bottleneck
-      if (i < 30) {
-        img.src = url;
+      // Preload priority: Intro gets a head start, scroll layers only load their first frame initially.
+      if (isIntro) {
+        if (i < 30) img.src = url;
+      } else {
+        if (i === 0) img.src = url;
       }
       
       images.push(img);
@@ -102,22 +110,22 @@ export default function CanvasSequenceManager({
 
       const deltaTime = time - lastTime;
       if (deltaTime > interval) {
-        // Ensure all layers have the current frame loaded before advancing
         let allReady = true;
         introLayers.forEach((layer, idx) => {
           const progress = currentFrame / maxIntroFrames;
-          const layerFrame = Math.min(layer.frameCount, Math.floor(progress * layer.frameCount));
+          const layerFrame = Math.min(layer.frameCount - 1, Math.floor(progress * layer.frameCount));
           const img = introImagesRef.current[idx][layerFrame];
           if (!img || !img.complete) allReady = false;
         });
 
+        introLayers.forEach((layer, idx) => {
+          const progress = currentFrame / maxIntroFrames;
+          const layerFrame = Math.min(layer.frameCount - 1, Math.floor(progress * layer.frameCount));
+          const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
+          drawFrame(introCanvasRefs.current[idx], layerFrame, introImagesRef.current[idx], currentFit, `intro-${idx}`);
+        });
+        
         if (allReady) {
-          introLayers.forEach((layer, idx) => {
-            const progress = currentFrame / maxIntroFrames;
-            const layerFrame = Math.min(layer.frameCount, Math.floor(progress * layer.frameCount));
-            const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
-            drawFrame(introCanvasRefs.current[idx], layerFrame, introImagesRef.current[idx], currentFit);
-          });
           currentFrame++;
         }
         lastTime = time - (deltaTime % interval);
@@ -136,14 +144,20 @@ export default function CanvasSequenceManager({
     canvas: HTMLCanvasElement | null,
     frameIndex: number,
     images: HTMLImageElement[],
-    fit: "contain" | "cover"
+    fit: "contain" | "cover",
+    layerKey?: string
   ) => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Look ahead and lazily preload next 30 frames to avoid lag
-    const preloadAhead = 30;
+    if (layerKey) {
+      targetFrames.current[layerKey] = frameIndex;
+    }
+    
+    // Look ahead and lazily preload frames. Less aggressive for scroll to avoid clogging network.
+    const isIntro = layerKey?.startsWith("intro");
+    const preloadAhead = isIntro ? 30 : 15;
     for (let i = frameIndex; i < frameIndex + preloadAhead && i < images.length; i++) {
       const imgToPreload = images[i];
       if (!imgToPreload.src && (imgToPreload as any).dataset_src) {
@@ -152,8 +166,40 @@ export default function CanvasSequenceManager({
     }
 
     const img = images[frameIndex];
-    if (!img || !img.complete) return;
+    if (!img) return;
 
+    if (!img.complete) {
+      // If the image is not loaded yet, wait for it and re-draw if it's still the target frame
+      img.onload = () => {
+        if (layerKey && targetFrames.current[layerKey] === frameIndex) {
+          drawFrame(canvas, frameIndex, images, fit, layerKey);
+        }
+      };
+
+      // Try to find the closest loaded frame (backwards) to draw as a placeholder
+      let fallbackImg = null;
+      // Search all the way back to frame 0 if necessary to avoid blank canvas on fast scrolls
+      for (let i = frameIndex - 1; i >= 0; i--) {
+        if (images[i] && images[i].complete) {
+          fallbackImg = images[i];
+          break;
+        }
+      }
+      if (fallbackImg) {
+        doDraw(canvas, ctx, fallbackImg, fit);
+      }
+      return;
+    }
+
+    doDraw(canvas, ctx, img, fit);
+  };
+
+  const doDraw = (
+    canvas: HTMLCanvasElement,
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    fit: "contain" | "cover"
+  ) => {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     
@@ -206,6 +252,16 @@ export default function CanvasSequenceManager({
   // Draw initial scroll frames when phase changes
   useEffect(() => {
     if (phase === "scroll") {
+      // Lazy preload the first 30 frames of all scroll layers now that intro is done.
+      // This ensures that fast scrolls have non-transparent fallback frames to display.
+      scrollImagesRef.current.forEach(images => {
+        for (let i = 0; i < 30 && i < images.length; i++) {
+          if (!images[i].src && (images[i] as any).dataset_src) {
+            images[i].src = (images[i] as any).dataset_src;
+          }
+        }
+      });
+
       const latest = scrollYProgress.get();
       scrollLayers.forEach((layer, idx) => {
         const canvas = scrollCanvasRefs.current[idx];
@@ -238,7 +294,7 @@ export default function CanvasSequenceManager({
         const frameIndex = Math.floor(layerProgress * (layer.frameCount - 1));
         const safeFrameIndex = Math.max(0, Math.min(layer.frameCount - 1, frameIndex));
         const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
-        drawFrame(canvas, safeFrameIndex, scrollImagesRef.current[idx], currentFit);
+        drawFrame(canvas, safeFrameIndex, scrollImagesRef.current[idx], currentFit, `scroll-${idx}`);
       });
     }
   }, [phase, scrollLayers, scrollYProgress]);
@@ -286,7 +342,7 @@ export default function CanvasSequenceManager({
       // Ensure we don't exceed array bounds
       const safeFrameIndex = Math.max(0, Math.min(layer.frameCount - 1, frameIndex));
       const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
-      drawFrame(canvas, safeFrameIndex, scrollImagesRef.current[idx], currentFit);
+      drawFrame(canvas, safeFrameIndex, scrollImagesRef.current[idx], currentFit, `scroll-${idx}`);
     });
   });
 

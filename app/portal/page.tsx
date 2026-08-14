@@ -140,14 +140,14 @@ export default function PortalKampusPage() {
       <main className="flex-1 w-full max-w-[1400px] mx-auto px-5 md:px-8 py-6 pb-28 md:pb-10 md:pt-6 md:pl-[260px] relative">
         {isGuest && (
           <div 
-            className="absolute inset-0 z-50 bg-black/40 flex flex-col items-center justify-center p-6 text-center cursor-pointer"
+            className="absolute inset-0 z-40 bg-black/40 cursor-pointer"
             onClickCapture={(e) => {
               e.preventDefault();
               e.stopPropagation();
               showLoginPopup();
             }}
           >
-            <div className="bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-300">
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#1c1c1e]/90 backdrop-blur-md border border-[#2a2a30] px-6 py-5 rounded-2xl shadow-2xl max-w-[90vw] sm:max-w-sm w-full animate-in zoom-in-95 duration-300 flex flex-col items-center text-center">
               <h3 className="text-lg font-bold text-white mb-1">Pratinjau Mode Tamu</h3>
               <p className="text-[var(--color-text-3)] text-xs leading-relaxed">Ini hanya tampilan contoh. Klik di mana saja untuk Login dan mengakses fitur Portal Kampus.</p>
             </div>
@@ -171,14 +171,14 @@ export default function PortalKampusPage() {
         </header>
 
         {/* Dynamic Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-8">
           {portalLinks.map((item, index) => (
             <a 
               key={item.id} 
               href={item.url}
               target="_blank"
               rel="noreferrer"
-              className="relative w-full h-[280px] md:h-[320px] rounded-[2rem] overflow-hidden shadow-xl group block transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(220,38,38,0.3)] border border-white/5 hover:border-white/20"
+              className="relative w-full h-[150px] md:h-[320px] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-xl group block transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(220,38,38,0.3)] border border-white/5 hover:border-white/20"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Background Color & Image */}
@@ -190,7 +190,7 @@ export default function PortalKampusPage() {
               {/* Gradient Overlay for Text Readability */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10 z-0" />
 
-              <div className="relative z-10 p-7 flex flex-col h-full justify-between">
+              <div className="relative z-10 p-3 md:p-7 flex flex-col h-full justify-between">
                 {/* Top Section */}
                 <div className="flex justify-end items-start">
                   <div className="bg-white/10 backdrop-blur-md p-2.5 rounded-full transform opacity-0 translate-x-4 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 border border-white/20">
@@ -200,10 +200,10 @@ export default function PortalKampusPage() {
                 
                 {/* Bottom Section */}
                 <div className="transform transition-transform duration-300 group-hover:translate-y-0">
-                  <h2 className="text-2xl font-bold text-white leading-tight mb-2 tracking-wide group-hover:text-red-400 transition-colors">
+                  <h2 className="text-[12px] md:text-2xl font-bold text-white leading-tight mb-1 md:mb-2 tracking-wide group-hover:text-red-400 transition-colors">
                     {item.title}
                   </h2>
-                  <p className="text-[#ebebf5]/70 text-sm leading-relaxed font-medium line-clamp-2">
+                  <p className="text-[#ebebf5]/70 text-[10px] md:text-sm leading-snug md:leading-relaxed font-medium line-clamp-2">
                     {item.subtitle}
                   </p>
                 </div>

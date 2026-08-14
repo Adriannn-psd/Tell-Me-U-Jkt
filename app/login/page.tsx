@@ -155,7 +155,7 @@ function LoginContent() {
   ];
 
   return (
-    <main className="page" style={{ height: "400vh", position: "relative" }}>
+    <main className="page" style={{ height: "400vh", position: "relative" }} suppressHydrationWarning>
       {/* Background elements to ensure smooth blending if needed */}
       <div
         className="fixed inset-0 -z-10"
