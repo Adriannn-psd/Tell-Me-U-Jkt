@@ -40,7 +40,7 @@ export default function EventCard({ event }: { event: EventData }) {
               <div key={i} className={`w-full h-full relative ${(event.thumbnail as string[]).length === 2 && i === 0 ? "col-span-2 row-span-1" : ""} ${(event.thumbnail as string[]).length === 2 && i === 1 ? "col-span-2 row-span-1" : ""} ${(event.thumbnail as string[]).length === 3 && i === 0 ? "col-span-2 row-span-1" : ""}`}>
                 {isVid ? (
                   <>
-                    <img src={optimizeCloudinaryUrl(url.replace(/\.(mp4|webm|ogg)$/i, '.jpg'), { width: 600 })} alt={`${event.title} ${i}`} className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isGuest ? 'blur-md' : ''}`} />
+                    <img src={optimizeCloudinaryUrl(url.replace(/\.(mp4|webm|ogg)$/i, '.jpg'), { width: 600 })} alt={`${event.title} ${i}`} className={`w-full h-full object-cover md:transition-transform md:duration-500 md:group-hover:scale-105 ${isGuest ? 'opacity-20 grayscale' : ''}`} />
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                       <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white pl-0.5 border border-white/20">
                         <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M5 3l14 9-14 9V3z"/></svg>
@@ -48,7 +48,7 @@ export default function EventCard({ event }: { event: EventData }) {
                     </div>
                   </>
                 ) : (
-                  <img src={optimizeCloudinaryUrl(url, { width: 600 })} alt={`${event.title} ${i}`} className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isGuest ? 'blur-md' : ''}`} />
+                  <img src={optimizeCloudinaryUrl(url, { width: 600 })} alt={`${event.title} ${i}`} className={`w-full h-full object-cover md:transition-transform md:duration-500 md:group-hover:scale-105 ${isGuest ? 'opacity-20 grayscale' : ''}`} />
                 )}
               </div>
             )})}
@@ -58,7 +58,7 @@ export default function EventCard({ event }: { event: EventData }) {
             const isVid = event.thumbnail.match(/\.(mp4|webm|ogg)$/i) || event.thumbnail.includes('/video/upload/');
             return isVid ? (
               <>
-                <img src={optimizeCloudinaryUrl(event.thumbnail.replace(/\.(mp4|webm|ogg)$/i, '.jpg'), { width: 800 })} alt={event.title} className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isGuest ? 'blur-md' : ''}`} />
+                <img src={optimizeCloudinaryUrl(event.thumbnail.replace(/\.(mp4|webm|ogg)$/i, '.jpg'), { width: 800 })} alt={event.title} className={`w-full h-full object-cover md:transition-transform md:duration-500 md:group-hover:scale-105 ${isGuest ? 'opacity-20 grayscale' : ''}`} />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                   <div className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white pl-1 border border-white/20">
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M5 3l14 9-14 9V3z"/></svg>
@@ -66,7 +66,7 @@ export default function EventCard({ event }: { event: EventData }) {
                 </div>
               </>
             ) : (
-               <img src={optimizeCloudinaryUrl(event.thumbnail, { width: 800 })} alt={event.title} className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isGuest ? 'blur-md' : ''}`} />
+               <img src={optimizeCloudinaryUrl(event.thumbnail, { width: 800 })} alt={event.title} className={`w-full h-full object-cover md:transition-transform md:duration-500 md:group-hover:scale-105 ${isGuest ? 'opacity-20 grayscale' : ''}`} />
             );
           })()
         ) : (

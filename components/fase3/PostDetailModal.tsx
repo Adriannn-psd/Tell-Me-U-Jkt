@@ -16,6 +16,8 @@ export default function PostDetailModal({
   const [commentText, setCommentText] = useState("");
   const [isLiking, setIsLiking] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
+  const [followStatus, setFollowStatus] = useState("none");
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   
   // Swipe to close state
@@ -29,6 +31,7 @@ export default function PostDetailModal({
       if (data.success) {
         setDetail(data.post);
         setHasLiked(data.post.hasLiked || false);
+        setFollowStatus(data.post.followStatus || "none");
       }
     } catch (err) {
       console.error(err);
@@ -78,6 +81,31 @@ export default function PostDetailModal({
       setHasLiked(previousHasLiked);
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!detail?.author?.discord_id || isFollowLoading) return;
+    setIsFollowLoading(true);
+    
+    try {
+      const isCurrentlyFollowed = followStatus === "accepted" || followStatus === "pending";
+      const action = isCurrentlyFollowed ? "unfollow" : "follow";
+      
+      const res = await fetch("/api/user/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId: detail.author.discord_id, action })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFollowStatus(data.status);
+      }
+    } catch (err) {
+      console.error("Failed to follow/unfollow:", err);
+    } finally {
+      setIsFollowLoading(false);
     }
   };
 
@@ -175,9 +203,20 @@ export default function PostDetailModal({
               <p className="text-[var(--color-text-3)] text-xs">{post.prodi}</p>
             </div>
           </Link>
-          {detail && !detail.isOwnPost && (
-            <button className="bg-[var(--color-brand-red)] text-white text-xs font-bold px-4 py-1.5 rounded-full hover:bg-red-600 transition">Follow</button>
-          )}
+          <div className="flex items-center gap-2">
+            {detail && !detail.isOwnPost && (
+              <button 
+                onClick={handleFollow}
+                disabled={isFollowLoading}
+                className={`${followStatus === "accepted" ? "bg-[#2a2a30] text-white" : followStatus === "pending" ? "bg-[var(--color-surface)] text-[var(--color-text-2)] border border-[var(--color-border-color)]" : "bg-[var(--color-brand-red)] text-white"} text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50`}
+              >
+                {followStatus === "accepted" ? "Following" : followStatus === "pending" ? "Requested" : "Follow"}
+              </button>
+            )}
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface-2)] text-white hover:bg-[var(--color-border-color)]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
         </div>
 
         {/* Left Area - Image */}
@@ -230,8 +269,17 @@ export default function PostDetailModal({
             </Link>
             <div className="flex gap-2">
               {detail && !detail.isOwnPost && (
-                <button className="bg-[var(--color-brand-red)] text-white text-xs font-bold px-4 py-1.5 rounded-full hover:bg-red-600 transition">Follow</button>
+                <button 
+                  onClick={handleFollow}
+                  disabled={isFollowLoading}
+                  className={`${followStatus === "accepted" ? "bg-[#2a2a30] text-white" : followStatus === "pending" ? "bg-[var(--color-surface)] text-[var(--color-text-2)] border border-[var(--color-border-color)]" : "bg-[var(--color-brand-red)] text-white"} text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50`}
+                >
+                  {followStatus === "accepted" ? "Following" : followStatus === "pending" ? "Requested" : "Follow"}
+                </button>
               )}
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface-2)] text-white hover:bg-[var(--color-border-color)]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
             </div>
           </div>
 

@@ -29,15 +29,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const session = await auth();
     let hasLiked = false;
     let isOwnPost = false;
+    let followStatus = "none";
     
     if (session?.user?.discordId) {
       if (post.likes) {
         hasLiked = post.likes.some((like: any) => like.user_id === session.user.discordId);
       }
       isOwnPost = post.author?.discord_id === session.user.discordId;
+
+      if (!isOwnPost && post.author?.discord_id) {
+        const { data: followData } = await supabase
+          .from("follows")
+          .select("status")
+          .eq("follower_id", session.user.discordId)
+          .eq("following_id", post.author.discord_id)
+          .maybeSingle();
+        if (followData) {
+          followStatus = followData.status;
+        }
+      }
     }
 
-    return NextResponse.json({ success: true, post: { ...post, hasLiked, isOwnPost } });
+    return NextResponse.json({ success: true, post: { ...post, hasLiked, isOwnPost, followStatus } });
   } catch (error: any) {
     console.error("Post Detail GET Error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

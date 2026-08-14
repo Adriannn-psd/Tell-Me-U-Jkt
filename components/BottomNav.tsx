@@ -109,7 +109,7 @@ export default function BottomNav() {
     <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden pointer-events-none">
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
       
-      <div className="relative mx-4 mb-4 h-[72px] bg-[#1c1c1e] md:bg-[#1c1c1e]/95 md:backdrop-blur-xl border border-[#2a2a30] rounded-3xl flex items-center justify-around px-2 shadow-2xl pointer-events-auto">
+      <div className="relative mx-4 mb-4 h-[72px] bg-gradient-to-b from-[#252529] to-[#17171a] md:bg-[#1c1c1e]/95 md:backdrop-blur-xl border border-[#333338] md:border-[#2a2a30] rounded-3xl flex items-center justify-around px-2 shadow-[0_10px_40px_rgba(0,0,0,0.8)] pointer-events-auto">
         
         {/* Home */}
         <Link href="/home" className={getLinkClass("/home")} scroll={false} replace={pathname !== "/home"}>

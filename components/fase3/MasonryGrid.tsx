@@ -62,7 +62,7 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
               <img 
                 src={optimizeCloudinaryUrl(post.imageUrl.replace(/\.(mp4|webm|ogg)$/i, '.jpg'), { width: 800 })}
                 alt={post.title}
-                className={`w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 block`}
+                className={`w-full h-auto object-cover md:transition-transform md:duration-500 md:group-hover:scale-105 block`}
               />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                 <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white pl-1 shadow-xl border border-white/20">
@@ -74,14 +74,14 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
             <img 
               src={optimizeCloudinaryUrl(post.imageUrl, { width: 800 })}
               alt={post.title}
-              className={`w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 block`}
+              className={`w-full h-auto object-cover md:transition-transform md:duration-500 md:group-hover:scale-105 block`}
             />
           )
         ) : (
           <>
             {/* Dummy Image (Using colored rectangles for mockup) */}
             <div 
-              className="absolute inset-0 opacity-40 transition-transform duration-500 group-hover:scale-105"
+              className="absolute inset-0 opacity-40 md:transition-transform md:duration-500 md:group-hover:scale-105"
               style={{ 
                 background: `linear-gradient(45deg, ${post.id.includes('1') ? '#3b82f6, #8b5cf6' : post.id.includes('2') ? '#ef4444, #f97316' : '#10b981, #3b82f6'})` 
               }}

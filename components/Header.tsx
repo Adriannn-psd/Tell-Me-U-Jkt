@@ -78,7 +78,7 @@ export default function Header() {
 
   return (
     <>
-    <header className="sticky top-0 z-50 bg-[#1c1c1e] md:bg-[var(--color-bg)]/80 md:backdrop-blur-md border-b border-[var(--color-border-color)] md:w-[calc(100%-260px)] md:ml-[260px]">
+    <header className="sticky top-0 z-50 bg-[var(--color-bg)] md:bg-[var(--color-bg)]/80 md:backdrop-blur-md border-b border-[var(--color-border-color)] md:w-[calc(100%-260px)] md:ml-[260px]">
       <div className="w-full px-5 md:px-8 py-4 flex items-center justify-between md:justify-end gap-6">
         
         {/* Mobile Logo */}
