@@ -3,6 +3,7 @@
 import { useState } from "react";
 import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useGuest } from "@/components/GuestProvider";
 import LoginPanel from "@/components/LoginPanel";
 import Header from "@/components/Header";
