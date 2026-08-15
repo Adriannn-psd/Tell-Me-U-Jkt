@@ -8,19 +8,8 @@ import { motion, useScroll, useMotionValueEvent, useTransform } from "framer-mot
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
 
 function LandingContent() {
-  const { scrollYProgress } = useScroll();
-  const opacityScrollText = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
   const [showLoginUI, setShowLoginUI] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
-
-  // Trigger login UI when scroll reaches 85% (when reverse starts)
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    if (latest > 0.85 && !showLoginUI) {
-      setShowLoginUI(true);
-    } else if (latest <= 0.85 && showLoginUI) {
-      setShowLoginUI(false);
-    }
-  });
 
   // Reset scroll to top on reload so animations play from the start
   useEffect(() => {
@@ -144,7 +133,7 @@ function LandingContent() {
   ];
 
   return (
-    <main className="page" style={{ height: "400vh", position: "relative" }} suppressHydrationWarning>
+    <main className="page" style={{ height: "100vh", overflow: "hidden", position: "relative" }} suppressHydrationWarning>
       {/* Background elements to ensure smooth blending if needed */}
       <div
         className="fixed inset-0 -z-10"
@@ -161,23 +150,11 @@ function LandingContent() {
       <CanvasSequenceManager
         introLayers={introLayers}
         scrollLayers={scrollLayers}
+        autoPlayScrollLayers={true}
+        autoPlayDuration={8}
         onIntroComplete={() => setIntroFinished(true)}
+        onScrollLayersComplete={() => setShowLoginUI(true)}
       />
-
-      {/* Scroll Down Indicator */}
-      {introFinished && (
-        <motion.div
-          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center justify-center text-white/50"
-          style={{ opacity: opacityScrollText }}
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <span className="text-sm tracking-widest uppercase mb-2">Scroll Down</span>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M19 12l-7 7-7-7" />
-          </svg>
-        </motion.div>
-      )}
 
       {/* Go to Login Button Section */}
       {showLoginUI && (

@@ -217,19 +217,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check 3: Jurusan matches Discord prodi?
+    // Check 3: Jurusan matches Discord prodi? (If they already have a prodi from Discord)
     const userProdi = session.user.prodi || existingUser?.prodi;
-    if (!userProdi) {
-      validationErrors.push(
-        "Prodi kamu belum terdeteksi dari Discord. Pastikan kamu punya role prodi di server."
-      );
-    } else if (
-      !extracted.jurusan ||
-      !jurusanMatchesProdi(extracted.jurusan, userProdi)
-    ) {
-      validationErrors.push(
-        `Jurusan di dokumen ("${extracted.jurusan || "tidak terdeteksi"}") tidak cocok dengan prodi Discord kamu ("${userProdi}").`
-      );
+    if (userProdi) {
+      if (
+        !extracted.jurusan ||
+        !jurusanMatchesProdi(extracted.jurusan, userProdi)
+      ) {
+        validationErrors.push(
+          `Jurusan di dokumen ("${extracted.jurusan || "tidak terdeteksi"}") tidak cocok dengan prodi Discord kamu ("${userProdi}").`
+        );
+      }
+    } else {
+      // If they don't have a prodi from Discord, make sure we at least extracted one from the SKL
+      if (!extracted.jurusan) {
+        validationErrors.push("Jurusan tidak terdeteksi dalam dokumen. Mohon pastikan dokumen mencantumkan program studi Anda.");
+      }
     }
 
     // If there are validation errors, return them

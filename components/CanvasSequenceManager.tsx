@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useScroll, useMotionValueEvent, useSpring } from "framer-motion";
+import { useScroll, useMotionValueEvent, useSpring, useMotionValue, animate } from "framer-motion";
 
 export interface AnimationLayer {
   folderPath: string;
@@ -26,14 +26,22 @@ interface CanvasSequenceManagerProps {
   introLayers: AnimationLayer[];
   scrollLayers: AnimationLayer[];
   onIntroComplete?: () => void;
+  onScrollLayersComplete?: () => void;
   skipIntro?: boolean;
+  loopIntro?: boolean;
+  autoPlayScrollLayers?: boolean;
+  autoPlayDuration?: number;
 }
 
 export default function CanvasSequenceManager({
   introLayers,
   scrollLayers,
   onIntroComplete,
-  skipIntro = false
+  onScrollLayersComplete,
+  skipIntro = false,
+  loopIntro = false,
+  autoPlayScrollLayers = false,
+  autoPlayDuration = 10
 }: CanvasSequenceManagerProps) {
   const [phase, setPhase] = useState<"intro" | "scroll">(skipIntro ? "scroll" : "intro");
   
@@ -45,7 +53,24 @@ export default function CanvasSequenceManager({
   const targetFrames = useRef<Record<string, number>>({});
 
   const { scrollYProgress: rawScrollYProgress } = useScroll();
-  const scrollYProgress = useSpring(rawScrollYProgress, {
+  const autoProgress = useMotionValue(0);
+
+  useEffect(() => {
+    if (autoPlayScrollLayers && phase === "scroll") {
+      const controls = animate(autoProgress, 1, {
+        duration: autoPlayDuration,
+        ease: "easeInOut",
+        onComplete: () => {
+          onScrollLayersComplete?.();
+        }
+      });
+      return controls.stop;
+    }
+  }, [autoPlayScrollLayers, autoPlayDuration, phase, autoProgress, onScrollLayersComplete]);
+
+  const effectiveProgress = autoPlayScrollLayers ? autoProgress : rawScrollYProgress;
+
+  const scrollYProgress = useSpring(effectiveProgress, {
     stiffness: 400,
     damping: 90,
     restDelta: 0.001
@@ -97,6 +122,7 @@ export default function CanvasSequenceManager({
     }
 
     let currentFrame = 0;
+    let hasCompleted = false;
     const maxIntroFrames = Math.max(...introLayers.map((l) => l.frameCount));
     let animationFrameId: number;
     let lastTime = performance.now();
@@ -105,9 +131,16 @@ export default function CanvasSequenceManager({
 
     const playIntro = (time: number) => {
       if (currentFrame >= maxIntroFrames) {
-        setPhase("scroll");
-        onIntroComplete?.();
-        return;
+        if (!hasCompleted) {
+          hasCompleted = true;
+          onIntroComplete?.();
+        }
+        if (loopIntro) {
+          currentFrame = 0;
+        } else {
+          setPhase("scroll");
+          return;
+        }
       }
 
       const deltaTime = time - lastTime;
