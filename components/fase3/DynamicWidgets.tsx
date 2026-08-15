@@ -61,25 +61,32 @@ export default function DynamicWidgets() {
             </div>
             
             <div className="flex flex-col gap-1.5 md:gap-3.5 flex-1 relative z-10 w-full xl:w-[75%]">
-              {localTasks.map(task => (
-                <div 
-                  key={task.id} 
-                  className={`flex items-center gap-2 md:gap-4 p-2 md:p-4 rounded-xl md:rounded-[18px] border backdrop-blur-md transition-all cursor-pointer ${task.done ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#1a1a1c]/80 border-white/10 hover:bg-[#202022] hover:border-[#ff3b30]/40 shadow-sm'}`}
-                  onClick={() => toggleTask(task.id)}
-                >
-                  <div className={`w-3.5 h-3.5 md:w-5 md:h-5 rounded-full border-[1.5px] md:border-2 flex items-center justify-center shrink-0 transition-colors ${task.done ? 'bg-[#ff3b30] border-[#ff3b30]' : 'border-[#6e6e73]'}`}>
-                    {task.done && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2 h-2 md:w-3 md:h-3">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[9px] md:text-[14px] font-semibold truncate transition-all ${task.done ? 'text-[#8e8e93] line-through' : 'text-[#f5f5f7]'}`}>{task.title}</p>
-                    <p className={`text-[8px] md:text-[12px] mt-0.5 font-medium ${task.done ? 'text-[#6e6e73]' : 'text-[#ff3b30]'}`}>{task.deadline}</p>
-                  </div>
+              {localTasks.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center opacity-70 p-4">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 md:w-8 md:h-8 text-[#ff3b30] mb-2 opacity-80"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                  <p className="text-[10px] md:text-xs text-[#8e8e93] font-medium">Belum ada tugas yang kamu tambahkan.</p>
                 </div>
-              ))}
+              ) : (
+                localTasks.map(task => (
+                  <div 
+                    key={task.id} 
+                    className={`flex items-center gap-2 md:gap-4 p-2 md:p-4 rounded-xl md:rounded-[18px] border backdrop-blur-md transition-all cursor-pointer ${task.done ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#1a1a1c]/80 border-white/10 hover:bg-[#202022] hover:border-[#ff3b30]/40 shadow-sm'}`}
+                    onClick={() => toggleTask(task.id)}
+                  >
+                    <div className={`w-3.5 h-3.5 md:w-5 md:h-5 rounded-full border-[1.5px] md:border-2 flex items-center justify-center shrink-0 transition-colors ${task.done ? 'bg-[#ff3b30] border-[#ff3b30]' : 'border-[#6e6e73]'}`}>
+                      {task.done && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-2 h-2 md:w-3 md:h-3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[9px] md:text-[14px] font-semibold truncate transition-all ${task.done ? 'text-[#8e8e93] line-through' : 'text-[#f5f5f7]'}`}>{task.title}</p>
+                      <p className={`text-[8px] md:text-[12px] mt-0.5 font-medium ${task.done ? 'text-[#6e6e73]' : 'text-[#ff3b30]'}`}>{task.deadline}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Premium Illustration / Flare */}

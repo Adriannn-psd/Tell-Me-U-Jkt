@@ -440,7 +440,7 @@ function ProfileContent() {
           <div className="flex-1 w-full min-w-0">
             {/* Onboarding Flow for mobile/tablet */}
             {completedSteps < 3 && (
-              <div className="bg-[var(--color-surface)] rounded-2xl p-3 md:p-5 mb-4 md:mb-8 w-full block lg:hidden">
+              <div className="bg-[var(--color-surface)] rounded-2xl p-3 md:p-5 mb-4 md:mb-8 w-full">
                 <div className="flex items-center justify-between mb-3 md:mb-6 pb-2 md:pb-4 border-b border-[var(--color-border-color)]">
                   <h3 className="text-white font-bold text-[12px] md:text-sm">Status Data Diri & OSPEK</h3>
                   <span className="text-[var(--color-brand-red)] font-bold text-[10px] md:text-xs">{completedSteps}/3 Selesai</span>
