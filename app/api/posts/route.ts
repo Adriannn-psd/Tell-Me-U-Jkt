@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
       .select(`
         *,
         author:user_id ( full_name, username, avatar_url, prodi ),
+        collaborator:collaborator_id ( full_name, username, avatar_url, prodi ),
         likes:post_likes(id, user_id),
         comments:post_comments(id)
       `)
@@ -126,7 +127,13 @@ export async function POST(req: NextRequest) {
     const userName = session.user.fullName || session.user.name || "Unknown User";
     
     const body = await req.json();
-    const { title, description, tags, aspectRatio, photoBase64 } = body;
+    const { title, description, tags, aspectRatio, photoBase64, collaborator_username } = body;
+
+    let collaborator_id = null;
+    if (collaborator_username) {
+      const { data: collabUser } = await supabase.from("users").select("id").eq("username", collaborator_username).single();
+      if (collabUser) collaborator_id = collabUser.id;
+    }
 
     if (!title || !photoBase64) {
       return NextResponse.json({ success: false, error: "Title and photo are required" }, { status: 400 });
@@ -234,7 +241,9 @@ export async function POST(req: NextRequest) {
         title,
         description,
         prodi: dbUser.prodi,
-        media_url: photoUrl
+        media_url: photoUrl,
+        collaborator_id,
+        collab_status: collaborator_id ? 'pending' : null
       })
       .select()
       .single();
@@ -242,6 +251,44 @@ export async function POST(req: NextRequest) {
     if (dbError) {
       console.error("DB insert error:", dbError);
       return NextResponse.json({ success: false, error: "Gagal menyimpan karya" }, { status: 500 });
+    }
+
+    // 4. Send Notifications (Collab & Mentions)
+    const notificationsToInsert = [];
+
+    if (collaborator_id) {
+      notificationsToInsert.push({
+        recipient_id: collaborator_id,
+        actor_id: dbUserId,
+        type: "collab_request",
+        reference_id: post.id,
+        is_read: false
+      });
+    }
+
+    // Parse mentions
+    const textToParse = `${title} ${description || ""}`;
+    const mentions = textToParse.match(/@([a-zA-Z0-9_.]+)/g);
+    if (mentions) {
+      const usernames = mentions.map((m: string) => m.substring(1));
+      const { data: mentionedUsers } = await supabase.from("users").select("id").in("username", usernames);
+      if (mentionedUsers) {
+        for (const u of mentionedUsers) {
+          if (u.id !== dbUserId && u.id !== collaborator_id) {
+            notificationsToInsert.push({
+              recipient_id: u.id,
+              actor_id: dbUserId,
+              type: "mention",
+              reference_id: post.id,
+              is_read: false
+            });
+          }
+        }
+      }
+    }
+
+    if (notificationsToInsert.length > 0) {
+      await supabase.from("notifications").insert(notificationsToInsert);
     }
 
     return NextResponse.json({ success: true, post });

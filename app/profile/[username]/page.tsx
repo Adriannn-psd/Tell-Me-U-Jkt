@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
+import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import { useSession } from "next-auth/react";
 import { use } from "react";
 
 export default function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const [activeTab, setActiveTab] = useState<"karya" | "tentang">("karya");
+  const [networkModalType, setNetworkModalType] = useState<"followers" | "following" | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   
@@ -139,11 +141,17 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                     <span className="text-white font-bold text-lg md:text-xl block">{profileData.stats.karya}</span>
                     <span className="text-white text-xs md:text-sm">postingan</span>
                   </div>
-                  <div className="text-center">
+                  <div 
+                    className={`text-center ${profileData.canViewPosts ? 'cursor-pointer hover:opacity-80 transition' : ''}`}
+                    onClick={() => profileData.canViewPosts && setNetworkModalType('followers')}
+                  >
                     <span className="text-white font-bold text-lg md:text-xl block">{profileData.stats.followers}</span>
                     <span className="text-white text-xs md:text-sm">pengikut</span>
                   </div>
-                  <div className="text-center">
+                  <div 
+                    className={`text-center ${profileData.canViewPosts ? 'cursor-pointer hover:opacity-80 transition' : ''}`}
+                    onClick={() => profileData.canViewPosts && setNetworkModalType('following')}
+                  >
                     <span className="text-white font-bold text-lg md:text-xl block">{profileData.stats.following}</span>
                     <span className="text-white text-xs md:text-sm">mengikuti</span>
                   </div>
@@ -278,6 +286,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
               </div>
             )}
           </>
+        )}
+        {/* Network Modal */}
+        {networkModalType && profileData && (
+          <FollowNetworkModal 
+            username={profileData.username} 
+            type={networkModalType} 
+            onClose={() => setNetworkModalType(null)} 
+          />
         )}
       </main>
 

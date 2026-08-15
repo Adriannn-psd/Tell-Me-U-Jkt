@@ -14,9 +14,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         author:user_id ( id, full_name, username, avatar_url, prodi ),
         likes:post_likes ( id, user_id ),
         comments:post_comments (
-          id, content, created_at,
-          user:user_id ( full_name, username, avatar_url )
-        )
+          id, content, created_at, parent_id,
+          user:user_id ( id, full_name, username, avatar_url )
+        ),
+        collaborator:collaborator_id ( id, full_name, username, avatar_url, prodi )
       `)
       .eq("id", id)
       .single();

@@ -6,6 +6,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+  const [collaboratorUsername, setCollaboratorUsername] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [base64Data, setBase64Data] = useState<string | null>(null);
@@ -88,7 +89,8 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
         description,
         tags: tags.split(",").map(t => t.trim()).filter(Boolean),
         aspectRatio,
-        photoBase64: base64Data
+        photoBase64: base64Data,
+        collaborator_username: collaboratorUsername.trim() || undefined
       };
 
       const data: any = await new Promise((resolve, reject) => {
@@ -229,6 +231,20 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
               placeholder="UI/UX, 3D, Ilustrasi..." 
               className="w-full bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-xl px-4 py-3.5 text-white outline-none focus:border-[var(--color-brand-red)] transition text-sm"
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-[var(--color-text-2)] uppercase tracking-wide">Kolaborasi Dengan (Username) - Opsional</label>
+            <div className="flex w-full bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-xl overflow-hidden focus-within:border-[var(--color-brand-red)] transition">
+              <div className="flex items-center justify-center pl-4 pr-1 text-[var(--color-text-3)] font-bold">@</div>
+              <input 
+                type="text" 
+                value={collaboratorUsername}
+                onChange={(e) => setCollaboratorUsername(e.target.value.replace('@', ''))}
+                placeholder="username teman" 
+                className="w-full bg-transparent px-2 py-3.5 text-white outline-none text-sm"
+              />
+            </div>
           </div>
 
         </div>

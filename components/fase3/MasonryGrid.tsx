@@ -6,6 +6,7 @@ import PostDetailModal from "./PostDetailModal";
 import { useGuest } from "@/components/GuestProvider";
 
 import { optimizeCloudinaryUrl } from "@/lib/cloudinary";
+import { renderWithMentions } from "@/lib/mentions";
 
 // Dummy data structure for a Post/Karya
 export interface Post {
@@ -21,6 +22,12 @@ export interface Post {
   isTrending?: boolean;
   isLiked?: boolean;
   aspectRatio: "square" | "portrait" | "landscape" | "tall";
+  collaborator?: {
+    username: string;
+    avatar: string;
+    full_name: string;
+  };
+  collab_status?: 'pending' | 'accepted' | 'rejected';
 }
 
 export default function MasonryGrid({ posts }: { posts: Post[] }) {
@@ -118,7 +125,7 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
             </button>
           </div>
           <div>
-            <h3 className="text-white font-bold text-sm line-clamp-1">{post.title}</h3>
+            <h3 className="text-white font-bold text-sm line-clamp-1">{renderWithMentions(post.title)}</h3>
           </div>
         </div>
 
@@ -146,18 +153,37 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
               </div>
             </Link>
           ) : (
-            <Link href={`/profile/${post.username}`} className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-[10px] font-bold border border-[var(--color-border-color)]">
-                {post.author.charAt(0)}
-              </div>
-            </Link>
+            <div className="flex items-center gap-2 relative">
+              <Link href={`/profile/${post.username}`}>
+                <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-[10px] font-bold border border-[var(--color-border-color)] overflow-hidden">
+                  {post.avatar ? <img src={post.avatar} alt="Avatar" className="w-full h-full object-cover" /> : post.author.charAt(0)}
+                </div>
+              </Link>
+              {post.collaborator && post.collab_status === 'accepted' && (
+                <Link href={`/profile/${post.collaborator.username}`}>
+                  <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-[10px] font-bold border border-[var(--color-border-color)] overflow-hidden absolute left-4 top-0">
+                    {post.collaborator.avatar ? <img src={post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : post.collaborator.full_name.charAt(0)}
+                  </div>
+                </Link>
+              )}
+            </div>
           )}
           {isGuest ? (
              <span className="text-white text-xs font-semibold group-hover/author:underline opacity-50 blur-[2px]">Secret User</span>
           ) : (
-             <Link href={`/profile/${post.username}`}>
-               <span className="text-white text-xs font-semibold group-hover/author:underline">{post.author}</span>
-             </Link>
+             <div className={`flex items-center gap-1 ${post.collaborator && post.collab_status === 'accepted' ? 'ml-3' : ''}`}>
+               <Link href={`/profile/${post.username}`}>
+                 <span className="text-white text-xs font-semibold group-hover/author:underline">{post.author}</span>
+               </Link>
+               {post.collaborator && post.collab_status === 'accepted' && (
+                 <>
+                   <span className="text-white text-xs font-semibold">and</span>
+                   <Link href={`/profile/${post.collaborator.username}`}>
+                     <span className="text-white text-xs font-semibold group-hover/author:underline">{post.collaborator.username}</span>
+                   </Link>
+                 </>
+               )}
+             </div>
           )}
         </div>
         

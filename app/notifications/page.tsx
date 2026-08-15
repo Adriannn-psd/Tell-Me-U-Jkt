@@ -70,6 +70,21 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleCollabRequest = async (postId: string, action: "accept" | "reject") => {
+    try {
+      const res = await fetch(`/api/posts/${postId}/collab`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      if (res.ok) {
+        mutate();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isToday(date)) return `Hari ini, ${format(date, 'HH.mm')}`;
@@ -164,6 +179,46 @@ export default function NotificationsPage() {
       case "tugas":
         content = "Ada tugas baru yang harus kamu kerjakan!";
         link = "/ospek";
+        break;
+      case "mention":
+        content = "menyebutmu dalam sebuah karya atau komentar.";
+        link = `/post/${notification.reference_id}`;
+        break;
+      case "reply":
+        content = "membalas komentarmu di sebuah karya.";
+        link = `/post/${notification.reference_id}`;
+        break;
+      case "collab_request":
+        content = "mengundangmu untuk berkolaborasi dalam sebuah karya.";
+        link = `/post/${notification.reference_id}`;
+        actionButtons = (
+          <div className="flex gap-2 mt-2">
+            <button 
+              onClick={(e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
+                handleCollabRequest(notification.reference_id, "accept"); 
+              }}
+              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10 disabled:opacity-50"
+            >
+              Terima
+            </button>
+            <button 
+              onClick={(e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
+                handleCollabRequest(notification.reference_id, "reject"); 
+              }}
+              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10 disabled:opacity-50"
+            >
+              Tolak
+            </button>
+          </div>
+        );
+        break;
+      case "collab_accept":
+        content = "menerima undangan kolaborasimu.";
+        link = `/post/${notification.reference_id}`;
         break;
       default:
         content = "berinteraksi dengan profilmu.";

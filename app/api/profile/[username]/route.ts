@@ -59,10 +59,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
         .from("posts")
         .select(`
           *,
+          author:user_id ( full_name, username, avatar_url, prodi ),
+          collaborator:collaborator_id ( full_name, username, avatar_url, prodi ),
           likes:post_likes ( id ),
           comments:post_comments ( id )
         `)
-        .eq("user_id", user.id)
+        .or(`user_id.eq.${user.id},and(collaborator_id.eq.${user.id},collab_status.eq.accepted)`)
         .order("created_at", { ascending: false });
 
       if (postsError) throw postsError;

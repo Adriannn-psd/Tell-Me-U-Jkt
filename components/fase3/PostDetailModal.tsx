@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Post } from "./MasonryGrid";
 import Link from "next/link";
+import { renderWithMentions } from "@/lib/mentions";
+
 
 export default function PostDetailModal({ 
   post, 
@@ -14,6 +16,9 @@ export default function PostDetailModal({
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: string, username: string } | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const commentInputRef = useRef<HTMLInputElement>(null);
   const [isLiking, setIsLiking] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
   const [followStatus, setFollowStatus] = useState("none");
@@ -132,13 +137,16 @@ export default function PostDetailModal({
     if (!commentText.trim()) return;
     
     const textToSubmit = commentText;
+    const parentId = replyingTo?.id || null;
     setCommentText(""); // Optimistic clear
+    setReplyingTo(null);
     
     // Optimistic Add
     const optimisticComment = {
       id: Date.now().toString(),
       content: textToSubmit,
       created_at: new Date().toISOString(),
+      parent_id: parentId,
       user: { full_name: "Terkirim...", avatar_url: "" }
     };
     
@@ -153,7 +161,7 @@ export default function PostDetailModal({
       const res = await fetch(`/api/posts/${post.id}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: textToSubmit })
+        body: JSON.stringify({ content: textToSubmit, parentId })
       });
       const data = await res.json();
       if (data.success) {
@@ -211,17 +219,42 @@ export default function PostDetailModal({
         
         {/* Mobile Header (Author Info moved above image) */}
         <div className="md:hidden p-4 bg-[var(--color-bg)] border-b border-[var(--color-border-color)] flex items-center justify-between">
-          <Link href={`/profile/${post.username}`} className="flex items-center gap-3 group" onClick={onClose}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand-red)] to-purple-600 p-0.5">
-              <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                {post.avatar && post.avatar.length > 2 ? <img src={post.avatar} alt="avatar" className="w-full h-full object-cover"/> : post.avatar}
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 relative">
+              <Link href={`/profile/${post.username}`} onClick={onClose}>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand-red)] to-purple-600 p-0.5">
+                  <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+                    {post.avatar && post.avatar.length > 2 ? <img src={post.avatar} alt="avatar" className="w-full h-full object-cover"/> : post.author.charAt(0)}
+                  </div>
+                </div>
+              </Link>
+              {post.collaborator && post.collab_status === 'accepted' && (
+                <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0">
+                    <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+                      {post.collaborator.avatar ? <img src={post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : post.collaborator.full_name.charAt(0)}
+                    </div>
+                  </div>
+                </Link>
+              )}
             </div>
-            <div>
-              <h3 className="text-white font-bold text-sm group-hover:underline decoration-[var(--color-brand-red)] underline-offset-2">{post.author}</h3>
+            <div className={`flex flex-col justify-center ${post.collaborator && post.collab_status === 'accepted' ? 'ml-6' : ''}`}>
+              <div className="flex items-center gap-1">
+                <Link href={`/profile/${post.username}`} onClick={onClose}>
+                  <h3 className="text-white font-bold text-sm hover:underline decoration-[var(--color-brand-red)] underline-offset-2">{post.author}</h3>
+                </Link>
+                {post.collaborator && post.collab_status === 'accepted' && (
+                  <>
+                    <span className="text-white text-sm">and</span>
+                    <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
+                      <h3 className="text-white font-bold text-sm hover:underline decoration-[var(--color-brand-red)] underline-offset-2">{post.collaborator.username}</h3>
+                    </Link>
+                  </>
+                )}
+              </div>
               <p className="text-[var(--color-text-3)] text-xs">{post.prodi}</p>
             </div>
-          </Link>
+          </div>
           <div className="flex items-center gap-2">
             {detail && !detail.isOwnPost && (
               <button 
@@ -275,17 +308,42 @@ export default function PostDetailModal({
           
           {/* Desktop Header - Author Info (Hidden on Mobile) */}
           <div className="hidden md:flex p-5 border-b border-[var(--color-border-color)] items-center justify-between">
-            <Link href={`/profile/${post.username}`} className="flex items-center gap-3 group" onClick={onClose}>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand-red)] to-purple-600 p-0.5">
-                <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                  {post.avatar && post.avatar.length > 2 ? <img src={post.avatar} alt="avatar" className="w-full h-full object-cover"/> : post.avatar}
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 relative">
+                <Link href={`/profile/${post.username}`} onClick={onClose}>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand-red)] to-purple-600 p-0.5">
+                    <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+                      {post.avatar && post.avatar.length > 2 ? <img src={post.avatar} alt="avatar" className="w-full h-full object-cover"/> : post.author.charAt(0)}
+                    </div>
+                  </div>
+                </Link>
+                {post.collaborator && post.collab_status === 'accepted' && (
+                  <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0">
+                      <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
+                        {post.collaborator.avatar ? <img src={post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : post.collaborator.full_name.charAt(0)}
+                      </div>
+                    </div>
+                  </Link>
+                )}
               </div>
-              <div>
-                <h3 className="text-white font-bold text-sm group-hover:underline decoration-[var(--color-brand-red)] underline-offset-2">{post.author}</h3>
+              <div className={`flex flex-col justify-center ${post.collaborator && post.collab_status === 'accepted' ? 'ml-6' : ''}`}>
+                <div className="flex items-center gap-1">
+                  <Link href={`/profile/${post.username}`} onClick={onClose}>
+                    <h3 className="text-white font-bold text-sm hover:underline decoration-[var(--color-brand-red)] underline-offset-2">{post.author}</h3>
+                  </Link>
+                  {post.collaborator && post.collab_status === 'accepted' && (
+                    <>
+                      <span className="text-white text-sm">and</span>
+                      <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
+                        <h3 className="text-white font-bold text-sm hover:underline decoration-[var(--color-brand-red)] underline-offset-2">{post.collaborator.username}</h3>
+                      </Link>
+                    </>
+                  )}
+                </div>
                 <p className="text-[var(--color-text-3)] text-xs">{post.prodi}</p>
               </div>
-            </Link>
+            </div>
             <div className="flex gap-2">
               {detail && !detail.isOwnPost && (
                 <button 
@@ -311,7 +369,7 @@ export default function PostDetailModal({
             ) : (
               <>
                 <p className="text-[var(--color-text-2)] text-sm leading-relaxed mb-6 whitespace-pre-wrap">
-                  {detail?.description || "Tidak ada deskripsi."}
+                  {renderWithMentions(detail?.description || "Tidak ada deskripsi.")}
                 </p>
                 {detail?.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-6">
@@ -326,23 +384,91 @@ export default function PostDetailModal({
             <div className="border-t border-[var(--color-border-color)] pt-5">
               <h4 className="text-white font-bold text-sm mb-4">Komentar ({detail?.comments?.length || post.comments})</h4>
               
-              <div className="flex flex-col gap-4">
-                {detail?.comments?.map((comment: any) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] overflow-hidden flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {comment.user?.avatar_url ? <img src={comment.user.avatar_url} className="w-full h-full object-cover"/> : (comment.user?.full_name?.[0] || 'U')}
+              <div className="flex flex-col gap-5">
+                {detail?.comments?.filter((c: any) => !c.parent_id).map((comment: any) => {
+                  const replies = detail.comments.filter((c: any) => c.parent_id === comment.id);
+                  const isExpanded = expandedReplies[comment.id];
+                  
+                  return (
+                    <div key={comment.id} className="flex flex-col gap-2">
+                      {/* Root Comment */}
+                      <div className="flex gap-3 group">
+                        <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] overflow-hidden flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {comment.user?.avatar_url ? <img src={comment.user.avatar_url} className="w-full h-full object-cover"/> : (comment.user?.full_name?.[0] || 'U')}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white text-xs font-bold mb-0.5">
+                            {comment.user?.full_name || comment.user?.username} 
+                            <span className="text-[var(--color-text-3)] font-normal text-[10px] ml-1">
+                              {new Date(comment.created_at).toLocaleDateString()}
+                            </span>
+                          </p>
+                          <p className="text-[var(--color-text-2)] text-xs mb-1">{renderWithMentions(comment.content)}</p>
+                          <button 
+                            onClick={() => {
+                              setReplyingTo({ id: comment.id, username: comment.user?.username || comment.user?.full_name });
+                              commentInputRef.current?.focus();
+                            }}
+                            className="text-[10px] font-bold text-[var(--color-text-3)] hover:text-white"
+                          >
+                            Balas
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Replies */}
+                      {replies.length > 0 && (
+                        <div className="ml-11 flex flex-col gap-3 mt-1">
+                          {!isExpanded ? (
+                            <button 
+                              onClick={() => setExpandedReplies(prev => ({ ...prev, [comment.id]: true }))}
+                              className="text-[11px] font-bold text-[var(--color-text-3)] text-left flex items-center gap-2 hover:text-white w-max"
+                            >
+                              <div className="w-6 h-[1px] bg-[var(--color-border-color)]"></div>
+                              Lihat {replies.length} balasan
+                            </button>
+                          ) : (
+                            <>
+                              {replies.map((reply: any) => (
+                                <div key={reply.id} className="flex gap-3 group">
+                                  <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] overflow-hidden flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                                    {reply.user?.avatar_url ? <img src={reply.user.avatar_url} className="w-full h-full object-cover"/> : (reply.user?.full_name?.[0] || 'U')}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-white text-[11px] font-bold mb-0.5">
+                                      {reply.user?.full_name || reply.user?.username} 
+                                      <span className="text-[var(--color-text-3)] font-normal text-[9px] ml-1">
+                                        {new Date(reply.created_at).toLocaleDateString()}
+                                      </span>
+                                    </p>
+                                    <p className="text-[var(--color-text-2)] text-[11px] mb-1">{renderWithMentions(reply.content)}</p>
+                                    <button 
+                                      onClick={() => {
+                                        setReplyingTo({ id: comment.id, username: reply.user?.username || reply.user?.full_name });
+                                        commentInputRef.current?.focus();
+                                        setCommentText(`@${reply.user?.username || reply.user?.full_name} `);
+                                      }}
+                                      className="text-[9px] font-bold text-[var(--color-text-3)] hover:text-white"
+                                    >
+                                      Balas
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                              <button 
+                                onClick={() => setExpandedReplies(prev => ({ ...prev, [comment.id]: false }))}
+                                className="text-[11px] font-bold text-[var(--color-text-3)] text-left flex items-center gap-2 hover:text-white w-max mt-1"
+                              >
+                                <div className="w-6 h-[1px] bg-[var(--color-border-color)]"></div>
+                                Sembunyikan balasan
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-white text-xs font-bold mb-0.5">
-                        {comment.user?.full_name || comment.user?.username} 
-                        <span className="text-[var(--color-text-3)] font-normal text-[10px] ml-1">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </span>
-                      </p>
-                      <p className="text-[var(--color-text-2)] text-xs">{comment.content}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {!loading && (!detail?.comments || detail.comments.length === 0) && (
                   <p className="text-[var(--color-text-3)] text-xs italic">Belum ada komentar.</p>
                 )}
@@ -380,16 +506,25 @@ export default function PostDetailModal({
             
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-xs font-bold shrink-0 border border-[var(--color-border-color)]">U</div>
-              <div className="flex-1 bg-[var(--color-bg)] rounded-full border border-[var(--color-border-color)] px-4 py-2 flex items-center">
+              <div className="flex-1 bg-[var(--color-bg)] rounded-2xl border border-[var(--color-border-color)] px-3 py-1.5 flex flex-wrap items-center gap-1 overflow-hidden focus-within:border-[var(--color-brand-red)] transition-colors">
+                {replyingTo && (
+                  <div className="flex items-center gap-1 bg-[var(--color-brand-red)]/20 text-[var(--color-brand-red)] text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    Membalas @{replyingTo.username}
+                    <button onClick={() => setReplyingTo(null)} className="hover:text-white ml-1">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                )}
                 <input 
+                  ref={commentInputRef}
                   type="text" 
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleComment()}
-                  placeholder="Tambahkan komentar..." 
-                  className="bg-transparent border-none outline-none text-white text-xs w-full"
+                  placeholder={replyingTo ? "Balasan Anda..." : "Tambahkan komentar..."} 
+                  className="bg-transparent border-none outline-none text-white text-xs flex-1 min-w-[100px] py-1"
                 />
-                <button onClick={handleComment} disabled={!commentText.trim()} className="text-[var(--color-brand-red)] text-xs font-bold ml-2 shrink-0 disabled:opacity-50">Kirim</button>
+                <button onClick={handleComment} disabled={!commentText.trim()} className="text-[var(--color-brand-red)] text-xs font-bold ml-1 shrink-0 disabled:opacity-50">Kirim</button>
               </div>
             </div>
           </div>
