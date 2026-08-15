@@ -168,7 +168,6 @@ export default function CanvasSequenceManager({
     <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
       {/* Intro layers */}
       {introLayers.map((layer, idx) => {
-        const currentFit = typeof window !== 'undefined' && window.innerWidth < 1024 && layer.mobileFit ? layer.mobileFit : layer.fit;
         return (
           <video
             key={`intro-${idx}`}
@@ -181,10 +180,11 @@ export default function CanvasSequenceManager({
               zIndex: layer.zIndex,
               opacity: phase === "intro" ? 1 : 0,
               transition: "opacity 0.3s ease-out",
-              objectFit: currentFit
+              objectFit: layer.fit
             }}
             muted
             playsInline
+            autoPlay
             loop={loopIntro}
             preload="auto"
           />
@@ -193,7 +193,6 @@ export default function CanvasSequenceManager({
 
       {/* Scroll layers */}
       {scrollLayers.map((layer, idx) => {
-        const currentFit = typeof window !== 'undefined' && window.innerWidth < 1024 && layer.mobileFit ? layer.mobileFit : layer.fit;
         return (
           <video
             key={`scroll-${idx}`}
@@ -206,14 +205,26 @@ export default function CanvasSequenceManager({
               zIndex: layer.zIndex,
               opacity: phase === "scroll" && !layer.hideBeforeStart ? 1 : 0,
               transition: "opacity 0.1s ease-out",
-              objectFit: currentFit
+              objectFit: layer.fit
             }}
             muted
             playsInline
             preload="auto"
+            onLoadedMetadata={(e) => {
+              // Force browser to decode the first frame
+              e.currentTarget.currentTime = 0.01;
+            }}
           />
         );
       })}
+      
+      {/* DEBUG OVERLAY - REMOVE LATER */}
+      <div className="absolute top-4 left-4 bg-black/80 text-white p-4 font-mono text-xs z-50 pointer-events-auto rounded">
+        <div>DEBUG: CanvasSequenceManager Mounted</div>
+        <div>Phase: {phase}</div>
+        <div>Intro videos: {introLayers.length}</div>
+        <div>Scroll videos: {scrollLayers.length}</div>
+      </div>
     </div>
   );
 }
