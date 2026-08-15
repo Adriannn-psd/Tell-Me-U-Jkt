@@ -49,7 +49,7 @@ export async function PUT(req: NextRequest) {
     const { error } = await supabase
       .from("notifications")
       .update({ is_read: true })
-      .eq("user_id", dbUser.id)
+      .eq("recipient_id", dbUser.id)
       .eq("is_read", false);
 
     if (error) throw error;

@@ -8,7 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import Link from "next/link";
 import useSWR from "swr";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useGuest } from "@/components/GuestProvider";
 
@@ -70,6 +70,13 @@ export default function NotificationsPage() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isToday(date)) return `Hari ini, ${format(date, 'HH.mm')}`;
+    if (isYesterday(date)) return `Kemarin, ${format(date, 'HH.mm')}`;
+    return format(date, 'dd/MM/yyyy, HH.mm');
+  };
+
   const getNotificationContent = (notification: any) => {
     const actorName = notification.actor?.full_name || notification.actor?.username || "Seseorang";
     const actorAvatar = notification.actor?.avatar_url;
@@ -79,10 +86,12 @@ export default function NotificationsPage() {
     let actionButtons = null;
 
     switch (notification.type) {
+      case "like":
       case "like_post":
         content = "menyukai postingan karyamu.";
         link = `/post/${notification.reference_id}`;
         break;
+      case "comment":
       case "comment_post":
         content = "mengomentari postingan karyamu.";
         link = `/post/${notification.reference_id}`;
@@ -93,14 +102,22 @@ export default function NotificationsPage() {
         actionButtons = (
           <div className="flex gap-2 mt-2">
             <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollowRequest(notification.actor_id, "accept"); }}
-              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10"
+              onClick={(e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
+                handleFollowRequest(notification.actor?.id || notification.actor_id, "accept"); 
+              }}
+              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10 disabled:opacity-50"
             >
               Terima
             </button>
             <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollowRequest(notification.actor_id, "reject"); }}
-              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10"
+              onClick={(e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
+                handleFollowRequest(notification.actor?.id || notification.actor_id, "reject"); 
+              }}
+              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10 disabled:opacity-50"
             >
               Tolak
             </button>
@@ -108,6 +125,7 @@ export default function NotificationsPage() {
         );
         break;
       case "follow_accept":
+      case "follow":
         content = "mulai mengikuti kamu.";
         link = `/profile/${notification.actor?.username}`;
         break;
@@ -117,14 +135,22 @@ export default function NotificationsPage() {
         actionButtons = (
           <div className="flex gap-2 mt-2">
             <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUploadRequest(notification.actor_id, notification.reference_id, "accept"); }}
-              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10"
+              onClick={(e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
+                handleUploadRequest(notification.actor?.id || notification.actor_id, notification.reference_id, "accept"); 
+              }}
+              className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10 disabled:opacity-50"
             >
               Izinkan
             </button>
             <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleUploadRequest(notification.actor_id, notification.reference_id, "reject"); }}
-              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10"
+              onClick={(e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
+                handleUploadRequest(notification.actor?.id || notification.actor_id, notification.reference_id, "reject"); 
+              }}
+              className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10 disabled:opacity-50"
             >
               Tolak
             </button>
@@ -211,7 +237,7 @@ export default function NotificationsPage() {
                         <span className="font-bold text-white">{actorName}</span> {content}
                       </p>
                       <p className="text-xs text-[var(--color-text-3)] mt-1">
-                        {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: localeId })}
+                        {formatDate(notif.created_at)}
                       </p>
                       {actionButtons}
                     </div>

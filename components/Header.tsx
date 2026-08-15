@@ -9,6 +9,7 @@ import PortalKampusModal from "@/components/fase3/PortalKampusModal";
 import { useScrollState } from "./ScrollContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuest } from "@/components/GuestProvider";
+import { isToday, isYesterday, format } from "date-fns";
 
 export default function Header() {
   const pathname = usePathname();
@@ -26,6 +27,13 @@ export default function Header() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
   const { isGuest, showLoginPopup } = useGuest();
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isToday(date)) return `Hari ini, ${format(date, 'HH.mm')}`;
+    if (isYesterday(date)) return `Kemarin, ${format(date, 'HH.mm')}`;
+    return format(date, 'dd/MM/yyyy, HH.mm');
+  };
 
   // Notification polling - fetch every 15 seconds
   useEffect(() => {
@@ -368,7 +376,7 @@ export default function Header() {
                                 {n.type === 'upload_accept' && 'menerima permintaan upload Anda.'}
                               </p>
                               <p className="text-xs text-[var(--color-text-3)] mt-1">
-                                {new Date(n.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                {formatDate(n.created_at)}
                               </p>
                             </div>
                             {!n.is_read && <div className="w-2 h-2 rounded-full bg-[var(--color-brand-red)] self-center shrink-0"></div>}
@@ -469,7 +477,7 @@ export default function Header() {
                                   {n.type === 'upload_accept' && 'menerima permintaan upload Anda.'}
                                 </p>
                                 <p className="text-xs text-[var(--color-text-3)] mt-1">
-                                  {new Date(n.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                  {formatDate(n.created_at)}
                                 </p>
                               </div>
                               {!n.is_read && <div className="w-2 h-2 rounded-full bg-[var(--color-brand-red)] self-center shrink-0"></div>}
