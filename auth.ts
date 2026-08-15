@@ -77,7 +77,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .eq("username", discordUsername)
             .maybeSingle();
 
-          if (botRecord) {
+          // Hanya auto-verify jika bot sudah mengekstrak full_name
+          if (botRecord && botRecord.full_name) {
             botVerified = true;
             // Map bot's short role names to full prodi names used by the web
             const BOT_ROLE_TO_PRODI: Record<string, string> = {
@@ -87,8 +88,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               "TEKTEL": "Teknik Telekomunikasi",
             };
             botProdi = BOT_ROLE_TO_PRODI[botRecord.role_name] || prodi;
-            botFullName = botRecord.full_name || undefined;
-            console.log(`✅ Bot-verified user detected: ${discordUsername} → ${botRecord.role_name}, name: ${botFullName || "(not stored)"}`);
+            botFullName = botRecord.full_name;
+            console.log(`✅ Bot-verified user detected: ${discordUsername} → ${botRecord.role_name}, name: ${botFullName}`);
+          } else if (botRecord && !botRecord.full_name) {
+            console.log(`⚠️ User ${discordUsername} verified di bot tapi belum ada nama lengkap. Harus upload SKL ulang di web.`);
           }
         }
 
