@@ -374,6 +374,8 @@ export default function Header() {
                                 {(n.type === 'follow_accept' || n.type === 'follow') && 'mulai mengikuti Anda.'}
                                 {n.type === 'upload_request' && 'meminta izin upload karya.'}
                                 {n.type === 'upload_accept' && 'menerima permintaan upload Anda.'}
+                                {n.type === 'collab_request' && 'mengajak Anda berkolaborasi dalam sebuah karya.'}
+                                {n.type === 'mention' && 'menyebut Anda dalam sebuah karya.'}
                               </p>
                               <p className="text-xs text-[var(--color-text-3)] mt-1">
                                 {formatDate(n.created_at)}
@@ -491,6 +493,8 @@ export default function Header() {
                                   {(n.type === 'follow_accept' || n.type === 'follow') && 'mulai mengikuti Anda.'}
                                   {n.type === 'upload_request' && 'meminta izin upload karya.'}
                                   {n.type === 'upload_accept' && 'menerima permintaan upload Anda.'}
+                                  {n.type === 'collab_request' && 'mengajak Anda berkolaborasi dalam sebuah karya.'}
+                                  {n.type === 'mention' && 'menyebut Anda dalam sebuah karya.'}
                                 </p>
                                 <p className="text-xs text-[var(--color-text-3)] mt-1">
                                   {formatDate(n.created_at)}

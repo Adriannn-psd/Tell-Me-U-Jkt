@@ -24,6 +24,7 @@ export default function PostDetailModal({
   const [hasLiked, setHasLiked] = useState(false);
   const [followStatus, setFollowStatus] = useState("none");
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isCollabLoading, setIsCollabLoading] = useState(false);
   const [showHeartAnim, setShowHeartAnim] = useState(false);
   
   // Swipe to close state
@@ -136,6 +137,30 @@ export default function PostDetailModal({
       console.error("Failed to follow/unfollow:", err);
     } finally {
       setIsFollowLoading(false);
+    }
+  };
+
+  const handleCollab = async (action: 'accept' | 'reject') => {
+    if (isCollabLoading) return;
+    setIsCollabLoading(true);
+    try {
+      const res = await fetch("/api/posts/collab", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id, action })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDetail((prev: any) => ({
+          ...prev,
+          collab_status: action === 'accept' ? 'accepted' : null,
+          collaborator: action === 'accept' ? prev.collaborator : null
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCollabLoading(false);
     }
   };
 
@@ -262,7 +287,13 @@ export default function PostDetailModal({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {detail && !detail.isOwnPost && (
+            {detail?.currentUserId === detail?.collaborator?.id && detail?.collab_status === 'pending' && (
+              <>
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCollab('accept'); }} disabled={isCollabLoading} className="bg-[var(--color-brand-green)] text-white text-[11px] font-bold px-3 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50">Terima</button>
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCollab('reject'); }} disabled={isCollabLoading} className="bg-[var(--color-brand-red)] text-white text-[11px] font-bold px-3 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50">Tolak</button>
+              </>
+            )}
+            {detail && !detail.isOwnPost && detail.currentUserId !== detail.collaborator?.id && (
               <button 
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollow(); }}
                 disabled={isFollowLoading}
@@ -293,7 +324,7 @@ export default function PostDetailModal({
           
           {post.imageUrl ? (
             post.imageUrl.match(/\.(mp4|webm|ogg)$/i) || post.imageUrl.includes('/video/upload/') ? (
-              <video src={post.imageUrl} controls className="w-full h-full object-contain" playsInline autoPlay loop />
+              <video src={post.imageUrl} controls controlsList="nodownload" onContextMenu={(e) => e.preventDefault()} className="w-full h-full object-contain" playsInline autoPlay loop />
             ) : (
               <img src={post.imageUrl} alt={post.title} className="w-full h-full object-contain" />
             )
@@ -351,7 +382,13 @@ export default function PostDetailModal({
               </div>
             </div>
             <div className="flex gap-2">
-              {detail && !detail.isOwnPost && (
+              {detail?.currentUserId === detail?.collaborator?.id && detail?.collab_status === 'pending' && (
+                <>
+                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCollab('accept'); }} disabled={isCollabLoading} className="bg-[var(--color-brand-green)] text-white text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50">Terima</button>
+                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCollab('reject'); }} disabled={isCollabLoading} className="bg-[var(--color-brand-red)] text-white text-xs font-bold px-4 py-1.5 rounded-full hover:opacity-80 transition disabled:opacity-50">Tolak</button>
+                </>
+              )}
+              {detail && !detail.isOwnPost && detail.currentUserId !== detail.collaborator?.id && (
                 <button 
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFollow(); }}
                   disabled={isFollowLoading}

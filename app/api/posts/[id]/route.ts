@@ -60,7 +60,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    return NextResponse.json({ success: true, post: { ...post, hasLiked, isOwnPost, followStatus } });
+    return NextResponse.json({ success: true, post: { ...post, hasLiked, isOwnPost, followStatus, currentUserId: currentUser?.id } });
   } catch (error: any) {
     console.error("Post Detail GET Error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
