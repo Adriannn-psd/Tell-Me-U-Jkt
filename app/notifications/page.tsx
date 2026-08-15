@@ -11,6 +11,7 @@ import useSWR from "swr";
 import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useGuest } from "@/components/GuestProvider";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -39,8 +40,22 @@ export default function NotificationsPage() {
 
 
   const notifications = data?.notifications || [];
+  const { isComplete, missingInfo } = useProfileCheck();
+  const [showLock, setShowLock] = useState(false);
 
-  const handleFollowRequest = async (followerId: string, action: "accept" | "reject") => {
+  const checkLock = (e?: any) => {
+    if (!isComplete) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setShowLock(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleFollowRequest = async (followerId: string, action: "accept" | "reject", btn: HTMLButtonElement, originalText: string) => {
     try {
       const res = await fetch("/api/profile/follow_requests", {
         method: "PUT",
@@ -49,13 +64,21 @@ export default function NotificationsPage() {
       });
       if (res.ok) {
         mutate();
+      } else {
+        const err = await res.json();
+        alert("Gagal memproses: " + (err.error || res.statusText));
+        btn.innerText = originalText;
+        btn.disabled = false;
       }
     } catch (err) {
       console.error(err);
+      alert("Terjadi kesalahan.");
+      btn.innerText = originalText;
+      btn.disabled = false;
     }
   };
 
-  const handleUploadRequest = async (requesterId: string, eventId: string, action: "accept" | "reject") => {
+  const handleUploadRequest = async (requesterId: string, eventId: string, action: "accept" | "reject", btn: HTMLButtonElement, originalText: string) => {
     try {
       const res = await fetch("/api/dokumentasi/upload_requests", {
         method: "PUT",
@@ -64,13 +87,21 @@ export default function NotificationsPage() {
       });
       if (res.ok) {
         mutate();
+      } else {
+        const err = await res.json();
+        alert("Gagal memproses: " + (err.error || res.statusText));
+        btn.innerText = originalText;
+        btn.disabled = false;
       }
     } catch (err) {
       console.error(err);
+      alert("Terjadi kesalahan.");
+      btn.innerText = originalText;
+      btn.disabled = false;
     }
   };
 
-  const handleCollabRequest = async (postId: string, action: "accept" | "reject") => {
+  const handleCollabRequest = async (postId: string, action: "accept" | "reject", btn: HTMLButtonElement, originalText: string) => {
     try {
       const res = await fetch(`/api/posts/${postId}/collab`, {
         method: "POST",
@@ -79,9 +110,17 @@ export default function NotificationsPage() {
       });
       if (res.ok) {
         mutate();
+      } else {
+        const err = await res.json();
+        alert("Gagal memproses: " + (err.error || res.statusText));
+        btn.innerText = originalText;
+        btn.disabled = false;
       }
     } catch (err) {
       console.error(err);
+      alert("Terjadi kesalahan.");
+      btn.innerText = originalText;
+      btn.disabled = false;
     }
   };
 
@@ -118,9 +157,12 @@ export default function NotificationsPage() {
           <div className="flex gap-2 mt-2">
             <button 
               onClick={(e) => { 
+                if (!checkLock(e)) return;
                 e.preventDefault(); e.stopPropagation(); 
-                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
-                handleFollowRequest(notification.actor?.id || notification.actor_id, "accept"); 
+                const btn = e.currentTarget; 
+                const original = btn.innerText;
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                handleFollowRequest(notification.actor?.id || notification.actor_id, "accept", btn, original); 
               }}
               className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10 disabled:opacity-50"
             >
@@ -128,9 +170,12 @@ export default function NotificationsPage() {
             </button>
             <button 
               onClick={(e) => { 
+                if (!checkLock(e)) return;
                 e.preventDefault(); e.stopPropagation(); 
-                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
-                handleFollowRequest(notification.actor?.id || notification.actor_id, "reject"); 
+                const btn = e.currentTarget; 
+                const original = btn.innerText;
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                handleFollowRequest(notification.actor?.id || notification.actor_id, "reject", btn, original); 
               }}
               className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10 disabled:opacity-50"
             >
@@ -151,9 +196,12 @@ export default function NotificationsPage() {
           <div className="flex gap-2 mt-2">
             <button 
               onClick={(e) => { 
+                if (!checkLock(e)) return;
                 e.preventDefault(); e.stopPropagation(); 
-                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
-                handleUploadRequest(notification.actor?.id || notification.actor_id, notification.reference_id, "accept"); 
+                const btn = e.currentTarget;
+                const original = btn.innerText;
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                handleUploadRequest(notification.actor?.id || notification.actor_id, notification.reference_id, "accept", btn, original); 
               }}
               className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10 disabled:opacity-50"
             >
@@ -161,9 +209,12 @@ export default function NotificationsPage() {
             </button>
             <button 
               onClick={(e) => { 
+                if (!checkLock(e)) return;
                 e.preventDefault(); e.stopPropagation(); 
-                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
-                handleUploadRequest(notification.actor?.id || notification.actor_id, notification.reference_id, "reject"); 
+                const btn = e.currentTarget;
+                const original = btn.innerText;
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                handleUploadRequest(notification.actor?.id || notification.actor_id, notification.reference_id, "reject", btn, original); 
               }}
               className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10 disabled:opacity-50"
             >
@@ -195,9 +246,12 @@ export default function NotificationsPage() {
           <div className="flex gap-2 mt-2">
             <button 
               onClick={(e) => { 
+                if (!checkLock(e)) return;
                 e.preventDefault(); e.stopPropagation(); 
-                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
-                handleCollabRequest(notification.reference_id, "accept"); 
+                const btn = e.currentTarget;
+                const original = btn.innerText;
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                handleCollabRequest(notification.reference_id, "accept", btn, original); 
               }}
               className="bg-[var(--color-brand-red)] hover:bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition relative z-10 disabled:opacity-50"
             >
@@ -205,9 +259,12 @@ export default function NotificationsPage() {
             </button>
             <button 
               onClick={(e) => { 
+                if (!checkLock(e)) return;
                 e.preventDefault(); e.stopPropagation(); 
-                const btn = e.currentTarget; btn.innerText = "Memproses..."; btn.disabled = true;
-                handleCollabRequest(notification.reference_id, "reject"); 
+                const btn = e.currentTarget;
+                const original = btn.innerText;
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                handleCollabRequest(notification.reference_id, "reject", btn, original); 
               }}
               className="bg-[var(--color-surface-2)] hover:bg-[var(--color-surface)] text-white text-xs font-bold px-4 py-1.5 rounded-lg transition border border-[var(--color-border-color)] relative z-10 disabled:opacity-50"
             >
@@ -329,6 +386,8 @@ export default function NotificationsPage() {
             ))}
           </div>
         )}
+        
+        {showLock && <ProfileLockOverlay missingInfo={missingInfo} onClose={() => setShowLock(false)} />}
       </main>
 
       <BottomNav />

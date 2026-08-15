@@ -5,8 +5,9 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useGuest } from "@/components/GuestProvider";
 import { useSession } from "next-auth/react";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
+import { useGuest } from "@/components/GuestProvider";
 
 interface PartnerRequest {
   id: string;
@@ -55,6 +56,22 @@ function CariPartnerContent() {
   const [role, setRole] = useState("");
   const [contact, setContact] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isComplete, missingInfo } = useProfileCheck();
+  const [showLock, setShowLock] = useState(false);
+
+  const handleAction = (e?: React.MouseEvent | React.FocusEvent) => {
+    if (isGuest) {
+      if (e) e.preventDefault();
+      showLoginPopup();
+      return false;
+    }
+    if (!isComplete) {
+      if (e) e.preventDefault();
+      setShowLock(true);
+      return false;
+    }
+    return true;
+  };
 
   const searchQuery = searchParams.get('q')?.toLowerCase() || "";
   const requests = allRequests.filter(r => {
@@ -185,7 +202,7 @@ function CariPartnerContent() {
                     type="text"
                     value={course}
                     onChange={(e) => setCourse(e.target.value)}
-                    onFocus={() => isGuest && showLoginPopup()}
+                    onFocus={handleAction}
                     placeholder="Contoh: Pemrograman Web"
                     className="w-full bg-[#121212] border border-[#2a2a30] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--color-brand-red)] transition"
                     required
@@ -198,7 +215,7 @@ function CariPartnerContent() {
                     type="text"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    onFocus={() => isGuest && showLoginPopup()}
+                    onFocus={handleAction}
                     placeholder="Contoh: Frontend Developer, Desainer UI/UX"
                     className="w-full bg-[#121212] border border-[#2a2a30] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--color-brand-red)] transition"
                     required
@@ -211,7 +228,7 @@ function CariPartnerContent() {
                     type="text"
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
-                    onFocus={() => isGuest && showLoginPopup()}
+                    onFocus={handleAction}
                     placeholder="Contoh: wa.me/628123..."
                     className="w-full bg-[#121212] border border-[#2a2a30] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[var(--color-brand-red)] transition"
                     required
@@ -220,7 +237,7 @@ function CariPartnerContent() {
                 </div>
                 <button
                   type={isGuest ? "button" : "submit"}
-                  onClick={() => isGuest && showLoginPopup()}
+                  onClick={handleAction}
                   disabled={isSubmitting && !isGuest}
                   className="w-full bg-[var(--color-brand-red)] hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-xl py-3.5 mt-2 transition shadow-md flex justify-center items-center"
                 >
@@ -231,6 +248,7 @@ function CariPartnerContent() {
           </div>
 
         </div>
+        {showLock && <ProfileLockOverlay missingInfo={missingInfo} onClose={() => setShowLock(false)} />}
       </main>
 
       <BottomNav />

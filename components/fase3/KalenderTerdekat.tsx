@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { useGuest } from "@/components/GuestProvider";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -30,6 +31,8 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
   const [weekDates, setWeekDates] = useState<{ dateNum: number, dateStr: string }[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", time: "", location: "", visibility: "Diri Sendiri" });
+  const { isComplete, missingInfo } = useProfileCheck();
+  const [showLock, setShowLock] = useState(false);
 
   const { data: dbEvents, mutate, isLoading } = useSWR('/api/events', fetcher);
   
@@ -147,7 +150,11 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
             </button>
           </div>
           <button 
-            onClick={() => isGuest ? showLoginPopup() : setShowAddForm(!showAddForm)}
+            onClick={() => {
+              if (isGuest) showLoginPopup();
+              else if (!isComplete) setShowLock(true);
+              else setShowAddForm(!showAddForm);
+            }}
             className="ml-1 w-6 h-6 rounded-full bg-[var(--color-brand-red)]/20 text-[var(--color-brand-red)] flex items-center justify-center hover:bg-[var(--color-brand-red)]/40 transition"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -282,7 +289,14 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             <p className="text-xs mb-3">Tidak ada jadwal hari ini</p>
-            <button onClick={() => isGuest ? showLoginPopup() : setShowAddForm(true)} className="bg-white/10 hover:bg-white/20 transition text-white text-xs font-medium px-4 py-1.5 rounded-lg flex items-center gap-1.5">
+            <button 
+              onClick={() => {
+                if (isGuest) showLoginPopup();
+                else if (!isComplete) setShowLock(true);
+                else setShowAddForm(true);
+              }} 
+              className="bg-white/10 hover:bg-white/20 transition text-white text-xs font-medium px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
@@ -301,6 +315,7 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
            </div>
         )}
       </div>
+      {showLock && <ProfileLockOverlay missingInfo={missingInfo} onClose={() => setShowLock(false)} />}
     </div>
   );
 }

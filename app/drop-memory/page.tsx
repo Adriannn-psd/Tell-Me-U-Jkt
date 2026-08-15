@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { useGuest } from "@/components/GuestProvider";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 interface Memory {
   id: string;
@@ -62,6 +63,8 @@ function DropMemoryContent() {
   const [description, setDescription] = useState("");
   const [privacy, setPrivacy] = useState<"Publik" | "Khusus Kelas Saya" | "Khusus Prodi Saya">("Khusus Kelas Saya");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isComplete, missingInfo } = useProfileCheck();
+  const [showLock, setShowLock] = useState(false);
 
   // Filter state
   const [activeTab, setActiveTab] = useState<"Semua" | "Kelas Saya" | "Prodi Saya">("Semua");
@@ -134,7 +137,15 @@ function DropMemoryContent() {
           </div>
           
           <button 
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              if (isGuest) {
+                showLoginPopup();
+              } else if (!isComplete) {
+                setShowLock(true);
+              } else {
+                setShowCreateModal(true);
+              }
+            }}
             className="hidden md:flex bg-[var(--color-brand-red)] hover:bg-red-600 text-white font-bold px-5 py-3 rounded-xl transition shadow-md items-center gap-2 w-full md:w-auto justify-center"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -276,6 +287,8 @@ function DropMemoryContent() {
           </div>
         </div>
       )}
+
+      {showLock && <ProfileLockOverlay missingInfo={missingInfo} onClose={() => setShowLock(false)} />}
 
       <BottomNav />
     </div>
