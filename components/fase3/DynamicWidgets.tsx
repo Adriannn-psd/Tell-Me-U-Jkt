@@ -112,7 +112,7 @@ export default function DynamicWidgets() {
               {/* Slider cards wrapper */}
               <div className="flex gap-2.5 md:gap-4 w-full snap-x snap-mandatory overflow-x-auto pb-2 scrollbar-hide">
                 
-                {radarPosts.map((post, idx) => {
+                {radarPosts.map((post: any, idx: number) => {
                   const cover = post.media_urls?.[0] || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=400&auto=format&fit=crop';
                   const bgGradient = idx % 2 === 0 
                     ? "from-[#8a1414] via-[#cc2121] to-[#ff3b30]" 
