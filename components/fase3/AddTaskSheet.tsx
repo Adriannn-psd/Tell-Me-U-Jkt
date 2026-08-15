@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ProfileLockOverlay from "@/components/ProfileLockOverlay";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => void, onSuccess?: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,12 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
     category: "tugas",
     notes: ""
   });
+
+  const { isComplete, missingInfo } = useProfileCheck();
+
+  if (!isComplete) {
+    return <ProfileLockOverlay onClose={onClose} missingInfo={missingInfo} />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +44,7 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
   };
 
   return (
-    <ProfileLockOverlay onClose={onClose}>
+    <>
       <div className="fixed inset-0 z-50 flex flex-col justify-end">
       {/* Backdrop */}
       <div 
@@ -125,8 +131,8 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
             {loading ? "Menyimpan..." : "Simpan Tugas"}
           </button>
         </form>
+        </div>
       </div>
-    </div>
-    </ProfileLockOverlay>
+    </>
   );
 }
