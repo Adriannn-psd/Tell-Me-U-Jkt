@@ -49,10 +49,11 @@ const profileFetcher = async (url: string) => {
       followers_count: data.stats?.followers || 0,
       following_count: data.stats?.following || 0,
       stats: data.stats || { karya: 0, followers: 0, following: 0 },
-      isPrivate: data.profile.is_private || false
+      isPrivate: data.profile.is_private || false,
+      profile: data.profile
     };
   }
-  return { posts: [], stats: { karya: 0, followers: 0, following: 0 }, isPrivate: false };
+  return { posts: [], stats: { karya: 0, followers: 0, following: 0 }, isPrivate: false, profile: null };
 };
 
 export default function ProfilePage() {

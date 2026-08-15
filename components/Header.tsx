@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import useSWR from "swr";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
 import PortalKampusModal from "@/components/fase3/PortalKampusModal";
 import { useScrollState } from "./ScrollContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuest } from "@/components/GuestProvider";
 import { isToday, isYesterday, format } from "date-fns";
+
+const notifFetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function Header() {
   const pathname = usePathname();
@@ -24,8 +27,6 @@ export default function Header() {
   const [showAllModal, setShowAllModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showPortal, setShowPortal] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const { isGuest, showLoginPopup } = useGuest();
 
   const formatDate = (dateString: string) => {
@@ -35,35 +36,24 @@ export default function Header() {
     return format(date, 'dd/MM/yyyy, HH.mm');
   };
 
-  // Notification polling - fetch every 15 seconds
-  useEffect(() => {
-    if (!session || isGuest) return;
-    
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch(`/api/notifications?t=${Date.now()}`);
-        const data = await res.json();
-        if (data.success) {
-          setNotifications(data.notifications || []);
-          setNotificationCount((data.notifications || []).filter((n: any) => !n.is_read).length);
-        }
-      } catch (err) {
-        // Silently fail on polling errors
-      }
-    };
-    
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000); // Poll every 15s
-    
-    return () => clearInterval(interval);
-  }, [session, isGuest]);
+  const { data: notifData, mutate: mutateNotif } = useSWR(
+    session && !isGuest ? "/api/notifications" : null,
+    notifFetcher,
+    { refreshInterval: 15000 }
+  );
+
+  const notifications = notifData?.notifications || [];
+  const notificationCount = notifications.filter((n: any) => !n.is_read).length;
 
   const handleMarkAsRead = async () => {
     if (notificationCount === 0) return;
     try {
+      mutateNotif({
+        ...notifData,
+        notifications: notifications.map(n => ({ ...n, is_read: true }))
+      }, false);
       await fetch("/api/notifications", { method: "PUT" });
-      setNotificationCount(0);
-      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+      mutateNotif();
     } catch (err) {
       console.error("Failed to mark notifications as read", err);
     }
@@ -360,8 +350,26 @@ export default function Header() {
                           else if (n.type.includes('follow')) href = `/profile/${n.actor?.username}`;
                           else if (n.type === 'like' || n.type === 'comment' || n.type === 'like_post' || n.type === 'comment_post' || n.type === 'mention') href = `/karya?post=${n.reference_id}`;
 
+                          const handleNotificationClick = async () => {
+                            setShowNotifications(false);
+                            if (!n.is_read) {
+                              mutateNotif({
+                                ...notifData,
+                                notifications: notifications.map(notif => notif.id === n.id ? { ...notif, is_read: true } : notif)
+                              }, false);
+                              try {
+                                await fetch("/api/notifications", {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ id: n.id })
+                                });
+                                mutateNotif();
+                              } catch (err) {}
+                            }
+                          };
+
                           return (
-                          <Link href={href} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                          <Link href={href} key={n.id} onClick={handleNotificationClick} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                             <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                               {n.actor?.avatar_url ? (
                                 <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -486,8 +494,26 @@ export default function Header() {
                             else if (n.type.includes('follow')) href = `/profile/${n.actor?.username}`;
                             else if (n.type === 'like' || n.type === 'comment' || n.type === 'like_post' || n.type === 'comment_post' || n.type === 'mention') href = `/karya?post=${n.reference_id}`;
                             
+                            const handleNotificationClick = async () => {
+                              setShowNotifications(false);
+                              if (!n.is_read) {
+                                mutateNotif({
+                                  ...notifData,
+                                  notifications: notifications.map(notif => notif.id === n.id ? { ...notif, is_read: true } : notif)
+                                }, false);
+                                try {
+                                  await fetch("/api/notifications", {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ id: n.id })
+                                  });
+                                  mutateNotif();
+                                } catch (err) {}
+                              }
+                            };
+
                             return (
-                            <Link href={href} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                            <Link href={href} key={n.id} onClick={handleNotificationClick} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                               <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                                 {n.actor?.avatar_url ? (
                                   <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />

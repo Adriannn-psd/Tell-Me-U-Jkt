@@ -47,12 +47,27 @@ export async function PUT(req: NextRequest) {
     const { data: dbUser } = await supabase.from("users").select("id").eq("discord_id", session.user.discordId).single();
     if (!dbUser) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
 
-    // Mark all as read
-    const { error } = await supabase
+    // Check for optional id to mark single notification as read
+    const text = await req.text();
+    let notifId = null;
+    if (text) {
+      try {
+        const body = JSON.parse(text);
+        notifId = body.id;
+      } catch (e) {}
+    }
+
+    let query = supabase
       .from("notifications")
       .update({ is_read: true })
       .eq("recipient_id", dbUser.id)
       .eq("is_read", false);
+
+    if (notifId) {
+      query = query.eq("id", notifId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 
