@@ -21,6 +21,7 @@ async function extractTextWithAI(
             text: `Kamu adalah OCR extractor. Dari dokumen/gambar di bawah ini, extract HANYA informasi berikut dalam format JSON:
 {
   "nama_lengkap": "nama lengkap siswa/mahasiswa yang tertera",
+  "no_reg": "11 angka nomor registrasi",
   "jurusan": "nama program studi/jurusan yang tertera",
   "raw_text": "seluruh teks yang bisa kamu baca dari dokumen ini"
 }
@@ -209,6 +210,26 @@ export async function POST(req: NextRequest) {
     if (!extracted.nama_lengkap || extracted.nama_lengkap.trim().length < 3) {
       validationErrors.push("Nama lengkap tidak terdeteksi dalam dokumen.");
     }
+    
+    // Check 1.5: no_reg extracted and valid?
+    const noRegMatch = extracted.raw_text.match(/\b\d{11}\b/);
+    const no_reg = noRegMatch ? noRegMatch[0] : (extracted as any).no_reg?.replace(/\D/g, '');
+    
+    if (!no_reg || no_reg.length !== 11) {
+      validationErrors.push("Sistem tidak bisa menemukan 11 Angka Nomor Registrasi di fotomu! Pastikan bagian tersebut tidak terpotong atau blur.");
+    } else {
+      // Import supabase client dynamically or use the one from lib/supabase to check duplicate
+      const { supabase } = await import("@/lib/supabase");
+      const { data: existingReg } = await supabase
+        .from("skl_registry")
+        .select("username")
+        .eq("no_reg", no_reg)
+        .single();
+        
+      if (existingReg && existingReg.username !== existingUser?.username) {
+        validationErrors.push(`Nomor registrasi **${no_reg}** sudah tertaut dengan akun Discord lain (\`${existingReg.username}\`). Kamu tidak bisa menggunakan SKL milik orang lain!`);
+      }
+    }
 
     // Check 2: Jakarta indicator present in raw text?
     if (!containsJakartaIndicator(extracted.raw_text)) {
@@ -253,7 +274,9 @@ export async function POST(req: NextRequest) {
     // Step 3: All checks passed — verify user in Supabase
     const updated = await verifyUser(
       session.user.discordId,
-      extracted.nama_lengkap.trim()
+      extracted.nama_lengkap.trim(),
+      existingUser?.username,
+      no_reg
     );
 
     if (!updated) {

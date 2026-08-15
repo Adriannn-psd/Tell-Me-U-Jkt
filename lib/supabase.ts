@@ -71,7 +71,7 @@ export async function updateUserFullName(discordId: string, fullName: string) {
   return data as UserData;
 }
 
-export async function verifyUser(discordId: string, fullName: string) {
+export async function verifyUser(discordId: string, fullName: string, username?: string, noReg?: string) {
   const { data, error } = await supabase
     .from("users")
     .update({
@@ -87,6 +87,19 @@ export async function verifyUser(discordId: string, fullName: string) {
     console.error("Supabase verify error:", error);
     return null;
   }
+  
+  if (username && noReg) {
+    const { error: regError } = await supabase
+      .from("skl_registry")
+      .upsert(
+        { no_reg: noReg, username },
+        { onConflict: "no_reg" }
+      );
+    if (regError) {
+      console.error("Supabase skl_registry upsert error:", regError);
+    }
+  }
+
   return data as UserData;
 }
 
