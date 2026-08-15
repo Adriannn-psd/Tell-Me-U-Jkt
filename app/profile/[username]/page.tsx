@@ -176,27 +176,36 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                     </div>
                   )}
                 </div>
-                
                 <p className="text-[var(--color-text-3)] text-sm mb-1">
-                  {profileData.prodi || "Mahasiswa"}
+                  @{profileData.username || profileData.name?.toLowerCase().replace(/\s/g, "")}
                 </p>
+
+                <p className="text-[var(--color-text-3)] text-sm mb-1">
+                  {profileData.canViewPosts 
+                    ? [profileData.prodi, profileData.kelas].filter(Boolean).join(" • ") || "Mahasiswa"
+                    : profileData.prodi || "Mahasiswa"}
+                </p>
+
+                {profileData.canViewPosts && profileData.bio && (
+                  <p className="text-white text-sm mt-2 mb-1 leading-relaxed whitespace-pre-wrap">
+                    {profileData.bio}
+                  </p>
+                )}
                 
-                <div className="text-white text-sm mt-1">
-                  <div className="flex items-center gap-1.5 mt-1">
-                    {profileData?.instagram && profileData.canViewPosts && (
-                      <>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-pink-500">
-                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                        </svg>
-                        <a href={`https://instagram.com/${profileData.instagram}`} target="_blank" rel="noreferrer" className="hover:underline text-[var(--color-text-2)] hover:text-white transition">
-                          @{profileData.instagram}
-                        </a>
-                      </>
-                    )}
+                {profileData.canViewPosts && profileData.instagram && (
+                  <div className="text-white text-sm mt-2">
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-pink-500">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                      </svg>
+                      <a href={`https://instagram.com/${profileData.instagram}`} target="_blank" rel="noreferrer" className="hover:underline text-[var(--color-text-2)] hover:text-white transition">
+                        @{profileData.instagram}
+                      </a>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Action Buttons */}
