@@ -71,14 +71,26 @@ export async function updateUserFullName(discordId: string, fullName: string) {
   return data as UserData;
 }
 
-export async function verifyUser(discordId: string, fullName: string, username?: string, noReg?: string) {
+export async function verifyUser(
+  discordId: string,
+  fullName: string,
+  username?: string,
+  noReg?: string,
+  prodi?: string
+) {
+  const updateData: any = {
+    full_name: fullName,
+    is_verified: true,
+    updated_at: new Date().toISOString(),
+  };
+  
+  if (prodi) {
+    updateData.prodi = prodi;
+  }
+
   const { data, error } = await supabase
     .from("users")
-    .update({
-      full_name: fullName,
-      is_verified: true,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("discord_id", discordId)
     .select()
     .single();

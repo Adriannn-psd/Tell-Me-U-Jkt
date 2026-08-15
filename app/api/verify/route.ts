@@ -138,6 +138,36 @@ function jurusanMatchesProdi(
   return prodiAliases.some((alias) => normalizedJurusan.includes(alias));
 }
 
+function deduceProdiFromJurusan(extractedJurusan: string): string | undefined {
+  if (!extractedJurusan) return undefined;
+  
+  const normalizedJurusan = normalize(extractedJurusan);
+  const aliases: Record<string, string[]> = {
+    "Teknik Informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informasi", "informatika", "teknik informatika", "s1 informatika"],
+    "Sistem Informasi": ["sistem informasi", "s1 sistem informasi", "si"],
+    "Desain Komunikasi Visual": [
+      "desain komunikasi visual",
+      "dkv",
+      "s1 desain komunikasi visual",
+      "s1 dkv",
+    ],
+    "Teknik Telekomunikasi": [
+      "teknik telekomunikasi",
+      "telekomunikasi",
+      "s1 teknik telekomunikasi",
+      "tt",
+    ],
+  };
+
+  for (const [officialName, aliasList] of Object.entries(aliases)) {
+    if (aliasList.some((alias) => normalizedJurusan.includes(alias))) {
+      return officialName;
+    }
+  }
+
+  return undefined;
+}
+
 // ---- API Route ----
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -272,11 +302,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 3: All checks passed — verify user in Supabase
+    // Dedukdi prodi jika user belum milih di web
+    let finalProdi = session.user.prodi || existingUser?.prodi;
+    if (!finalProdi && extracted.jurusan) {
+      finalProdi = deduceProdiFromJurusan(extracted.jurusan);
+    }
+
     const updated = await verifyUser(
       session.user.discordId,
       extracted.nama_lengkap.trim(),
       existingUser?.username,
-      no_reg
+      no_reg,
+      finalProdi
     );
 
     if (!updated) {
