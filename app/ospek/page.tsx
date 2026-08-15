@@ -126,9 +126,12 @@ export default function OspekPage() {
               Ke Profil Sekarang
             </Link>
           )}
-          <Link href="/" className="block w-full bg-transparent text-[var(--color-text-2)] py-3 mt-3 rounded-xl font-bold text-sm hover:text-white transition">
+          <button 
+            onClick={() => router.push('/')}
+            className="block w-full bg-transparent text-[var(--color-text-2)] py-3 mt-3 rounded-xl font-bold text-sm hover:text-white transition"
+          >
             Kembali ke Beranda
-          </Link>
+          </button>
         </div>
       </div>
     );
