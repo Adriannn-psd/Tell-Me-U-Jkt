@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import Link from "next/link";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -22,6 +23,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showProfileLock, setShowProfileLock] = useState(false);
+  const { isComplete, missingInfo } = useProfileCheck();
+  
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     type: 'alert' | 'confirm';
@@ -60,6 +64,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   });
 
   const handleUploadClick = () => {
+    if (!isComplete) {
+      setShowProfileLock(true);
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -395,6 +403,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       )}
 
       <BottomNav />
+      {showProfileLock && (
+        <ProfileLockOverlay 
+          onClose={() => setShowProfileLock(false)} 
+          missingInfo={missingInfo} 
+        />
+      )}
     </div>
   );
 }

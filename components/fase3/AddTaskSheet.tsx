@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ProfileLockOverlay from "@/components/ProfileLockOverlay";
 
 export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => void, onSuccess?: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,8 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <ProfileLockOverlay onClose={onClose}>
+      <div className="fixed inset-0 z-50 flex flex-col justify-end">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
@@ -123,8 +125,8 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
             {loading ? "Menyimpan..." : "Simpan Tugas"}
           </button>
         </form>
-
       </div>
     </div>
+    </ProfileLockOverlay>
   );
 }

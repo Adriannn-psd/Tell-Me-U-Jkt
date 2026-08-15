@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 export default function PreviewConfirmModal({ 
   onClose, 
@@ -12,6 +13,7 @@ export default function PreviewConfirmModal({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
+  const { isComplete, missingInfo } = useProfileCheck();
 
   const handleSimpan = () => {
     setIsUploading(true);
@@ -56,6 +58,11 @@ export default function PreviewConfirmModal({
       photoBase64: scanSession.photoBase64,
     }));
   };
+
+  if (!isComplete) {
+    return <ProfileLockOverlay onClose={onClose} missingInfo={missingInfo} />;
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)] animate-in fade-in duration-200">
       
