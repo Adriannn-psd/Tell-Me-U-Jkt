@@ -180,7 +180,9 @@ export default function CanvasSequenceManager({
               zIndex: layer.zIndex,
               opacity: phase === "intro" ? 1 : 0,
               transition: "opacity 0.3s ease-out",
-              objectFit: layer.fit
+              objectFit: layer.fit,
+              border: "5px solid red",
+              backgroundColor: "rgba(0, 255, 0, 0.2)"
             }}
             muted
             playsInline
@@ -205,7 +207,9 @@ export default function CanvasSequenceManager({
               zIndex: layer.zIndex,
               opacity: phase === "scroll" && !layer.hideBeforeStart ? 1 : 0,
               transition: "opacity 0.1s ease-out",
-              objectFit: layer.fit
+              objectFit: layer.fit,
+              border: "5px solid blue",
+              backgroundColor: "rgba(0, 0, 255, 0.2)"
             }}
             muted
             playsInline
