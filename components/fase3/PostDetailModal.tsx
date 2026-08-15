@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Post } from "./MasonryGrid";
 import Link from "next/link";
 import { renderWithMentions } from "@/lib/mentions";
+import MentionTextarea from "./MentionTextarea";
 
 
 export default function PostDetailModal({ 
@@ -18,7 +19,7 @@ export default function PostDetailModal({
   const [commentText, setCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: string, username: string } | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
-  const commentInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [isLiking, setIsLiking] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
   const [followStatus, setFollowStatus] = useState("none");
@@ -521,19 +522,19 @@ export default function PostDetailModal({
                     </button>
                   </div>
                 )}
-                <input 
+                <MentionTextarea 
                   ref={commentInputRef}
-                  type="text" 
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                  onChange={(e: any) => setCommentText(e.target.value)}
+                  onKeyDown={(e: any) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       handleComment();
                     }
                   }}
                   placeholder={replyingTo ? "Balasan Anda..." : "Tambahkan komentar..."} 
-                  className="bg-transparent border-none outline-none text-white text-xs flex-1 min-w-[100px] py-1"
+                  rows={1}
+                  className="bg-transparent border-none outline-none text-white text-xs flex-1 min-w-[100px] py-1 resize-none h-[28px] custom-scrollbar overflow-y-auto"
                 />
                 <button type="button" onClick={(e) => { e.preventDefault(); handleComment(); }} disabled={!commentText.trim()} className="text-[var(--color-brand-red)] text-xs font-bold ml-1 shrink-0 disabled:opacity-50">Kirim</button>
               </div>

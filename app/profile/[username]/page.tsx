@@ -277,6 +277,17 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                         </span>
                       ))}
                     </div>
+
+                    <h3 className="text-white font-bold text-lg mb-4">Pendidikan</h3>
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
+                        <img src="/Telkom.png" alt="Telkom" className="w-full h-full object-contain p-1" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold">Telkom University Jakarta</h4>
+                        <p className="text-[var(--color-text-3)] text-sm">{profileData.prodi || "Prodi"} • 2026 - Sekarang</p>
+                      </div>
+                    </div>
                   </>
                 ) : (
                    <div className="text-center text-[var(--color-text-2)] py-10">

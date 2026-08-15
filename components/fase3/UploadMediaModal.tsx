@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
+import imageCompression from "browser-image-compression";
+import MentionTextarea from "./MentionTextarea";
 
 export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
@@ -26,13 +28,33 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    if (selectedFile.type.startsWith("image/") && selectedFile.size > 5 * 1024 * 1024) {
-      alert("Ukuran gambar maksimal 5MB!");
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    if (selectedFile.type.startsWith("image/")) {
+      // Compress image
+      const options = {
+        maxSizeMB: 1, // Compress to max 1MB to avoid Next.js payload limit
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+      
+      imageCompression(selectedFile, options)
+        .then((compressedFile) => {
+          proceedWithFile(compressedFile);
+        })
+        .catch((error) => {
+          console.error("Compression error:", error);
+          alert("Gagal memproses gambar.");
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        });
       return;
     }
 
     if (selectedFile.type.startsWith("video/")) {
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        alert("Ukuran video maksimal 10MB!");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
       const video = document.createElement("video");
       video.preload = "metadata";
       video.onloadedmetadata = () => {
@@ -213,10 +235,10 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
 
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-[var(--color-text-2)] uppercase tracking-wide">Deskripsi</label>
-            <textarea 
+            <MentionTextarea 
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ceritakan proses pembuatan karyamu..." 
+              onChange={(e: any) => setDescription(e.target.value)}
+              placeholder="Ceritakan proses pembuatan karyamu (ketik @ untuk tag teman)..." 
               rows={4}
               className="w-full bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-xl px-4 py-3 text-white outline-none focus:border-[var(--color-brand-red)] transition text-sm resize-none"
             />

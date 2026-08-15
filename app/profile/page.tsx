@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -44,6 +45,9 @@ const profileFetcher = async (url: string) => {
     
     return {
       posts: formattedPosts,
+      posts_count: data.posts?.length || 0,
+      followers_count: data.followers_count || 0,
+      following_count: data.following_count || 0,
       stats: data.stats || { karya: 0, followers: 0, following: 0 },
       isPrivate: data.profile.is_private || false
     };
@@ -76,6 +80,7 @@ function ProfileContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<"karya" | "tentang">("karya");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [networkModalType, setNetworkModalType] = useState<'followers' | 'following' | null>(null);
   
   // Verification state
   const [verifyFile, setVerifyFile] = useState<File | null>(null);
@@ -129,7 +134,7 @@ function ProfileContent() {
   const completedSteps = [user?.isVerified, !!user?.kelas, !!user?.instagram].filter(Boolean).length;
 
   const usernameForFetch = user?.dbUsername || user?.name;
-  const { data: profileData = { posts: [], stats: { karya: 0, followers: 0, following: 0 }, isPrivate: false }, isLoading: isLoadingPosts, mutate } = useSWR(
+  const { data: profileData = { posts: [], posts_count: 0, followers_count: 0, following_count: 0, stats: { karya: 0, followers: 0, following: 0 }, isPrivate: false }, isLoading: isLoadingPosts, mutate } = useSWR(
     usernameForFetch ? `/api/profile/${usernameForFetch}` : null,
     profileFetcher
   );
@@ -353,17 +358,17 @@ function ProfileContent() {
                 {/* Stats */}
                 <div className="flex flex-1 justify-around items-center ml-4 md:ml-6">
                   <div className="text-center">
-                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{userPosts.length}</span>
+                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{profileData.posts_count}</span>
                     <span className="text-white text-[10px] md:text-sm">postingan</span>
                   </div>
-                  <div className="text-center">
-                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{stats.followers}</span>
+                  <button onClick={() => setNetworkModalType('followers')} className="text-center">
+                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{profileData.followers_count}</span>
                     <span className="text-white text-[10px] md:text-sm">pengikut</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{stats.following}</span>
+                  </button>
+                  <button onClick={() => setNetworkModalType('following')} className="text-center">
+                    <span className="text-white font-bold text-base md:text-xl block leading-tight">{profileData.following_count}</span>
                     <span className="text-white text-[10px] md:text-sm">mengikuti</span>
-                  </div>
+                  </button>
                 </div>
               </div>
 
@@ -727,11 +732,11 @@ function ProfileContent() {
 
                 <h3 className="text-white font-bold text-lg mb-4">Pendidikan</h3>
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--color-surface-2)] flex items-center justify-center text-white shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M22 10v6M2 2l10 5 10-5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                  <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
+                    <img src="/Telkom.png" alt="Telkom" className="w-full h-full object-contain p-1" />
                   </div>
                   <div>
-                    <h4 className="text-white font-bold">Universitas Telkom Jakarta</h4>
+                    <h4 className="text-white font-bold">Telkom University Jakarta</h4>
                     <p className="text-[var(--color-text-3)] text-sm">{user?.prodi || "Prodi"} • 2026 - Sekarang</p>
                   </div>
                 </div>
@@ -764,29 +769,7 @@ function ProfileContent() {
                   <p className="text-[10px] text-[var(--color-text-3)] mt-1">Nama lengkap terisi otomatis dari verifikasi (Discord/SKL) dan tidak dapat diubah.</p>
                 </div>
 
-                <div>
-                  <label className="text-[var(--color-text-2)] text-xs font-semibold mb-1.5 block">Pendidikan Terakhir (Opsional)</label>
-                  <div className="relative">
-                    <select
-                      value={editEducation}
-                      onChange={(e) => setEditEducation(e.target.value)}
-                      className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-[var(--color-brand-red)] transition cursor-pointer"
-                    >
-                      <option value="">-- Pilih Pendidikan --</option>
-                      <option value="SD">Sekolah Dasar (SD)</option>
-                      <option value="SMP">Sekolah Menengah Pertama (SMP)</option>
-                      <option value="SMA">Sekolah Menengah Atas (SMA)</option>
-                      <option value="SMK">Sekolah Menengah Kejuruan (SMK)</option>
-                      <option value="MI">Madrasah Ibtidaiyah (MI)</option>
-                      <option value="MTs">Madrasah Tsanawiyah (MTs)</option>
-                      <option value="MA">Madrasah Aliyah (MA)</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-[var(--color-text-3)]">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
-                  </div>
-                </div>
-                
+
                 <div className="flex items-center justify-between pt-2">
                   <div>
                     <h4 className="text-white text-sm font-semibold">Akun Privat</h4>
@@ -893,6 +876,15 @@ function ProfileContent() {
       <BottomNav />
 
       {isUploading && <UploadMediaModal onClose={() => setIsUploading(false)} />}
+      
+      {/* Network Modal */}
+      {networkModalType && usernameForFetch && (
+        <FollowNetworkModal 
+          username={usernameForFetch} 
+          type={networkModalType} 
+          onClose={() => setNetworkModalType(null)} 
+        />
+      )}
     </div>
   );
 }
