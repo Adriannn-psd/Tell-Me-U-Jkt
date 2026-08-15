@@ -13,7 +13,36 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [base64Data, setBase64Data] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [collabHints, setCollabHints] = useState<any[]>([]);
+  const [showCollabHints, setShowCollabHints] = useState(false);
+  const collabDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleCollaboratorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace('@', '');
+    setCollaboratorUsername(val);
+
+    if (val.trim() === '') {
+      setShowCollabHints(false);
+      return;
+    }
+
+    if (collabDebounceTimer.current) clearTimeout(collabDebounceTimer.current);
+    collabDebounceTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/mentions?q=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        if (data.success) {
+          setCollabHints(data.users);
+          setShowCollabHints(true);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 300);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -27,6 +56,8 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
+    setIsProcessing(true);
 
     if (selectedFile.type.startsWith("image/")) {
       // Compress image
@@ -44,6 +75,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
           console.error("Compression error:", error);
           alert("Gagal memproses gambar.");
           if (fileInputRef.current) fileInputRef.current.value = "";
+          setIsProcessing(false);
         });
       return;
     }
@@ -74,9 +106,11 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
     reader.onload = (event) => {
       const result = event.target?.result as string;
       setBase64Data(result);
+      setIsProcessing(false);
     };
     reader.onerror = () => {
       alert("Gagal membaca file.");
+      setIsProcessing(false);
     };
     reader.readAsDataURL(selectedFile);
   };
@@ -182,10 +216,19 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
             onChange={handleFileChange}
           />
           <div 
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full h-40 border-2 border-dashed border-[var(--color-border-color)] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-[var(--color-brand-red)] hover:bg-[var(--color-surface)] transition group overflow-hidden relative"
+            onClick={() => { if (!isProcessing) fileInputRef.current?.click() }}
+            className={`w-full h-40 border-2 border-dashed border-[var(--color-border-color)] rounded-2xl flex flex-col items-center justify-center transition group overflow-hidden relative ${isProcessing ? 'cursor-wait opacity-80' : 'cursor-pointer hover:border-[var(--color-brand-red)] hover:bg-[var(--color-surface)]'}`}
           >
-            {preview ? (
+            {isProcessing ? (
+              <div className="flex flex-col items-center justify-center animate-pulse">
+                <svg className="animate-spin w-8 h-8 text-[var(--color-brand-red)] mb-3" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-white font-bold text-sm">Memproses file...</p>
+                <p className="text-[var(--color-text-3)] text-xs mt-1">Mohon tunggu sebentar</p>
+              </div>
+            ) : preview ? (
               file?.type.startsWith("video/") ? (
                 <video src={preview} controls className="w-full h-full object-cover" />
               ) : (
@@ -245,18 +288,49 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 relative">
             <label className="text-xs font-bold text-[var(--color-text-2)] uppercase tracking-wide">Kolaborasi Dengan (Username) - Opsional</label>
             <div className="flex w-full bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-xl overflow-hidden focus-within:border-[var(--color-brand-red)] transition">
               <div className="flex items-center justify-center pl-4 pr-1 text-[var(--color-text-3)] font-bold">@</div>
               <input 
                 type="text" 
                 value={collaboratorUsername}
-                onChange={(e) => setCollaboratorUsername(e.target.value.replace('@', ''))}
+                onChange={handleCollaboratorChange}
+                onBlur={() => setTimeout(() => setShowCollabHints(false), 200)}
                 placeholder="username teman" 
                 className="w-full bg-transparent px-2 py-3.5 text-white outline-none text-sm"
               />
             </div>
+            {showCollabHints && collabHints.length > 0 && (
+              <div className="absolute top-[100%] mt-1 left-0 right-0 z-[100] bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-xl shadow-2xl overflow-hidden">
+                <ul className="max-h-48 overflow-y-auto custom-scrollbar">
+                  {collabHints.map((user) => (
+                    <li 
+                      key={user.id}
+                      onClick={() => {
+                        setCollaboratorUsername(user.username);
+                        setShowCollabHints(false);
+                      }}
+                      className="flex items-center gap-3 p-2.5 hover:bg-[var(--color-surface)] cursor-pointer transition"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] overflow-hidden shrink-0">
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold bg-gradient-to-br from-pink-500 to-yellow-500">
+                            {(user.full_name || user.username).charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-white text-sm font-bold truncate">{user.username}</span>
+                        <span className="text-[var(--color-text-2)] text-xs truncate">{user.full_name}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
         </div>
@@ -277,7 +351,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
         ) : (
           <button 
             onClick={handleUpload}
-            disabled={!title || !base64Data}
+            disabled={!title || !base64Data || isProcessing}
             className="w-full bg-[var(--color-brand-red)] text-white font-bold py-4 rounded-xl mt-6 hover:bg-red-600 transition shadow-[0_4px_14px_rgba(229,39,31,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Upload Sekarang

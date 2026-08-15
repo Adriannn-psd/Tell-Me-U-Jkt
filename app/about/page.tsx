@@ -203,7 +203,7 @@ export default function AboutPage() {
                         {/* Smaller on mobile (w-28 h-28), larger on desktop */}
                         <div className="relative w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-2xl md:rounded-[24px] overflow-hidden border-2 border-[#2a2a30] bg-[#1c1c1e]">
                           <img
-                            src="/adrian.jpg"
+                            src="/Adrian.jpg"
                             alt="Adrian Adiputra"
                             className="w-full h-full object-cover"
                             onError={(e) => {

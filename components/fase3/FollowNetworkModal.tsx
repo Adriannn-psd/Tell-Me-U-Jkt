@@ -73,7 +73,7 @@ export default function FollowNetworkModal({
           return {
             ...u,
             my_follow_status: action === 'unfollow' || action === 'cancel' ? 'none' 
-                            : action === 'follow' ? 'pending' : u.my_follow_status
+                            : action === 'follow' ? (u.is_private ? 'pending' : 'accepted') : u.my_follow_status
           };
         }
         return u;
@@ -186,35 +186,35 @@ export default function FollowNetworkModal({
             ))
           )}
         </div>
+      </div>
 
-        {confirmUnfollow && (
-          <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-2xl p-6 w-full max-w-xs text-center shadow-xl">
-              <h3 className="text-white font-bold text-lg mb-2">Batal Ikuti?</h3>
-              <p className="text-[var(--color-text-2)] text-sm mb-6">
-                Yakin ingin batal ikuti <strong>{confirmUnfollow.username}</strong>?
-              </p>
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={() => {
-                    executeFollowAction(confirmUnfollow.id, 'unfollow');
-                    setConfirmUnfollow(null);
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-[var(--color-brand-red)] hover:bg-red-600 text-white font-bold text-sm transition"
-                >
-                  Batal Ikuti
-                </button>
-                <button 
-                  onClick={() => setConfirmUnfollow(null)}
-                  className="w-full py-2.5 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)] text-white font-bold text-sm transition"
-                >
-                  Batal
-                </button>
-              </div>
+      {confirmUnfollow && (
+        <div className="fixed inset-0 z-[210] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-2xl p-6 w-full max-w-xs text-center shadow-xl">
+            <h3 className="text-white font-bold text-lg mb-2">Batal Ikuti?</h3>
+            <p className="text-[var(--color-text-2)] text-sm mb-6">
+              Yakin ingin batal ikuti <strong>{confirmUnfollow.username}</strong>?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={() => {
+                  executeFollowAction(confirmUnfollow.id, 'unfollow');
+                  setConfirmUnfollow(null);
+                }}
+                className="w-full py-2.5 rounded-xl bg-[var(--color-brand-red)] hover:bg-red-600 text-white font-bold text-sm transition"
+              >
+                Batal Ikuti
+              </button>
+              <button 
+                onClick={() => setConfirmUnfollow(null)}
+                className="w-full py-2.5 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)] text-white font-bold text-sm transition"
+              >
+                Batal
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
