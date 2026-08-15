@@ -7,6 +7,8 @@ import { Suspense, useState, useEffect } from "react";
 import { motion, useScroll, useMotionValueEvent, useTransform } from "framer-motion";
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
 
+import { redirect } from "next/navigation";
+
 function LandingContent() {
   const [showLoginUI, setShowLoginUI] = useState(true);
   const [introFinished, setIntroFinished] = useState(true);
@@ -209,6 +211,7 @@ function LandingContent() {
 }
 
 export default function LandingPage() {
+  redirect("/login");
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#060607]" />}>
       <LandingContent />
