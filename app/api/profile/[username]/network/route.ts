@@ -69,7 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       const { data } = await supabase
         .from("user_follows")
         .select(`
-          follower:follower_id(id, full_name, username, avatar_url, prodi)
+          follower:follower_id(id, full_name, username, avatar_url, prodi, is_private)
         `)
         .eq("following_id", targetUser.id)
         .eq("status", "accepted");
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       const { data } = await supabase
         .from("user_follows")
         .select(`
-          following:following_id(id, full_name, username, avatar_url, prodi)
+          following:following_id(id, full_name, username, avatar_url, prodi, is_private)
         `)
         .eq("follower_id", targetUser.id)
         .eq("status", "accepted");

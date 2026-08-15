@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     const { targetUserId, action } = await req.json();
 
-    if (!targetUserId || !["follow", "unfollow"].includes(action)) {
+    if (!targetUserId || !["follow", "unfollow", "remove"].includes(action)) {
       return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400 });
     }
 
@@ -81,6 +81,17 @@ export async function POST(req: NextRequest) {
         
       if (error) throw error;
       return NextResponse.json({ success: true, action: "unfollow", status: "none" });
+    } else if (action === "remove") {
+      const { error } = await supabase
+        .from("user_follows")
+        .delete()
+        .match({
+          follower_id: targetUserId,
+          following_id: currentUserId
+        });
+        
+      if (error) throw error;
+      return NextResponse.json({ success: true, action: "remove", status: "none" });
     }
 
     return NextResponse.json({ success: true, action });

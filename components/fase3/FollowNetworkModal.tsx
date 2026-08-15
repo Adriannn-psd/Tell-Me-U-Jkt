@@ -17,6 +17,7 @@ export default function FollowNetworkModal({
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmUnfollow, setConfirmUnfollow] = useState<any>(null);
 
   useEffect(() => {
     const fetchNetwork = async () => {
@@ -38,35 +39,54 @@ export default function FollowNetworkModal({
     fetchNetwork();
   }, [username, type]);
 
-  const handleFollowAction = async (targetUserId: string, currentStatus: string) => {
+  const handleFollowAction = async (targetUserId: string, currentStatus: string, actionType?: string) => {
     if (isGuest) return showLoginPopup();
     if (currentStatus === 'self') return;
     
-    const action = currentStatus === 'accepted' ? 'unfollow' 
-                 : currentStatus === 'pending' ? 'cancel' 
-                 : 'follow';
+    let action = actionType;
+    if (!action) {
+      action = currentStatus === 'accepted' ? 'unfollow' 
+             : currentStatus === 'pending' ? 'cancel' 
+             : 'follow';
+    }
 
-    // Optimistic update
-    setUsers(prev => prev.map(u => {
-      if (u.id === targetUserId) {
-        return {
-          ...u,
-          my_follow_status: action === 'unfollow' || action === 'cancel' ? 'none' 
-                          : action === 'follow' ? 'pending' : u.my_follow_status
-        };
+    if (action === 'unfollow') {
+      const u = users.find(x => x.id === targetUserId);
+      if (u && u.is_private) {
+        setConfirmUnfollow(u);
+        return;
       }
-      return u;
-    }));
+    }
+
+    executeFollowAction(targetUserId, action);
+  };
+
+  const executeFollowAction = async (targetUserId: string, action: string) => {
+    // Optimistic update
+    if (action === 'remove') {
+      setUsers(prev => prev.filter(u => u.id !== targetUserId));
+    } else {
+      setUsers(prev => prev.map(u => {
+        if (u.id === targetUserId) {
+          return {
+            ...u,
+            my_follow_status: action === 'unfollow' || action === 'cancel' ? 'none' 
+                            : action === 'follow' ? 'pending' : u.my_follow_status
+          };
+        }
+        return u;
+      }));
+    }
 
     try {
-      const res = await fetch(`/api/profile/${targetUserId}/follow`, {
+      const res = await fetch(`/api/user/follow`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ targetUserId, action })
       });
       const data = await res.json();
       
-      if (data.success) {
+      if (data.success && action !== 'remove') {
         setUsers(prev => prev.map(u => {
           if (u.id === targetUserId) {
             return { ...u, my_follow_status: data.status };
@@ -129,23 +149,66 @@ export default function FollowNetworkModal({
                 </Link>
 
                 {u.my_follow_status !== 'self' && (
-                  <button
-                    onClick={() => handleFollowAction(u.id, u.my_follow_status)}
-                    className={`ml-2 shrink-0 px-4 py-1.5 rounded-full text-xs font-bold transition ${
-                      u.my_follow_status === 'accepted' 
-                        ? 'bg-[var(--color-surface-2)] text-white hover:bg-[var(--color-surface)]' 
-                        : u.my_follow_status === 'pending'
-                        ? 'bg-transparent border border-[var(--color-border-color)] text-[var(--color-text-3)]'
-                        : 'bg-white text-black hover:bg-gray-200'
-                    }`}
-                  >
-                    {u.my_follow_status === 'accepted' ? 'Mengikuti' : u.my_follow_status === 'pending' ? 'Diminta' : 'Ikuti'}
-                  </button>
+                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                    <button
+                      onClick={() => handleFollowAction(u.id, u.my_follow_status)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                        u.my_follow_status === 'accepted' 
+                          ? 'bg-[var(--color-surface-2)] text-white hover:bg-[var(--color-surface)]' 
+                          : u.my_follow_status === 'pending'
+                          ? 'bg-transparent border border-[var(--color-border-color)] text-[var(--color-text-3)]'
+                          : 'bg-white text-black hover:bg-gray-200'
+                      }`}
+                    >
+                      {u.my_follow_status === 'accepted' 
+                        ? (type === 'following' ? 'Batal Ikuti' : 'Mengikuti') 
+                        : u.my_follow_status === 'pending' 
+                        ? 'Diminta' 
+                        : (type === 'followers' ? 'Ikuti Balik' : 'Ikuti')}
+                    </button>
+                    {type === 'followers' && (
+                      <button 
+                        onClick={() => handleFollowAction(u.id, u.my_follow_status, 'remove')}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)] text-[var(--color-text-3)] hover:text-white transition"
+                        title="Hapus pengikut"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))
           )}
         </div>
+
+        {confirmUnfollow && (
+          <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-2xl p-6 w-full max-w-xs text-center shadow-xl">
+              <h3 className="text-white font-bold text-lg mb-2">Batal Ikuti?</h3>
+              <p className="text-[var(--color-text-2)] text-sm mb-6">
+                Yakin ingin batal ikuti <strong>{confirmUnfollow.username}</strong>?
+              </p>
+              <div className="flex flex-col gap-2">
+                <button 
+                  onClick={() => {
+                    executeFollowAction(confirmUnfollow.id, 'unfollow');
+                    setConfirmUnfollow(null);
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-[var(--color-brand-red)] hover:bg-red-600 text-white font-bold text-sm transition"
+                >
+                  Batal Ikuti
+                </button>
+                <button 
+                  onClick={() => setConfirmUnfollow(null)}
+                  className="w-full py-2.5 rounded-xl bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)] text-white font-bold text-sm transition"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
