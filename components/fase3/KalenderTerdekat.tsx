@@ -16,11 +16,7 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
     return `${year}-${month}-${day}`;
   };
 
-  const getDummyDateStr = (dayOffset: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1) + dayOffset);
-    return formatDate(d);
-  };
+
 
   const getMonthYearStr = () => {
     const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];

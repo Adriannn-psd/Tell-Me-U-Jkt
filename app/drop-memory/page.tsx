@@ -26,29 +26,37 @@ function DropMemoryContent() {
   const router = useRouter();
   const pathname = usePathname();
   const { isGuest, showLoginPopup } = useGuest();
-  const [memories, setMemories] = useState<Memory[]>([
-    {
-      id: "1",
-      title: "Hari Pertama Kuliah",
-      description: "Kenalan sama temen-temen baru di kelas IF-46-01!",
-      privacy: "Khusus Kelas Saya",
-      target_group: "IF-46-01",
-      user_name: "Budi Santoso",
-      created_at: new Date().toISOString(),
-      image_url: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=600&auto=format&fit=crop",
-      likes: 12
-    },
-    {
-      id: "2",
-      title: "Kunjungan Industri",
-      description: "Seru banget bisa liat langsung proses kerja di Tech Company.",
-      privacy: "Khusus Prodi Saya",
-      target_group: "S1 Informatika",
-      user_name: "Anisa",
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      likes: 45
+  const [memories, setMemories] = useState<Memory[]>([]);
+
+  useEffect(() => {
+    if (isGuest) {
+      setMemories([
+        {
+          id: "1",
+          title: "Hari Pertama Kuliah",
+          description: "Kenalan sama temen-temen baru di kelas IF-46-01!",
+          privacy: "Khusus Kelas Saya",
+          target_group: "IF-46-01",
+          user_name: "Budi Santoso",
+          created_at: new Date().toISOString(),
+          image_url: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=600&auto=format&fit=crop",
+          likes: 12
+        },
+        {
+          id: "2",
+          title: "Kunjungan Industri",
+          description: "Seru banget bisa liat langsung proses kerja di Tech Company.",
+          privacy: "Khusus Prodi Saya",
+          target_group: "S1 Informatika",
+          user_name: "Anisa",
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          likes: 45
+        }
+      ]);
+    } else if (session?.user) {
+      setMemories([]);
     }
-  ]);
+  }, [isGuest, session]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

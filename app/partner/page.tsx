@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useGuest } from "@/components/GuestProvider";
+import { useSession } from "next-auth/react";
 
 interface PartnerRequest {
   id: string;
@@ -36,11 +37,20 @@ function CariPartnerContent() {
     }
   }, [searchParams, pathname, router]);
 
-  const [allRequests, setAllRequests] = useState<PartnerRequest[]>([
-    // Mock data for UI testing since we don't know if the table exists yet
-    { id: "1", course: "Pemrograman Web", role: "Frontend Developer (React)", contact: "wa.me/628123456789", created_at: new Date().toISOString(), user_name: "Budi Santoso" },
-    { id: "2", course: "Rekayasa Perangkat Lunak", role: "Sistem Analis / Designer", contact: "Line: @anisa_rpl", created_at: new Date().toISOString(), user_name: "Anisa" }
-  ]);
+  const { data: session } = useSession();
+  const [allRequests, setAllRequests] = useState<PartnerRequest[]>([]);
+
+  useEffect(() => {
+    if (isGuest) {
+      setAllRequests([
+        // Mock data for UI testing since we don't know if the table exists yet
+        { id: "1", course: "Pemrograman Web", role: "Frontend Developer (React)", contact: "wa.me/628123456789", created_at: new Date().toISOString(), user_name: "Budi Santoso" },
+        { id: "2", course: "Rekayasa Perangkat Lunak", role: "Sistem Analis / Designer", contact: "Line: @anisa_rpl", created_at: new Date().toISOString(), user_name: "Anisa" }
+      ]);
+    } else if (session?.user) {
+      setAllRequests([]);
+    }
+  }, [isGuest, session]);
   const [course, setCourse] = useState("");
   const [role, setRole] = useState("");
   const [contact, setContact] = useState("");
