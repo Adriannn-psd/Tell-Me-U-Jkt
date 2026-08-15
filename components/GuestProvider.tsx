@@ -8,6 +8,7 @@ interface GuestContextProps {
   isGuest: boolean;
   showLoginPopup: () => void;
   hideLoginPopup: () => void;
+  setIsGuest: (value: boolean) => void;
 }
 
 const GuestContext = createContext<GuestContextProps | undefined>(undefined);
@@ -19,7 +20,7 @@ export function GuestProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check if guest mode cookie exists
-    const hasGuestCookie = document.cookie.split("; ").some(c => c.startsWith("guest_mode="));
+    const hasGuestCookie = document.cookie.split(";").some(c => c.trim().startsWith("guest_mode=true"));
     
     if (status === "authenticated") {
       setIsGuest(false);
@@ -36,7 +37,7 @@ export function GuestProvider({ children }: { children: ReactNode }) {
   const hideLoginPopup = () => setPopupVisible(false);
 
   return (
-    <GuestContext.Provider value={{ isGuest, showLoginPopup, hideLoginPopup }}>
+    <GuestContext.Provider value={{ isGuest, showLoginPopup, hideLoginPopup, setIsGuest }}>
       {children}
       {isPopupVisible && <GuestAuthPopup onClose={hideLoginPopup} />}
     </GuestContext.Provider>

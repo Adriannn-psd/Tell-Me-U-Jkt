@@ -16,7 +16,7 @@ import LoginPanel from "@/components/LoginPanel";
 
 const getProdiAcronym = (prodi: string) => {
   if (prodi === "Sistem Informasi") return "SI";
-  if (prodi === "Teknik Informatika") return "TI";
+  if (prodi === "Teknik Informasi") return "TI";
   if (prodi === "Desain Komunikasi Visual") return "DKV";
   if (prodi === "Teknik Telekomunikasi") return "TT";
   return "UNKNOWN";

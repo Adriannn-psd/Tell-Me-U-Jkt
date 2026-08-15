@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import DiscordWidget from "@/components/DiscordWidget";
 import { useRouter } from "next/navigation";
+import { useGuest } from "@/components/GuestProvider";
 // Import styles from login.css to maintain exact styling
 import "@/app/login.css";
 
@@ -14,9 +15,11 @@ interface LoginPanelProps {
 
 export default function LoginPanel({ errorMessage, showGuestOption = false, showDiscordWidget = true }: LoginPanelProps) {
   const router = useRouter();
+  const { setIsGuest } = useGuest();
 
   const handleGuestLogin = () => {
     document.cookie = "guest_mode=true; path=/; max-age=86400"; // 1 day
+    setIsGuest(true);
     router.push("/home");
   };
 
@@ -34,6 +37,7 @@ export default function LoginPanel({ errorMessage, showGuestOption = false, show
 
         <button onClick={() => {
           document.cookie = "guest_mode=; path=/; max-age=0";
+          setIsGuest(false);
           signIn("discord", { callbackUrl: "/home" });
         }} className="discord-btn" type="button">
           <span className="discord-icon">
