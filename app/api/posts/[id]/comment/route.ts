@@ -46,7 +46,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Comment Insert Error:", error);
+      throw error;
+    }
 
     // Send notifications
     const notificationsToInsert = [];
@@ -92,7 +95,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (notificationsToInsert.length > 0) {
-      await supabase.from("notifications").insert(notificationsToInsert);
+      const { error: notifError } = await supabase.from("notifications").insert(notificationsToInsert);
+      if (notifError) {
+        console.error("Notification Insert Error:", notifError);
+      }
     }
 
     return NextResponse.json({ success: true, comment });

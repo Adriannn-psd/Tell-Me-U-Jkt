@@ -405,7 +405,10 @@ export default function PostDetailModal({
                           </p>
                           <p className="text-[var(--color-text-2)] text-xs mb-1">{renderWithMentions(comment.content)}</p>
                           <button 
-                            onClick={() => {
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setReplyingTo({ id: comment.id, username: comment.user?.username || comment.user?.full_name });
                               commentInputRef.current?.focus();
                             }}
@@ -443,7 +446,10 @@ export default function PostDetailModal({
                                     </p>
                                     <p className="text-[var(--color-text-2)] text-[11px] mb-1">{renderWithMentions(reply.content)}</p>
                                     <button 
-                                      onClick={() => {
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         setReplyingTo({ id: comment.id, username: reply.user?.username || reply.user?.full_name });
                                         commentInputRef.current?.focus();
                                         setCommentText(`@${reply.user?.username || reply.user?.full_name} `);
@@ -520,11 +526,16 @@ export default function PostDetailModal({
                   type="text" 
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleComment()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleComment();
+                    }
+                  }}
                   placeholder={replyingTo ? "Balasan Anda..." : "Tambahkan komentar..."} 
                   className="bg-transparent border-none outline-none text-white text-xs flex-1 min-w-[100px] py-1"
                 />
-                <button onClick={handleComment} disabled={!commentText.trim()} className="text-[var(--color-brand-red)] text-xs font-bold ml-1 shrink-0 disabled:opacity-50">Kirim</button>
+                <button type="button" onClick={(e) => { e.preventDefault(); handleComment(); }} disabled={!commentText.trim()} className="text-[var(--color-brand-red)] text-xs font-bold ml-1 shrink-0 disabled:opacity-50">Kirim</button>
               </div>
             </div>
           </div>
