@@ -33,7 +33,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/login",
   },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (!account?.access_token) return false;
 
       try {
@@ -62,6 +62,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Fetch existing user to preserve verification status
         const existingUser = await getUser(discordId);
 
+        // Actual Discord username from profile (e.g. "bella_rawrr" instead of "Bella Rawr 💕")
+        const rawDiscordUsername = (profile as any)?.username || user.name || "";
+
         // ── Bot Integration: Check if user was already verified via Discord bot ──
         // The bot stores verified users in `maba_roles` (username, role_name, full_name)
         // If found, we auto-verify them on the web so they don't need to upload SKL again.
@@ -70,11 +73,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         let botFullName: string | undefined = undefined;
 
         if (!botVerified) {
-          const discordUsername = user.name || "";
           const { data: botRecord } = await supabase
             .from("maba_roles")
             .select("role_name, full_name")
-            .eq("username", discordUsername)
+            .eq("username", rawDiscordUsername)
             .maybeSingle();
 
           // Hanya auto-verify jika bot sudah mengekstrak full_name
@@ -89,16 +91,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             };
             botProdi = BOT_ROLE_TO_PRODI[botRecord.role_name] || prodi;
             botFullName = botRecord.full_name;
-            console.log(`✅ Bot-verified user detected: ${discordUsername} → ${botRecord.role_name}, name: ${botFullName}`);
+            console.log(`✅ Bot-verified user detected: ${rawDiscordUsername} → ${botRecord.role_name}, name: ${botFullName}`);
           } else if (botRecord && !botRecord.full_name) {
-            console.log(`⚠️ User ${discordUsername} verified di bot tapi belum ada nama lengkap. Harus upload SKL ulang di web.`);
+            console.log(`⚠️ User ${rawDiscordUsername} verified di bot tapi belum ada nama lengkap. Harus upload SKL ulang di web.`);
           }
         }
 
         // Upsert user to Supabase
         await upsertUser({
           discord_id: discordId,
-          username: user.name || "user",
+          username: rawDiscordUsername,
           display_name: user.name || undefined,
           avatar_url: avatarUrl,
           prodi: botProdi,

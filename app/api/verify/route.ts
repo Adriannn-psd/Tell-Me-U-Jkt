@@ -256,7 +256,7 @@ export async function POST(req: NextRequest) {
         .eq("no_reg", no_reg)
         .single();
         
-      if (existingReg && existingReg.username !== existingUser?.username) {
+      if (existingReg && existingReg.username?.toLowerCase() !== existingUser?.username?.toLowerCase()) {
         validationErrors.push(`Nomor registrasi **${no_reg}** sudah tertaut dengan akun Discord lain (\`${existingReg.username}\`). Kamu tidak bisa menggunakan SKL milik orang lain!`);
       }
     }

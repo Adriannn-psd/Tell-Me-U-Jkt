@@ -35,12 +35,10 @@ function LandingContent() {
   // Intro layers
   const introLayers: AnimationLayer[] = [
     {
-      folderPath: `/opening-frames`,
-      frameCount: 154,
+      videoPath: `/intro.mp4`,
       zIndex: 10,
       fit: "cover",
-      mobileFit: "contain",
-      filenameFormat: (index) => `${index.toString().padStart(5, "0")}-frame.webp`
+      mobileFit: "contain"
     }
   ];
 
@@ -48,20 +46,17 @@ function LandingContent() {
   const scrollLayers: AnimationLayer[] = [
     {
       // 0.0 to 0.2: Outro (menghilangkan logo telkom)
-      folderPath: `/outro`,
-      frameCount: 116,
+      videoPath: `/outro.mp4`,
       zIndex: 20,
       fit: "cover",
       mobileFit: "contain",
       startProgress: 0.0,
       endProgress: 0.2,
-      hideAfterEnd: true,
-      filenameFormat: (index) => `${(index + 1).toString().padStart(4, "0")}.webp`
+      hideAfterEnd: true
     },
     {
       // 0.5 to 0.8: Telkom 1
-      folderPath: `/telkom 1`,
-      frameCount: 179,
+      videoPath: `/telkom1.mp4`,
       zIndex: 30,
       fit: "cover",
       mobileFit: "contain",
@@ -75,13 +70,11 @@ function LandingContent() {
         if (latest <= 0.85) return 1; // Freeze for 15% scroll
         return 1 - ((latest - 0.85) / 0.14); // Reverse finishes at 0.99
       },
-      className: "!w-[180vw] md:!w-full !h-[100vh] top-[5vh] left-[-40vw] md:left-0",
-      filenameFormat: (index) => `${(index + 1).toString().padStart(4, "0")}.webp`
+      className: "!w-[180vw] md:!w-full !h-[100vh] top-[5vh] left-[-40vw] md:left-0"
     },
     {
       // 0.2 to 0.5: Telkom 2
-      folderPath: `/telkom 2`,
-      frameCount: 177,
+      videoPath: `/telkom2.mp4`,
       zIndex: 25,
       fit: "contain",
       startProgress: 0.2,
@@ -101,13 +94,11 @@ function LandingContent() {
         if (latest >= 0.85) return 0; // Sembunyikan total saat login UI muncul untuk kurangi LAG
         return 0.3; // opacity redup
       },
-      className: "!w-[130vw] md:!w-[50vw] !h-[100vh] top-[-15vh] md:top-[-5vh] left-[-35vw] md:left-[-5vw]",
-      filenameFormat: (index) => `${(index + 1).toString().padStart(4, "0")}.webp`
+      className: "!w-[130vw] md:!w-[50vw] !h-[100vh] top-[-15vh] md:top-[-5vh] left-[-35vw] md:left-[-5vw]"
     },
     {
       // 0.5 to 0.8: Telkom 3 (Kanan pojok, paling dalam/belakang)
-      folderPath: `/telkom 3`,
-      frameCount: 240,
+      videoPath: `/telkom3.mp4`,
       zIndex: 22,
       fit: "contain",
       startProgress: 0.2,
@@ -127,8 +118,7 @@ function LandingContent() {
         if (latest >= 0.85) return 0; // Sembunyikan total saat login UI muncul untuk kurangi LAG
         return 0.3; // opacity redup
       },
-      className: "!w-[130vw] md:!w-[50vw] !h-[100vh] top-[-15vh] md:top-[-5vh] right-[-35vw] md:right-[-5vw]",
-      filenameFormat: (index) => `${(index + 1).toString().padStart(4, "0")}.webp`
+      className: "!w-[130vw] md:!w-[50vw] !h-[100vh] top-[-15vh] md:top-[-5vh] right-[-35vw] md:right-[-5vw]"
     }
   ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import TimeKeeper from "react-timekeeper";
 
 interface TimePickerPopupProps {
@@ -10,25 +10,21 @@ interface TimePickerPopupProps {
 
 export default function TimePickerPopup({ time, onChange }: TimePickerPopupProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close when clicking outside
+  // Prevent background scrolling when picker is open
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
     }
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.body.style.overflow = "";
     };
   }, [isOpen]);
 
   return (
-    <div className="relative w-1/2" ref={containerRef}>
+    <div className="relative w-1/2">
       <input
         type="text"
         readOnly
@@ -39,8 +35,14 @@ export default function TimePickerPopup({ time, onChange }: TimePickerPopupProps
       />
       
       {isOpen && (
-        <div className="absolute z-50 top-full mt-2 left-0 scale-90 origin-top-left">
-          <div className="bg-[#1c1c1e] p-2 rounded-xl border border-[#3a3a3d] shadow-2xl">
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          onClick={() => setIsOpen(false)}
+        >
+          <div 
+            className="bg-[#1c1c1e] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" 
+            onClick={(e) => e.stopPropagation()}
+          >
             <TimeKeeper
               time={time || "08:00"}
               onChange={(newTime) => onChange(newTime.formatted24)}
