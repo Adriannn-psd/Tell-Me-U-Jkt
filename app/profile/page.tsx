@@ -143,6 +143,7 @@ function ProfileContent() {
   const [editIsPrivate, setEditIsPrivate] = useState(false);
   const [editBio, setEditBio] = useState("");
   const [editSkills, setEditSkills] = useState("");
+  const [editSkillsError, setEditSkillsError] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Sync profile data to edit state
@@ -156,9 +157,16 @@ function ProfileContent() {
   }, [isEditingProfile, displayName, profileData.isPrivate, (profileData as any).profile?.bio, (profileData as any).profile?.skills]);
 
   const handleSaveProfile = async () => {
+    setEditSkillsError("");
+    const skillsArray = editSkills.split(",").map(s => s.trim()).filter(s => s.length > 0);
+    
+    if (skillsArray.length > 5) {
+      setEditSkillsError("Maksimal 5 keterampilan.");
+      return;
+    }
+
     setIsSavingProfile(true);
     try {
-      const skillsArray = editSkills.split(",").map(s => s.trim()).filter(s => s.length > 0);
       const res = await fetch("/api/user", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -170,7 +178,18 @@ function ProfileContent() {
         })
       });
       if (res.ok) {
-        await mutate(); // refresh profile data
+        // Optimistic update so UI doesn't flash empty
+        const updatedProfile = {
+          ...profileData,
+          profile: {
+            ...(profileData as any).profile,
+            full_name: editFullName,
+            is_private: editIsPrivate,
+            bio: editBio,
+            skills: skillsArray
+          }
+        };
+        await mutate(updatedProfile, { revalidate: true }); // refresh profile data
         await update(); // refresh session data
         setIsEditingProfile(false);
       } else {
@@ -798,7 +817,11 @@ function ProfileContent() {
                     placeholder="Contoh: Figma, React, Public Speaking"
                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--color-brand-red)] transition"
                   />
-                  <p className="text-[10px] text-[var(--color-text-3)] mt-1">Pisahkan dengan koma ( , ) jika lebih dari satu.</p>
+                  {editSkillsError ? (
+                    <p className="text-[10px] text-red-400 mt-1">{editSkillsError}</p>
+                  ) : (
+                    <p className="text-[10px] text-[var(--color-text-3)] mt-1">Pisahkan dengan koma ( , ) jika lebih dari satu. Maks 5.</p>
+                  )}
                 </div>
 
 

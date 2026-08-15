@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import { useGuest } from "@/components/GuestProvider";
+import { useSession } from "next-auth/react";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function KalenderTerdekat({ isModal = false, onClose }: { isModal?: boolean, onClose?: () => void }) {
+  const { data: session } = useSession();
   const { isGuest, showLoginPopup } = useGuest();
   const formatDate = (d: Date) => {
     const year = d.getFullYear();
@@ -30,6 +32,7 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [weekDates, setWeekDates] = useState<{ dateNum: number, dateStr: string }[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editEventId, setEditEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({ title: "", time: "", location: "", visibility: "Diri Sendiri" });
   const { isComplete, missingInfo } = useProfileCheck();
   const [showLock, setShowLock] = useState(false);
@@ -47,8 +50,10 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
     
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/events', {
-        method: 'POST',
+      const url = editEventId ? `/api/events/${editEventId}` : '/api/events';
+      const method = editEventId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json'
         },
@@ -64,16 +69,29 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
       if (res.ok) {
         setNewEvent({ title: "", time: "", location: "", visibility: "Diri Sendiri" });
         setShowAddForm(false);
+        setEditEventId(null);
         // Optimistic UI update or refetch
         mutate();
       } else {
         const err = await res.json();
-        console.error("Failed to add event", err);
+        console.error("Failed to save event", err);
       }
     } catch (error) {
       console.error("Error submitting event", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm("Yakin ingin menghapus jadwal ini?")) return;
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        mutate();
+      }
+    } catch (error) {
+      console.error("Error deleting event", error);
     }
   };
 
@@ -153,7 +171,11 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
             onClick={() => {
               if (isGuest) showLoginPopup();
               else if (!isComplete) setShowLock(true);
-              else setShowAddForm(!showAddForm);
+              else {
+                setEditEventId(null);
+                setNewEvent({ title: "", time: "", location: "", visibility: "Diri Sendiri" });
+                setShowAddForm(!showAddForm);
+              }
             }}
             className="ml-1 w-6 h-6 rounded-full bg-[var(--color-brand-red)]/20 text-[var(--color-brand-red)] flex items-center justify-center hover:bg-[var(--color-brand-red)]/40 transition"
           >
@@ -211,7 +233,7 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
       <div className="min-h-[80px]">
         {showAddForm ? (
           <form onSubmit={handleAddEvent} className="bg-[#2a2a30]/50 rounded-xl p-4 border border-[#3a3a3d]/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <h4 className="text-white font-bold text-sm mb-3">Tambah Jadwal (Tgl {selectedDateStr?.split('-')[2]})</h4>
+            <h4 className="text-white font-bold text-sm mb-3">{editEventId ? "Edit Jadwal" : "Tambah Jadwal"} (Tgl {selectedDateStr?.split('-')[2]})</h4>
             <div className="space-y-3">
               <input 
                 type="text" 
@@ -248,7 +270,7 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
                 <option value="Semua">Semua Mahasiswa</option>
               </select>
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowAddForm(false)} className="text-[var(--color-text-3)] text-xs font-medium hover:text-white transition" disabled={isSubmitting}>Batal</button>
+                <button type="button" onClick={() => { setShowAddForm(false); setEditEventId(null); }} className="text-[var(--color-text-3)] text-xs font-medium hover:text-white transition" disabled={isSubmitting}>Batal</button>
                 <button type="submit" disabled={isSubmitting} className="bg-[var(--color-brand-red)] text-white text-xs font-bold px-4 py-1.5 rounded-lg hover:bg-red-600 transition disabled:opacity-50">
                   {isSubmitting ? "Menyimpan..." : "Simpan"}
                 </button>
@@ -266,7 +288,23 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
                       <div className="w-2 h-2 rounded-full bg-[var(--color-brand-red)]"></div>
                       <h4 className="text-white font-bold text-sm leading-tight">{evt.title}</h4>
                     </div>
-                    <span className="text-[9px] font-medium bg-[#1c1c1e] border border-[#3a3a3d] px-2 py-0.5 rounded-full text-[var(--color-text-2)]">{evt.visibility}</span>
+                    <div className="flex items-center gap-2">
+                      {session?.user?.discordId === evt.user_discord_id && (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => {
+                            setEditEventId(evt.id);
+                            setNewEvent({ title: evt.title, time: evt.time, location: evt.location, visibility: evt.visibility });
+                            setShowAddForm(true);
+                          }} className="text-[var(--color-text-3)] hover:text-white transition">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button onClick={() => handleDeleteEvent(evt.id)} className="text-[var(--color-text-3)] hover:text-[var(--color-brand-red)] transition">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          </button>
+                        </div>
+                      )}
+                      <span className="text-[9px] font-medium bg-[#1c1c1e] border border-[#3a3a3d] px-2 py-0.5 rounded-full text-[var(--color-text-2)]">{evt.visibility}</span>
+                    </div>
                   </div>
                 </div>
                 <p className="text-[var(--color-text-2)] text-[11px] mb-2 pl-4">{evt.time}</p>

@@ -24,7 +24,7 @@ export default function DynamicWidgets() {
           id: t.id,
           title: t.title,
           deadline: new Date(t.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-          done: false
+          done: t.status === 'done'
         }));
       setLocalTasks(activeTasks);
     }
