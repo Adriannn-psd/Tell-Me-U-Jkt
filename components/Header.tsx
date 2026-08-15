@@ -354,8 +354,15 @@ export default function Header() {
                       </div>
                     ) : (
                       <div className="flex flex-col border-t border-[#3a3a3d]">
-                        {notifications.map((n) => (
-                          <Link href={n.type === 'follow_request' ? '/notifications' : n.type.includes('follow') ? `/profile/${n.actor?.username}` : '/home'} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
+                        {notifications.map((n) => {
+                          let href = '/home';
+                          if (n.type === 'follow_request' || n.type === 'upload_request' || n.type === 'upload_accept') href = '/notifications';
+                          else if (n.type.includes('follow')) href = `/profile/${n.actor?.username}`;
+                          else if (n.type === 'collab_request' || n.type === 'mention') href = `/profile/${n.actor?.username}?post=${n.reference_id}`;
+                          else if (n.type === 'like' || n.type === 'comment' || n.type === 'like_post' || n.type === 'comment_post') href = `/karya?post=${n.reference_id}`;
+
+                          return (
+                          <Link href={href} key={n.id} onClick={() => setShowNotifications(false)} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                             <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
                               {n.actor?.avatar_url ? (
                                 <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -383,7 +390,8 @@ export default function Header() {
                             </div>
                             {!n.is_read && <div className="w-2 h-2 rounded-full bg-[var(--color-brand-red)] self-center shrink-0"></div>}
                           </Link>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

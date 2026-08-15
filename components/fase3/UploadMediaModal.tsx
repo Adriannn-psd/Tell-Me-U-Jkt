@@ -302,7 +302,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
               />
             </div>
             {showCollabHints && collabHints.length > 0 && (
-              <div className="absolute top-[100%] mt-1 left-0 right-0 z-[100] bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-xl shadow-2xl overflow-hidden">
+              <div className="absolute bottom-[100%] mb-1 left-0 right-0 z-[100] bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-xl shadow-2xl overflow-hidden">
                 <ul className="max-h-48 overflow-y-auto custom-scrollbar">
                   {collabHints.map((user) => (
                     <li 

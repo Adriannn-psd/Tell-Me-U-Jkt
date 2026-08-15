@@ -1,9 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import PostDetailModal from "./PostDetailModal";
 import { useGuest } from "@/components/GuestProvider";
+
+function QueryParamHandler({ posts, setSelectedPost, selectedPost }: { posts: Post[], setSelectedPost: (p: Post) => void, selectedPost: Post | null }) {
+  const searchParams = useSearchParams();
+  const postParam = searchParams?.get('post');
+  
+  useEffect(() => {
+    if (postParam && posts.length > 0) {
+      const p = posts.find(p => p.id === postParam);
+      if (p && (!selectedPost || selectedPost.id !== p.id)) {
+        setSelectedPost(p);
+      }
+    }
+  }, [postParam, posts, selectedPost, setSelectedPost]);
+  return null;
+}
 
 import { optimizeCloudinaryUrl } from "@/lib/cloudinary";
 import { renderWithMentions } from "@/lib/mentions";
@@ -232,8 +248,17 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
         ))}
       </div>
 
+      <Suspense fallback={null}>
+        <QueryParamHandler posts={posts} setSelectedPost={setSelectedPost} selectedPost={selectedPost} />
+      </Suspense>
+
       {selectedPost && (
-        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+        <PostDetailModal 
+          post={selectedPost} 
+          onClose={() => {
+            setSelectedPost(null);
+          }} 
+        />
       )}
     </>
   );
