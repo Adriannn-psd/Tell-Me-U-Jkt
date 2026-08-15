@@ -47,10 +47,6 @@ export default function TimePickerPopup({ time, onChange }: TimePickerPopupProps
               onDoneClick={() => setIsOpen(false)}
               switchToMinuteOnHourSelect
               hour24Mode
-              config={{
-                TO_AM: { display: 'none' },
-                TO_PM: { display: 'none' }
-              }}
             />
           </div>
         </div>
