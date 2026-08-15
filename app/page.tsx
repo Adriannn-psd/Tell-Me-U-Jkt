@@ -8,8 +8,8 @@ import { motion, useScroll, useMotionValueEvent, useTransform } from "framer-mot
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
 
 function LandingContent() {
-  const [showLoginUI, setShowLoginUI] = useState(false);
-  const [introFinished, setIntroFinished] = useState(false);
+  const [showLoginUI, setShowLoginUI] = useState(true);
+  const [introFinished, setIntroFinished] = useState(true);
 
   // Reset scroll to top on reload so animations play from the start
   useEffect(() => {
@@ -146,7 +146,7 @@ function LandingContent() {
         }}
       />
 
-      {/* The intelligent multi-layer canvas manager */}
+      {/* The intelligent multi-layer canvas manager (DISABLED FOR NOW)
       <CanvasSequenceManager
         introLayers={introLayers}
         scrollLayers={scrollLayers}
@@ -155,6 +155,7 @@ function LandingContent() {
         onIntroComplete={() => setIntroFinished(true)}
         onScrollLayersComplete={() => setShowLoginUI(true)}
       />
+      */}
 
       {/* Go to Login Button Section */}
       {showLoginUI && (
