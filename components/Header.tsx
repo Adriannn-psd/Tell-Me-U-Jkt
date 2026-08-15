@@ -391,18 +391,7 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-3 md:hidden">
-            {!showMobileSearch && (
-              <button 
-                onClick={() => setShowMobileSearch(true)}
-                className="w-[28px] h-[28px] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                </svg>
-              </button>
-            )}
-            
-            {/* Mobile Sticky Action Button */}
+            {/* 1. Mobile Sticky Action Button */}
             <AnimatePresence>
               {isScrolledPastHero && !showMobileSearch && (
                 <motion.div 
@@ -427,6 +416,33 @@ export default function Header() {
               )}
             </AnimatePresence>
 
+            {/* 2. About Icon */}
+            {!showMobileSearch && (
+              <Link 
+                href="/about" 
+                className="w-[26px] h-[26px] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-[19px] h-[19px]">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </Link>
+            )}
+
+            {/* 3. Search Icon */}
+            {!showMobileSearch && (
+              <button 
+                onClick={() => setShowMobileSearch(true)}
+                className="w-[28px] h-[28px] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+              </button>
+            )}
+            
+            {/* 4. Notif Icon */}
             <div className="relative text-white w-[23px] h-[23px] cursor-pointer" onClick={() => isGuest ? showLoginPopup() : setShowNotifications(!showNotifications)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
                 <path d="M12 3a5 5 0 0 0-5 5v3.3c0 .8-.3 1.6-.9 2.2L5 15h14l-1.1-1.5c-.6-.6-.9-1.4-.9-2.2V8a5 5 0 0 0-5-5Z" />

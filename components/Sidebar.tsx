@@ -78,18 +78,21 @@ export default function Sidebar() {
           </div>
         </Link>
 
-        {/* Quote */}
-        <div className="p-4 rounded-2xl bg-[#0a0a0b] border border-[var(--color-brand-red)]/20 relative overflow-hidden group">
-          <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[var(--color-brand-red)] opacity-10 rounded-full blur-2xl group-hover:opacity-20 transition duration-500"></div>
-          {/* Red curved line at bottom */}
-          <svg className="absolute bottom-0 left-0 w-full h-8 text-[var(--color-brand-red)] opacity-40" viewBox="0 0 100 20" preserveAspectRatio="none">
-            <path d="M0 20 Q 50 0 100 20 L 100 20 L 0 20 Z" fill="currentColor" />
-          </svg>
-          <span className="text-[var(--color-brand-red)] text-3xl leading-none font-serif absolute top-3 left-3 opacity-50">&ldquo;</span>
-          <p className="text-[var(--color-text-2)] text-xs italic leading-relaxed relative z-10 mt-3 group-hover:text-white transition duration-300">
-            Berbagi karya,<br/>menginspirasi sesama.
-          </p>
-        </div>
+        {/* About Link */}
+        <Link href="/about" className="p-3 md:p-4 rounded-2xl bg-[#0a0a0b] border border-[var(--color-border-color)] hover:border-[var(--color-brand-red)]/50 relative overflow-hidden group flex items-center gap-3 transition-colors">
+          <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[var(--color-brand-red)] opacity-0 group-hover:opacity-10 rounded-full blur-xl transition duration-500"></div>
+          <div className="w-8 h-8 rounded-full bg-[var(--color-surface)] border border-[var(--color-border-color)] flex items-center justify-center shrink-0 group-hover:border-[var(--color-brand-red)]/50 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-[var(--color-text-2)] group-hover:text-[var(--color-brand-red)] transition-colors">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <div className="flex flex-col relative z-10">
+            <span className="text-white text-xs font-bold transition-colors">Tentang Tell Me U</span>
+            <span className="text-[var(--color-text-3)] text-[10px]">Apresiasi & Developer</span>
+          </div>
+        </Link>
       </div>
       
       {isUploading && <UploadMediaModal onClose={() => setIsUploading(false)} />}
