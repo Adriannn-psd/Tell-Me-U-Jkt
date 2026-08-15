@@ -27,7 +27,6 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
 
   const collabDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const collabDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const handleCollaboratorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace('@', '');
