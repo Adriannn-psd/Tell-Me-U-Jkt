@@ -21,8 +21,10 @@
     "next-auth": "^5.0.0-beta.32",
     "qrcode.react": "^4.2.0",
     "react": "19.2.8",
+    "react-clock": "^6.0.0",
     "react-dom": "19.2.8",
     "react-easy-crop": "^6.2.3",
+    "react-timekeeper": "^2.2.1",
     "sharp": "^0.35.3",
     "swr": "^2.5.0",
     "textarea-caret": "^3.1.0"

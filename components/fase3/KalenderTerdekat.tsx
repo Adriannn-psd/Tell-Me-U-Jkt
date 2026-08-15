@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useGuest } from "@/components/GuestProvider";
 import { useSession } from "next-auth/react";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
+import TimePickerPopup from "./TimePickerPopup";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -244,12 +245,9 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
                 className="w-full bg-[#1c1c1e] border border-[#3a3a3d] rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[var(--color-brand-red)] transition"
               />
               <div className="flex gap-2">
-                <input 
-                  type="time" 
-                  placeholder="Waktu (cth: 08:00)" 
-                  value={newEvent.time}
-                  onChange={e => setNewEvent({...newEvent, time: e.target.value})}
-                  className="w-1/2 bg-[#1c1c1e] border border-[#3a3a3d] rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[var(--color-brand-red)] transition"
+                <TimePickerPopup 
+                  time={newEvent.time}
+                  onChange={time => setNewEvent({...newEvent, time})}
                 />
                 <input 
                   type="text" 
