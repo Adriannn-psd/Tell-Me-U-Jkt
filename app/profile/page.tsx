@@ -183,18 +183,28 @@ function ProfileContent() {
       const formData = new FormData();
       formData.append("file", croppedBlob);
 
-      const signRes = await fetch("/api/sign-upload", { method: "POST" });
+      const timestamp = Math.round(new Date().getTime() / 1000);
+      const paramsToSign = {
+        timestamp,
+        folder: "avatars"
+      };
+
+      const signRes = await fetch("/api/sign-upload", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign })
+      });
       const signData = await signRes.json();
       
-      if (!signRes.ok) throw new Error("Failed to get signature");
+      if (!signData.success) throw new Error("Failed to get signature");
 
-      formData.append("api_key", signData.apikey);
-      formData.append("timestamp", signData.timestamp);
+      formData.append("api_key", signData.apiKey);
+      formData.append("timestamp", timestamp.toString());
       formData.append("signature", signData.signature);
-      formData.append("folder", signData.folder);
+      formData.append("folder", "avatars");
 
       const uploadRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`,
         { method: "POST", body: formData }
       );
       
