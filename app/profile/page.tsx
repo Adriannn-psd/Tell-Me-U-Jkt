@@ -46,8 +46,8 @@ const profileFetcher = async (url: string) => {
     return {
       posts: formattedPosts,
       posts_count: data.posts?.length || 0,
-      followers_count: data.followers_count || 0,
-      following_count: data.following_count || 0,
+      followers_count: data.stats?.followers || 0,
+      following_count: data.stats?.following || 0,
       stats: data.stats || { karya: 0, followers: 0, following: 0 },
       isPrivate: data.profile.is_private || false
     };
