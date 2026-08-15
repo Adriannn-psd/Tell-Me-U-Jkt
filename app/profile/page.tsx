@@ -714,11 +714,15 @@ function ProfileContent() {
               <div className="bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-2xl p-6 md:p-8 w-full">
                 <h3 className="text-white font-bold text-lg mb-4">Keterampilan</h3>
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {["UI/UX Design", "Figma", "React", "Next.js", "Tailwind CSS", "User Research"].map(skill => (
-                    <span key={skill} className="bg-[var(--color-bg)] border border-[var(--color-border-color)] text-[var(--color-text-2)] text-xs font-bold px-3 py-1.5 rounded-lg">
-                      {skill}
-                    </span>
-                  ))}
+                  {user?.skills && user.skills.length > 0 ? (
+                    user.skills.map((skill: string) => (
+                      <span key={skill} className="bg-[var(--color-bg)] border border-[var(--color-border-color)] text-[var(--color-text-2)] text-xs font-bold px-3 py-1.5 rounded-lg">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-[var(--color-text-3)] text-sm italic">Belum ada keterampilan yang ditambahkan.</p>
+                  )}
                 </div>
 
                 <h3 className="text-white font-bold text-lg mb-4">Pendidikan</h3>
@@ -728,7 +732,7 @@ function ProfileContent() {
                   </div>
                   <div>
                     <h4 className="text-white font-bold">Universitas Telkom Jakarta</h4>
-                    <p className="text-[var(--color-text-3)] text-sm">{user?.prodi || "Prodi"} • 2023 - Sekarang</p>
+                    <p className="text-[var(--color-text-3)] text-sm">{user?.prodi || "Prodi"} • 2026 - Sekarang</p>
                   </div>
                 </div>
               </div>
