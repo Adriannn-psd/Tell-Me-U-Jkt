@@ -56,24 +56,6 @@ export default function PostDetailModal({
     onCloseRef.current = onClose;
   }, [onClose]);
 
-  // Handle hardware back button
-  useEffect(() => {
-    const stateObj = { postModal: true };
-    window.history.pushState(stateObj, '');
-
-    const handlePopState = (e: PopStateEvent) => {
-      onCloseRef.current();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      if (window.history.state?.postModal) {
-         window.history.back();
-      }
-    };
-  }, []);
 
   const handleLike = async (forceLike: boolean = false) => {
     if (isLiking) return;
@@ -263,7 +245,7 @@ export default function PostDetailModal({
                 <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0">
                     <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                      {post.collaborator.avatar ? <img src={post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : post.collaborator.full_name.charAt(0)}
+                      {(post.collaborator as any).avatar_url || post.collaborator.avatar ? <img src={(post.collaborator as any).avatar_url || post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : (post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
                     </div>
                   </div>
                 </Link>
@@ -356,9 +338,9 @@ export default function PostDetailModal({
                 </Link>
                 {post.collaborator && post.collab_status === 'accepted' && (
                   <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0 z-0">
                       <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                        {post.collaborator.avatar ? <img src={post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : post.collaborator.full_name.charAt(0)}
+                        {(post.collaborator as any).avatar_url || post.collaborator.avatar ? <img src={(post.collaborator as any).avatar_url || post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : (post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
                       </div>
                     </div>
                   </Link>

@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     let hasLiked = false;
     let isOwnPost = false;
     let followStatus = "none";
+    let currentUserId = null;
     
     if (session?.user?.discordId) {
       if (post.likes) {
@@ -42,6 +43,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         .select("id")
         .eq("discord_id", session.user.discordId)
         .single();
+        
+      if (currentUser) {
+        currentUserId = currentUser.id;
+      }
         
       if (currentUser && post.author?.id) {
         isOwnPost = post.author.id === currentUser.id;
@@ -60,7 +65,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    return NextResponse.json({ success: true, post: { ...post, hasLiked, isOwnPost, followStatus, currentUserId: currentUser?.id } });
+    return NextResponse.json({ success: true, post: { ...post, hasLiked, isOwnPost, followStatus, currentUserId } });
   } catch (error: any) {
     console.error("Post Detail GET Error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

@@ -162,7 +162,7 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
               {post.collaborator && post.collab_status === 'accepted' && (
                 <Link href={`/profile/${post.collaborator.username}`}>
                   <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-[10px] font-bold border border-[var(--color-border-color)] overflow-hidden absolute left-4 top-0">
-                    {post.collaborator.avatar ? <img src={post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : post.collaborator.full_name.charAt(0)}
+                    {(post.collaborator as any).avatar_url || post.collaborator.avatar ? <img src={(post.collaborator as any).avatar_url || post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : (post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
                   </div>
                 </Link>
               )}
