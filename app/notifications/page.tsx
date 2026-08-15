@@ -212,42 +212,66 @@ export default function NotificationsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {notifications.map((notif: any) => {
-              const { actorName, actorAvatar, content, link, actionButtons } = getNotificationContent(notif);
-              
-              return (
-                <div 
-                  key={notif.id} 
-                  onClick={() => router.push(link)} 
-                  className={`block bg-[var(--color-surface)] border ${notif.is_read ? 'border-[var(--color-border-color)]' : 'border-[var(--color-brand-red)]'} rounded-xl p-4 transition hover:bg-[var(--color-surface-2)] cursor-pointer`}
-                >
-                  <div className="flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-[var(--color-surface-2)] shrink-0 overflow-hidden border border-[var(--color-border-color)]">
-                      {actorAvatar ? (
-                        <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
-                          {actorName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-[var(--color-text-2)] leading-snug">
-                        <span className="font-bold text-white">{actorName}</span> {content}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-3)] mt-1">
-                        {formatDate(notif.created_at)}
-                      </p>
-                      {actionButtons}
-                    </div>
-                    {!notif.is_read && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-brand-red)] shrink-0 mt-1"></div>
-                    )}
-                  </div>
+          <div className="space-y-6">
+            {Object.entries(
+              notifications.reduce((acc: any, notif: any) => {
+                const date = new Date(notif.created_at);
+                let group = "Lebih Lama";
+                if (isToday(date)) group = "Hari Ini";
+                else if (isYesterday(date)) group = "Kemarin";
+                
+                if (!acc[group]) acc[group] = [];
+                acc[group].push(notif);
+                return acc;
+              }, {})
+            ).sort((a: any, b: any) => {
+              const order = { "Hari Ini": 1, "Kemarin": 2, "Lebih Lama": 3 };
+              return (order[a[0] as keyof typeof order] || 4) - (order[b[0] as keyof typeof order] || 4);
+            }).map(([groupName, groupedNotifs]: [string, any]) => (
+              <div key={groupName}>
+                <div className="flex items-center gap-4 mb-4">
+                  <h3 className="text-white font-bold text-sm tracking-wide">{groupName}</h3>
+                  <div className="flex-1 h-px bg-[var(--color-border-color)]"></div>
                 </div>
-              );
-            })}
+                <div className="space-y-3">
+                  {groupedNotifs.map((notif: any) => {
+                    const { actorName, actorAvatar, content, link, actionButtons } = getNotificationContent(notif);
+                    
+                    return (
+                      <div 
+                        key={notif.id} 
+                        onClick={() => router.push(link)} 
+                        className={`block bg-[var(--color-surface)] border ${notif.is_read ? 'border-[var(--color-border-color)]' : 'border-[var(--color-brand-red)]'} rounded-xl p-4 transition hover:bg-[var(--color-surface-2)] cursor-pointer`}
+                      >
+                        <div className="flex gap-4">
+                          <div className="w-10 h-10 rounded-full bg-[var(--color-surface-2)] shrink-0 overflow-hidden border border-[var(--color-border-color)]">
+                            {actorAvatar ? (
+                              <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
+                                {actorName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-[var(--color-text-2)] leading-snug">
+                              <span className="font-bold text-white">{actorName}</span> {content}
+                            </p>
+                            <p className="text-xs text-[var(--color-text-3)] mt-1">
+                              {formatDate(notif.created_at)}
+                            </p>
+                            {actionButtons}
+                          </div>
+                          {!notif.is_read && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-brand-red)] shrink-0 mt-1"></div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>

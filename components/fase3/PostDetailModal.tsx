@@ -44,6 +44,25 @@ export default function PostDetailModal({
     fetchDetail();
   }, [post.id]);
 
+  // Handle hardware back button
+  useEffect(() => {
+    const stateObj = { postModal: true };
+    window.history.pushState(stateObj, '');
+
+    const handlePopState = (e: PopStateEvent) => {
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (window.history.state?.postModal) {
+         window.history.back();
+      }
+    };
+  }, [onClose]);
+
   const handleLike = async (forceLike: boolean = false) => {
     if (isLiking) return;
     

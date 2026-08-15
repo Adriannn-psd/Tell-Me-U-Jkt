@@ -92,6 +92,29 @@ function ProfileContent() {
   const [isSubmittingClass, setIsSubmittingClass] = useState(false);
   const [selectedClass, setSelectedClass] = useState("");
   const [classError, setClassError] = useState("");
+  const [bioError, setBioError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Handle hardware back button for Edit Profile Modal
+  useEffect(() => {
+    if (isEditingProfile) {
+      const stateObj = { profileModal: true };
+      window.history.pushState(stateObj, '');
+
+      const handlePopState = () => {
+        setIsEditingProfile(false);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        if (window.history.state?.profileModal) {
+           window.history.back();
+        }
+      };
+    }
+  }, [isEditingProfile]);
 
   const [isSubmittingIg, setIsSubmittingIg] = useState(false);
   const [instagramInput, setInstagramInput] = useState("");
@@ -731,13 +754,10 @@ function ProfileContent() {
                   <input
                     type="text"
                     value={editFullName}
-                    onChange={(e) => setEditFullName(e.target.value)}
-                    disabled={user?.isVerified}
-                    className={`w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--color-brand-red)] transition ${user?.isVerified ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={true}
+                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--color-brand-red)] transition opacity-50 cursor-not-allowed"
                   />
-                  {user?.isVerified && (
-                    <p className="text-[10px] text-[var(--color-text-3)] mt-1">Nama lengkap telah diverifikasi dan tidak dapat diubah.</p>
-                  )}
+                  <p className="text-[10px] text-[var(--color-text-3)] mt-1">Nama lengkap terisi otomatis dari verifikasi (Discord/SKL) dan tidak dapat diubah.</p>
                 </div>
 
                 <div>
