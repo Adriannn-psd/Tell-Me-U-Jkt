@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import imageCompression from "browser-image-compression";
 import MentionTextarea from "./MentionTextarea";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
@@ -21,13 +22,20 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [showCollabHints, setShowCollabHints] = useState(false);
   const { data: session } = useSession();
   const isVerified = session?.user?.isVerified;
+  const router = useRouter();
 
   const collabDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   if (session && !isVerified) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-        <div className="bg-[var(--color-bg)] w-full max-w-lg rounded-3xl border border-[var(--color-border-color)] p-8 relative flex flex-col items-center text-center">
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-[var(--color-bg)] w-full max-w-lg rounded-3xl border border-[var(--color-border-color)] p-8 relative flex flex-col items-center text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button onClick={onClose} className="absolute right-4 top-4 p-2 text-[var(--color-text-3)] hover:text-white transition rounded-full hover:bg-white/10">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
@@ -44,10 +52,16 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
             Kamu harus <strong>memverifikasi SKL</strong> kamu terlebih dahulu untuk dapat mengunggah karya ke portal pameran ini.
           </p>
           
-          <Link href="/profile" onClick={onClose} className="w-full bg-[var(--color-brand-red)] text-white font-bold py-4 rounded-xl hover:bg-red-600 transition text-lg flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,59,48,0.3)]">
+          <button 
+            onClick={() => {
+              onClose();
+              router.push("/profile");
+            }} 
+            className="w-full bg-[var(--color-brand-red)] text-white font-bold py-4 rounded-xl hover:bg-red-600 transition text-lg flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,59,48,0.3)]"
+          >
             Verifikasi Sekarang
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
+          </button>
           
           <button onClick={onClose} className="mt-4 text-[var(--color-text-3)] hover:text-white transition text-sm font-medium px-4 py-2">
             Nanti Saja
