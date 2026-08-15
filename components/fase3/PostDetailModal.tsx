@@ -197,15 +197,15 @@ export default function PostDetailModal({
       {/* Backdrop (Tap to close) */}
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+        onPointerDown={onClose}
         onClick={onClose}
       />
       
-      {/* Tap area at top for mobile to close */}
-      <div className="flex-1 w-full md:hidden" onClick={onClose} />
-
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-5xl h-[100dvh] md:h-auto max-h-[100dvh] md:max-h-[85vh] bg-[var(--color-surface)] rounded-none md:rounded-[24px] border border-[var(--color-border-color)] overflow-hidden flex flex-col md:flex-row shadow-2xl animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 duration-300"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-5xl h-full md:h-auto max-h-full md:max-h-[85vh] bg-[var(--color-surface)] rounded-none md:rounded-[24px] border border-[var(--color-border-color)] overflow-hidden flex flex-col md:flex-row shadow-2xl animate-in slide-in-from-bottom-full md:slide-in-from-bottom-0 md:zoom-in-95 duration-300"
         style={{ transform: `translateY(${translateY}px)`, transition: translateY === 0 ? 'transform 0.3s ease-out' : 'none' }}
       >
         {/* Swipe Handle for Mobile */}

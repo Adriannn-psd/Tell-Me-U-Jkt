@@ -49,21 +49,11 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
     }
 
     if (selectedFile.type.startsWith("video/")) {
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        alert("Ukuran video maksimal 10MB!");
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-
+      // User requested to allow large files and let the system compress them later
       const video = document.createElement("video");
       video.preload = "metadata";
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
-        if (video.duration > 90) {
-          alert("Durasi video maksimal 90 detik!");
-          if (fileInputRef.current) fileInputRef.current.value = "";
-          return;
-        }
         proceedWithFile(selectedFile);
       };
       video.src = URL.createObjectURL(selectedFile);

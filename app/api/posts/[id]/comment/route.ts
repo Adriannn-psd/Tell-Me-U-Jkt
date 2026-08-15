@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .from("post_comments")
       .insert({
         post_id: postId,
-        user_id: dbUser.id,
+        user_id: userId,
         content,
         parent_id: parentId || null
       })

@@ -71,19 +71,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
       posts = fetchedPosts;
     }
 
-    // Fetch followers count (only accepted)
+    // Fetch followers count (only accepted or null for legacy)
     const { count: followersCount } = await supabase
       .from("user_follows")
       .select("*", { count: 'exact', head: true })
       .eq("following_id", user.id)
-      .eq("status", "accepted");
+      .or("status.eq.accepted,status.is.null");
 
-    // Fetch following count (only accepted)
+    // Fetch following count (only accepted or null for legacy)
     const { count: followingCount } = await supabase
       .from("user_follows")
       .select("*", { count: 'exact', head: true })
       .eq("follower_id", user.id)
-      .eq("status", "accepted");
+      .or("status.eq.accepted,status.is.null");
 
     // Format stats
     const stats = {
