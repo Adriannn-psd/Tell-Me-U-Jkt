@@ -134,18 +134,18 @@ export default function Header() {
   return (
     <>
     <header className="sticky top-0 z-50 bg-[var(--color-bg)] md:bg-[var(--color-bg)]/80 md:backdrop-blur-md border-b border-[var(--color-border-color)] md:w-[calc(100%-260px)] md:ml-[260px]">
-      <div className="w-full px-5 md:px-8 py-4 flex items-center justify-between md:justify-end gap-6">
+      <div className="w-full px-4 md:px-8 py-3 md:py-4 flex items-center justify-between md:justify-end gap-2 md:gap-6">
         
         {/* Mobile Search Bar & Logo */}
-        <div className="flex items-center gap-3 md:hidden w-full">
+        <div className="flex items-center gap-2 md:gap-3 md:hidden w-full min-w-0">
           {!showMobileSearch ? (
             <>
-              <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+              <div className="w-9 h-9 md:w-10 md:h-10 shrink-0 flex items-center justify-center">
                 <img src="/logo.png" alt="Tell Me U Jkt Logo" className="w-full h-full object-contain drop-shadow-md" />
               </div>
-              <div className="leading-[1.05]">
-                <span className="text-white font-bold text-[16.5px] block">Tell Me U</span>
-                <span className="text-[var(--color-brand-red)] font-extrabold text-[14.5px] block italic tracking-[0.3px]">Jkt</span>
+              <div className="leading-[1.05] shrink-0">
+                <span className="text-white font-bold text-[15px] md:text-[16.5px] block whitespace-nowrap">Tell Me U</span>
+                <span className="text-[var(--color-brand-red)] font-extrabold text-[13px] md:text-[14.5px] block italic tracking-[0.3px]">Jkt</span>
               </div>
             </>
           ) : (
