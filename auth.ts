@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
-import { getUser, upsertUser } from "@/lib/supabase";
+import { getUser, upsertUser, supabase } from "@/lib/supabase";
 
 // ---- Role ID → Prodi Mapping ----
 // Ganti ROLE_ID_xxx dengan Role ID asli dari server Discord kamu
@@ -56,14 +56,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Build avatar URL
         const discordId = account.providerAccountId;
-        const avatarHash = (user as Record<string, unknown>).image
-          ? undefined
-          : undefined;
         const avatarUrl =
           user.image || `https://cdn.discordapp.com/embed/avatars/${parseInt(discordId) % 5}.png`;
 
         // Fetch existing user to preserve verification status
         const existingUser = await getUser(discordId);
+
+        // ── Bot Integration: Check if user was already verified via Discord bot ──
+        // The bot stores verified users in `maba_roles` (username, role_name, full_name)
+        // If found, we auto-verify them on the web so they don't need to upload SKL again.
+        let botVerified = existingUser?.is_verified || false;
+        let botProdi = prodi; // default from Discord role IDs
+        let botFullName: string | undefined = undefined;
+
+        if (!botVerified) {
+          const discordUsername = user.name || "";
+          const { data: botRecord } = await supabase
+            .from("maba_roles")
+            .select("role_name, full_name")
+            .eq("username", discordUsername)
+            .maybeSingle();
+
+          if (botRecord) {
+            botVerified = true;
+            // Map bot's short role names to full prodi names used by the web
+            const BOT_ROLE_TO_PRODI: Record<string, string> = {
+              "DKV": "Desain Komunikasi Visual",
+              "TEKINFO": "Teknik Informasi",
+              "SISFOR": "Sistem Informasi",
+              "TEKTEL": "Teknik Telekomunikasi",
+            };
+            botProdi = BOT_ROLE_TO_PRODI[botRecord.role_name] || prodi;
+            botFullName = botRecord.full_name || undefined;
+            console.log(`✅ Bot-verified user detected: ${discordUsername} → ${botRecord.role_name}, name: ${botFullName || "(not stored)"}`);
+          }
+        }
 
         // Upsert user to Supabase
         await upsertUser({
@@ -71,9 +98,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           username: user.name || "user",
           display_name: user.name || undefined,
           avatar_url: avatarUrl,
-          prodi: prodi,
+          prodi: botProdi,
           role_ids: roleIds,
-          is_verified: existingUser ? existingUser.is_verified : false,
+          is_verified: botVerified,
+          // Use bot-extracted full name if available, otherwise keep existing
+          ...(botFullName ? { full_name: botFullName } : {}),
         });
 
         return true;
