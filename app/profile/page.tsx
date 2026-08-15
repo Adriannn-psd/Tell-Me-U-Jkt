@@ -246,10 +246,10 @@ function ProfileContent() {
     setClassError("");
 
     try {
-      const res = await fetch("/api/user/class", {
+      const res = await fetch("/api/user/kelas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ class: selectedClass }),
+        body: JSON.stringify({ kelas: selectedClass }),
       });
 
       const data = await res.json();
