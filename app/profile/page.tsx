@@ -75,6 +75,7 @@ function ProfileContent() {
   
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<"karya" | "tentang">("karya");
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   
   // Verification state
   const [verifyFile, setVerifyFile] = useState<File | null>(null);
@@ -133,7 +134,6 @@ function ProfileContent() {
     profileFetcher
   );
   
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFullName, setEditFullName] = useState("");
   const [editIsPrivate, setEditIsPrivate] = useState(false);
   const [editEducation, setEditEducation] = useState("");
@@ -714,8 +714,8 @@ function ProfileContent() {
               <div className="bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-2xl p-6 md:p-8 w-full">
                 <h3 className="text-white font-bold text-lg mb-4">Keterampilan</h3>
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {user?.skills && user.skills.length > 0 ? (
-                    user.skills.map((skill: string) => (
+                  {(user as any)?.skills && (user as any).skills.length > 0 ? (
+                    (user as any).skills.map((skill: string) => (
                       <span key={skill} className="bg-[var(--color-bg)] border border-[var(--color-border-color)] text-[var(--color-text-2)] text-xs font-bold px-3 py-1.5 rounded-lg">
                         {skill}
                       </span>

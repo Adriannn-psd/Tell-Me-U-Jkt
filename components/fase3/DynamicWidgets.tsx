@@ -137,14 +137,21 @@ export default function DynamicWidgets() {
                   
                   const content = (
                     <>
-                      <div className={`absolute inset-0 bg-gradient-to-tr ${bgGradient} opacity-90 z-0`} />
-                      <div className={`absolute inset-0 bg-cover bg-center mix-blend-overlay opacity-40 z-0 transform scale-110 group-hover:scale-125 transition-transform duration-700 ${isGuest ? 'blur-md' : ''}`} style={{ backgroundImage: `url('${cover}')` }}></div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0" />
+                      <div className={`absolute inset-0 bg-cover bg-center z-0 transform scale-110 group-hover:scale-125 transition-transform duration-700 ${isGuest ? 'blur-md' : ''}`} style={{ backgroundImage: `url('${cover}')` }}></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-0" />
+                      <div className={`absolute inset-0 bg-gradient-to-tr ${bgGradient} opacity-40 mix-blend-color z-0`} />
                       <div className={`relative z-10 ${isGuest ? 'blur-md select-none' : ''}`}>
-                        <div className="flex mb-1 md:mb-2.5">
-                          <span className="px-1.5 py-0.5 md:px-2.5 md:py-1 bg-white/20 backdrop-blur-md rounded-md md:rounded-lg text-[6px] md:text-[9px] font-black text-white uppercase tracking-wider border border-white/20">{post.category || 'Info'}</span>
+                        <div className="flex items-center gap-1.5 mb-1.5 md:mb-2.5">
+                          {post.author_profile_pic && (
+                            <img src={post.author_profile_pic} alt={post.author_username} className="w-3.5 h-3.5 md:w-5 md:h-5 rounded-full object-cover border border-white/20" />
+                          )}
+                          <span className="px-1.5 py-0.5 md:px-2 md:py-0.5 bg-black/40 backdrop-blur-md rounded-md text-[7px] md:text-[9px] font-bold text-white tracking-wide border border-white/10 truncate max-w-[80px]">
+                            @{post.author_username || post.category || 'Info'}
+                          </span>
                         </div>
-                        <p className="text-[9px] md:text-[15px] font-extrabold text-white leading-[1.2] mb-1 md:mb-1.5 tracking-wide line-clamp-2">{post.title}</p>
+                        <p className="text-[9px] md:text-[13px] font-semibold text-white/90 leading-[1.3] mb-1 tracking-wide line-clamp-3">
+                          {post.summary}
+                        </p>
                       </div>
                       {isGuest && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2 text-center bg-black/20 backdrop-blur-sm">
