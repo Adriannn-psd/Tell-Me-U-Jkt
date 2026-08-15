@@ -304,6 +304,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             username={profileData.username} 
             type={networkModalType} 
             onClose={() => setNetworkModalType(null)} 
+            onUpdate={fetchProfile}
           />
         )}
       </main>

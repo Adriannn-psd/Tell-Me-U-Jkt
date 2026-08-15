@@ -883,6 +883,7 @@ function ProfileContent() {
           username={usernameForFetch} 
           type={networkModalType} 
           onClose={() => setNetworkModalType(null)} 
+          onUpdate={mutate}
         />
       )}
     </div>

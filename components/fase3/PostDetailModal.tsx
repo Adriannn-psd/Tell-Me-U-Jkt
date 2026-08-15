@@ -50,13 +50,18 @@ export default function PostDetailModal({
     fetchDetail();
   }, [post.id]);
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Handle hardware back button
   useEffect(() => {
     const stateObj = { postModal: true };
     window.history.pushState(stateObj, '');
 
     const handlePopState = (e: PopStateEvent) => {
-      onClose();
+      onCloseRef.current();
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -67,7 +72,7 @@ export default function PostDetailModal({
          window.history.back();
       }
     };
-  }, [onClose]);
+  }, []);
 
   const handleLike = async (forceLike: boolean = false) => {
     if (isLiking) return;

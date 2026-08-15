@@ -7,11 +7,13 @@ import { useGuest } from "../GuestProvider";
 export default function FollowNetworkModal({
   username,
   type,
-  onClose
+  onClose,
+  onUpdate
 }: {
   username: string;
   type: 'followers' | 'following';
   onClose: () => void;
+  onUpdate?: () => void;
 }) {
   const { isGuest, showLoginPopup } = useGuest();
   const [users, setUsers] = useState<any[]>([]);
@@ -93,6 +95,9 @@ export default function FollowNetworkModal({
           }
           return u;
         }));
+      }
+      if (data.success) {
+        onUpdate?.();
       }
     } catch (err) {
       console.error(err);
