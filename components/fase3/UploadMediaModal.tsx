@@ -263,7 +263,6 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
                   onError={() => {
                     alert("Gagal memuat preview.");
                     setPreview(null);
-                    setBase64Data(null);
                     setFile(null);
                   }}
                 />
@@ -375,7 +374,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
         ) : (
           <button 
             onClick={handleUpload}
-            disabled={!title || !base64Data || isProcessing}
+            disabled={!title || !file || isProcessing}
             className="w-full bg-[var(--color-brand-red)] text-white font-bold py-4 rounded-xl mt-6 hover:bg-red-600 transition shadow-[0_4px_14px_rgba(229,39,31,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Upload Sekarang
