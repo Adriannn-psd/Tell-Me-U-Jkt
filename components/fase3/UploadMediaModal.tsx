@@ -11,7 +11,6 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [collaboratorUsername, setCollaboratorUsername] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [base64Data, setBase64Data] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,28 +100,76 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
     const objectUrl = URL.createObjectURL(selectedFile);
     setPreview(objectUrl);
     
-    // Read as base64 for the API
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setBase64Data(result);
-      setIsProcessing(false);
-    };
-    reader.onerror = () => {
-      alert("Gagal membaca file.");
-      setIsProcessing(false);
-    };
-    reader.readAsDataURL(selectedFile);
+    // Kita tidak lagi mengubah file ke Base64 untuk menghindari crash browser
+    // saat user memilih file video berukuran besar.
+    setIsProcessing(false);
   };
 
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleUpload = async () => {
-    if (!title || !base64Data) return alert("Judul dan Foto wajib diisi!");
+    if (!title || !file) return alert("Judul dan Foto wajib diisi!");
     setLoading(true);
     setUploadProgress(0);
 
     try {
+      // 1. Dapatkan signature dari backend
+      const timestamp = Math.round(new Date().getTime() / 1000);
+      const paramsToSign = {
+        timestamp,
+        folder: "karya",
+      };
+
+      const signRes = await fetch("/api/sign-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paramsToSign })
+      });
+      const signData = await signRes.json();
+      if (!signData.success) throw new Error(signData.error || "Gagal mendapatkan signature");
+
+      const { signature, cloudName, apiKey } = signData;
+
+      // 2. Upload langsung ke Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", apiKey);
+      formData.append("timestamp", timestamp.toString());
+      formData.append("signature", signature);
+      formData.append("folder", "karya");
+
+      const uploadResult: any = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, true);
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            // Upload ke Cloudinary merepresentasikan 85% progress
+            const percentComplete = Math.round((event.loaded / event.total) * 85);
+            setUploadProgress(percentComplete);
+          }
+        };
+
+        xhr.onload = () => {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(response);
+            } else {
+              reject(new Error(response.error?.message || "Gagal upload ke Cloudinary"));
+            }
+          } catch (e) {
+            reject(new Error("Cloudinary server error"));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error during Cloudinary upload"));
+        xhr.send(formData);
+      });
+
+      const photoUrl = uploadResult.secure_url;
+      setUploadProgress(90);
+
       // Determine aspect ratio basic logic
       let aspectRatio = "square";
       const img = new Image();
@@ -130,56 +177,33 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
       if (img.width > img.height) aspectRatio = "landscape";
       if (img.height > img.width) aspectRatio = "tall";
 
+      // 3. Simpan data post ke database (Vercel Backend)
       const payload = {
         title,
         description,
         tags: tags.split(",").map(t => t.trim()).filter(Boolean),
         aspectRatio,
-        photoBase64: base64Data,
+        photoUrl, // Kita kirim URL saja, bukan Base64
         collaborator_username: collaboratorUsername.trim() || undefined
       };
 
-      const data: any = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/posts", true);
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentComplete);
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText));
-            } catch(e) {
-              resolve({ success: false, error: "Invalid response format" });
-            }
-          } else {
-            resolve({ success: false, error: xhr.statusText });
-          }
-        };
-
-        xhr.onerror = () => {
-          reject(new Error("Network error"));
-        };
-
-        xhr.send(JSON.stringify(payload));
+      const finalRes = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
-
-      if (data.success) {
-        onClose();
-        // ideally refresh the feed
-        window.location.reload();
-      } else {
-        alert("Gagal upload: " + data.error);
+      const finalData = await finalRes.json();
+      if (!finalData.success) {
+        throw new Error(finalData.error || "Gagal menyimpan karya ke database");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan saat upload.");
+
+      setUploadProgress(100);
+      alert("Karya berhasil diunggah!");
+      onClose();
+      window.location.reload(); // Temporary reload until Optimistic UI is complete
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || "Gagal mengupload karya.");
     } finally {
       setLoading(false);
       setUploadProgress(0);

@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     const userName = session.user.fullName || session.user.name || "Unknown User";
     
     const body = await req.json();
-    const { title, description, tags, aspectRatio, photoBase64, collaborator_username } = body;
+    const { title, description, tags, aspectRatio, photoUrl, collaborator_username } = body;
 
     let collaborator_id = null;
     if (collaborator_username) {
@@ -135,8 +135,8 @@ export async function POST(req: NextRequest) {
       if (collabUser) collaborator_id = collabUser.id;
     }
 
-    if (!title || !photoBase64) {
-      return NextResponse.json({ success: false, error: "Title and photo are required" }, { status: 400 });
+    if (!title || !photoUrl) {
+      return NextResponse.json({ success: false, error: "Title and photoUrl are required" }, { status: 400 });
     }
 
     // Fetch user UUID and prodi from database using discordId
@@ -154,7 +154,6 @@ export async function POST(req: NextRequest) {
     const dbUserId = dbUser.id;
 
     // WORKAROUND: Supabase `posts` table has a foreign key to `profiles` instead of `users`.
-    // We must ensure the user exists in `profiles` before inserting the post.
     await supabase.from("profiles").upsert({
       id: dbUserId,
       discord_id: dbUser.discord_id,
@@ -163,74 +162,72 @@ export async function POST(req: NextRequest) {
       prodi: dbUser.prodi
     });
 
-    // Convert base64 to buffer robustly
-    const base64Data = photoBase64.includes(",") ? photoBase64.split(",")[1] : photoBase64;
-    const buffer = Buffer.from(base64Data, "base64");
-    
-    let photoUrl = "";
+    const uploadTasks: Promise<void>[] = [];
 
-    // 1. Upload Preview ke Cloudinary
-    if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-      const uploadString = photoBase64.startsWith('data:') 
-        ? photoBase64 
-        : `data:image/jpeg;base64,${photoBase64}`;
-        
-      const uploadResult = await cloudinary.uploader.upload(uploadString, {
-        folder: "karya",
-        resource_type: "auto",
-        public_id: `${userId}_${Date.now()}`,
-        transformation: [{ quality: "auto", fetch_format: "auto" }]
-      });
-      photoUrl = uploadResult.secure_url;
+    // Upload Original ke Google Drive (Root -> Karya -> Nama User) dari link Cloudinary
+    if (process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_REFRESH_TOKEN) {
+      uploadTasks.push(
+        (async () => {
+          try {
+            const drive = getDriveService();
+            const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID as string;
+            
+            const karyaFolderId = await getOrCreateFolder(drive, "Karya", rootFolderId);
+            
+            const cleanUserName = userName.replace(/[^a-zA-Z0-9 ]/g, "_");
+            const userFolderId = await getOrCreateFolder(drive, cleanUserName, karyaFolderId);
+
+            // Fetch file dari Cloudinary
+            const response = await fetch(photoUrl);
+            if (!response.ok || !response.body) {
+                throw new Error("Failed to fetch image from Cloudinary for Drive backup");
+            }
+            
+            // Konversi web ReadableStream ke Node stream
+            const { Readable } = require('stream');
+            const nodeStream = Readable.fromWeb(response.body);
+
+            let mimeType = response.headers.get("content-type") || "image/jpeg";
+            let ext = mimeType.split("/")[1] || "jpg";
+            // Normalisasi ekstensi
+            if (ext === "jpeg") ext = "jpg";
+            if (ext === "quicktime") ext = "mov";
+
+            const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, "_");
+            const fileName = `${cleanTitle}_${Date.now()}.${ext}`;
+
+            // Optional timeout wrapper to prevent hanging the whole request for huge files on Vercel
+            const uploadPromise = drive.files.create({
+              requestBody: {
+                name: fileName,
+                parents: [userFolderId],
+              },
+              media: {
+                mimeType: mimeType,
+                body: nodeStream,
+              },
+              fields: "id",
+              supportsAllDrives: true,
+            });
+
+            // Beri batas waktu 6 detik maksimal untuk Google Drive upload di serverless
+            // Jika lewat, fungsi akan jalan terus di background (di local) atau terpotong (di Vercel)
+            // tanpa menggagalkan pengembalian response ke user.
+            await Promise.race([
+              uploadPromise,
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Drive upload timeout exceeded")), 6000))
+            ]);
+          } catch (driveErr: any) {
+            console.warn("Google Drive Upload Note:", driveErr.message || driveErr);
+            // Don't throw for Drive since it's meant to be optional/silent fail if needed
+          }
+        })()
+      );
     }
 
-    // 2. Upload Original ke Google Drive (Root -> Karya -> Nama User)
-    if (process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_REFRESH_TOKEN) {
-      try {
-        const drive = getDriveService();
-        const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-        
-        // Buat atau dapatkan folder "Karya" di dalam root
-        const karyaFolderId = await getOrCreateFolder(drive, "Karya", rootFolderId);
-        
-        // Buat atau dapatkan folder dengan nama user di dalam "Karya"
-        const cleanUserName = userName.replace(/[^a-zA-Z0-9 ]/g, "_");
-        const userFolderId = await getOrCreateFolder(drive, cleanUserName, karyaFolderId);
-
-        // Upload foto ke folder target
-        const stream = require('stream');
-        const bufferStream = new stream.PassThrough();
-        bufferStream.end(buffer);
-
-        // Extract mime type and extension
-        let mimeType = "image/jpeg";
-        let ext = "jpg";
-        if (photoBase64.startsWith("data:")) {
-          const match = photoBase64.match(/^data:([^;]+);/);
-          if (match && match[1]) {
-            mimeType = match[1];
-            ext = mimeType.split("/")[1] || "jpg";
-          }
-        }
-
-        const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, "_");
-        const fileName = `${cleanTitle}_${Date.now()}.${ext}`;
-
-        await drive.files.create({
-          requestBody: {
-            name: fileName,
-            parents: [userFolderId],
-          },
-          media: {
-            mimeType: mimeType,
-            body: bufferStream,
-          },
-          fields: "id",
-          supportsAllDrives: true,
-        });
-      } catch (driveErr) {
-        console.error("Google Drive Upload Error:", driveErr);
-      }
+    // Tunggu backup selesai (atau batas timeout tercapai)
+    if (uploadTasks.length > 0) {
+      await Promise.all(uploadTasks);
     }
 
     // 3. Save to database
@@ -295,6 +292,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Posts POST Error:", error);
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
