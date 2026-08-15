@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { fullName, isPrivate, bio, skills } = body;
+    const { fullName, isPrivate, bio, skills, avatarUrl } = body;
 
     if (fullName !== undefined && (typeof fullName !== "string" || fullName.trim().length < 2)) {
       return NextResponse.json(
@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest) {
     if (isPrivate !== undefined) updates.is_private = isPrivate;
     if (bio !== undefined) updates.bio = bio;
     if (skills !== undefined) updates.skills = skills;
+    if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
 
     const { data: updated, error } = await supabase
       .from("users")

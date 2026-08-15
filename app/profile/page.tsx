@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
+import AvatarCropModal from "@/components/fase3/AvatarCropModal";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useGuest } from "@/components/GuestProvider";
@@ -146,6 +147,10 @@ function ProfileContent() {
   const [editSkills, setEditSkills] = useState("");
   const [editSkillsError, setEditSkillsError] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editAvatarUrl, setEditAvatarUrl] = useState("");
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Sync profile data to edit state
   useEffect(() => {
@@ -154,8 +159,55 @@ function ProfileContent() {
       setEditIsPrivate(profileData.isPrivate);
       setEditBio((profileData as any).profile?.bio || "");
       setEditSkills((profileData as any).profile?.skills?.join(", ") || "");
+      setEditAvatarUrl(avatarUrl || "");
     }
-  }, [isEditingProfile, displayName, profileData.isPrivate, (profileData as any).profile?.bio, (profileData as any).profile?.skills]);
+  }, [isEditingProfile, displayName, profileData.isPrivate, (profileData as any).profile?.bio, (profileData as any).profile?.skills, avatarUrl]);
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+    if (e.target) e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setImageToCrop(null);
+    setIsUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", croppedBlob);
+
+      const signRes = await fetch("/api/sign-upload", { method: "POST" });
+      const signData = await signRes.json();
+      
+      if (!signRes.ok) throw new Error("Failed to get signature");
+
+      formData.append("api_key", signData.apikey);
+      formData.append("timestamp", signData.timestamp);
+      formData.append("signature", signData.signature);
+      formData.append("folder", signData.folder);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${signData.cloudname}/image/upload`,
+        { method: "POST", body: formData }
+      );
+      
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error?.message || "Upload failed");
+      
+      setEditAvatarUrl(uploadData.secure_url);
+    } catch (err) {
+      console.error("Failed to upload avatar", err);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     setEditSkillsError("");
@@ -175,7 +227,8 @@ function ProfileContent() {
           fullName: editFullName,
           isPrivate: editIsPrivate,
           bio: editBio,
-          skills: skillsArray
+          skills: skillsArray,
+          avatarUrl: editAvatarUrl
         })
       });
       if (res.ok) {
@@ -187,7 +240,8 @@ function ProfileContent() {
             full_name: editFullName,
             is_private: editIsPrivate,
             bio: editBio,
-            skills: skillsArray
+            skills: skillsArray,
+            avatar_url: editAvatarUrl
           }
         };
         await mutate(updatedProfile, { revalidate: true }); // refresh profile data
@@ -748,8 +802,8 @@ function ProfileContent() {
               <div className="bg-[var(--color-surface)] border border-[var(--color-border-color)] rounded-2xl p-6 md:p-8 w-full">
                 <h3 className="text-white font-bold text-lg mb-4">Keterampilan</h3>
                 <div className="flex flex-wrap gap-2 mb-8">
-                  {(user as any)?.skills && (user as any).skills.length > 0 ? (
-                    (user as any).skills.map((skill: string) => (
+                  {(profileData as any)?.profile?.skills && (profileData as any).profile.skills.length > 0 ? (
+                    (profileData as any).profile.skills.map((skill: string) => (
                       <span key={skill} className="bg-[var(--color-bg)] border border-[var(--color-border-color)] text-[var(--color-text-2)] text-xs font-bold px-3 py-1.5 rounded-lg">
                         {skill}
                       </span>
@@ -787,6 +841,36 @@ function ProfileContent() {
               </div>
               
               <div className="space-y-4">
+                <div className="flex flex-col items-center mb-6">
+                  <div 
+                    className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-[#333338] bg-[#2c2c2e] cursor-pointer group flex items-center justify-center shrink-0"
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    {isUploadingAvatar ? (
+                      <div className="w-8 h-8 border-4 border-[var(--color-brand-red)] border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        {editAvatarUrl ? (
+                          <img src={editAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl font-bold text-[#8e8e93]">{initial}</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[var(--color-text-3)] mt-2">Klik foto untuk mengganti</p>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={avatarInputRef} 
+                    onChange={handleAvatarFileSelect} 
+                  />
+                </div>
+
                 <div>
                   <label className="text-[var(--color-text-2)] text-xs font-semibold mb-1.5 block">Nama Lengkap</label>
                   <input
@@ -931,7 +1015,17 @@ function ProfileContent() {
 
       <BottomNav />
 
-      {isUploading && <UploadMediaModal onClose={() => setIsUploading(false)} />}
+      {isUploading && (
+        <UploadMediaModal onClose={() => setIsUploading(false)} />
+      )}
+      
+      {imageToCrop && (
+        <AvatarCropModal
+          imageSrc={imageToCrop}
+          onClose={() => setImageToCrop(null)}
+          onCropComplete={handleCropComplete}
+        />
+      )}
       
       {/* Network Modal */}
       {networkModalType && usernameForFetch && (
