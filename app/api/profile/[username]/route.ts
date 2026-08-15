@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
     // Fetch user details
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("id, full_name, username, avatar_url, prodi, is_private, instagram")
+      .select("id, full_name, username, avatar_url, prodi, is_private, instagram, bio, skills")
       .eq("username", username)
       .single();
 

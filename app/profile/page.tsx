@@ -141,7 +141,8 @@ function ProfileContent() {
   
   const [editFullName, setEditFullName] = useState("");
   const [editIsPrivate, setEditIsPrivate] = useState(false);
-  const [editEducation, setEditEducation] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editSkills, setEditSkills] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Sync profile data to edit state
@@ -149,21 +150,23 @@ function ProfileContent() {
     if (isEditingProfile) {
       setEditFullName(displayName);
       setEditIsPrivate(profileData.isPrivate);
-      // Fallback if education doesn't exist in profileData yet
-      setEditEducation((profileData as any).education || "");
+      setEditBio((profileData as any).profile?.bio || "");
+      setEditSkills((profileData as any).profile?.skills?.join(", ") || "");
     }
-  }, [isEditingProfile, displayName, profileData.isPrivate, (profileData as any).education]);
+  }, [isEditingProfile, displayName, profileData.isPrivate, (profileData as any).profile?.bio, (profileData as any).profile?.skills]);
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
     try {
+      const skillsArray = editSkills.split(",").map(s => s.trim()).filter(s => s.length > 0);
       const res = await fetch("/api/user", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: editFullName,
           isPrivate: editIsPrivate,
-          education: editEducation
+          bio: editBio,
+          skills: skillsArray
         })
       });
       if (res.ok) {
@@ -388,8 +391,14 @@ function ProfileContent() {
                 <p className="text-[var(--color-text-3)] text-sm mb-1">
                   {[user?.prodi, user?.kelas].filter(Boolean).join(" • ") || "Mahasiswa"}
                 </p>
+
+                {(profileData as any).profile?.bio && (
+                  <p className="text-white text-sm mt-2 mb-1 leading-relaxed whitespace-pre-wrap">
+                    {(profileData as any).profile.bio}
+                  </p>
+                )}
                 
-                <div className="text-white text-sm mt-1">
+                <div className="text-white text-sm mt-2">
                   <div className="flex items-center gap-1.5 mt-1">
                     {user?.instagram && (
                       <>
@@ -767,6 +776,29 @@ function ProfileContent() {
                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--color-brand-red)] transition opacity-50 cursor-not-allowed"
                   />
                   <p className="text-[10px] text-[var(--color-text-3)] mt-1">Nama lengkap terisi otomatis dari verifikasi (Discord/SKL) dan tidak dapat diubah.</p>
+                </div>
+
+                <div>
+                  <label className="text-[var(--color-text-2)] text-xs font-semibold mb-1.5 block">Bio</label>
+                  <textarea
+                    value={editBio}
+                    onChange={(e) => setEditBio(e.target.value)}
+                    placeholder="Ceritakan sedikit tentang dirimu..."
+                    rows={3}
+                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--color-brand-red)] transition resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[var(--color-text-2)] text-xs font-semibold mb-1.5 block">Keterampilan</label>
+                  <input
+                    type="text"
+                    value={editSkills}
+                    onChange={(e) => setEditSkills(e.target.value)}
+                    placeholder="Contoh: Figma, React, Public Speaking"
+                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-[var(--color-brand-red)] transition"
+                  />
+                  <p className="text-[10px] text-[var(--color-text-3)] mt-1">Pisahkan dengan koma ( , ) jika lebih dari satu.</p>
                 </div>
 
 

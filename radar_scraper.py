@@ -159,28 +159,28 @@ def main():
                     
                     # Unduh ke lokal
                     try:
-                            if media.media_type == 1:
-                                path = cl.photo_download(media.pk, folder=DOWNLOAD_DIR)
-                                media_paths.append(str(path))
-                            elif media.media_type == 2:
-                                path = cl.video_download(media.pk, folder=DOWNLOAD_DIR)
-                                media_paths.append(str(path))
-                            elif media.media_type == 8:
-                                paths = cl.album_download(media.pk, folder=DOWNLOAD_DIR)
-                                media_paths = [str(p) for p in paths]
-                                
-                            # Upload ke Cloudinary
-                            for local_path in media_paths:
-                                print(f"      Upload ke Cloudinary: {local_path}")
-                                upload_result = cloudinary.uploader.upload(
-                                    local_path, 
-                                    folder="media_kampus",
-                                    resource_type="auto"
-                                )
-                                cloudinary_urls.append(upload_result['secure_url'])
-                                
-                        except Exception as e:
-                            print(f"      [!] Gagal mendownload/upload media: {e}")
+                        if media.media_type == 1:
+                            path = cl.photo_download(media.pk, folder=DOWNLOAD_DIR)
+                            media_paths.append(str(path))
+                        elif media.media_type == 2:
+                            path = cl.video_download(media.pk, folder=DOWNLOAD_DIR)
+                            media_paths.append(str(path))
+                        elif media.media_type == 8:
+                            paths = cl.album_download(media.pk, folder=DOWNLOAD_DIR)
+                            media_paths = [str(p) for p in paths]
+                            
+                        # Upload ke Cloudinary
+                        for local_path in media_paths:
+                            print(f"      Upload ke Cloudinary: {local_path}")
+                            upload_result = cloudinary.uploader.upload(
+                                local_path, 
+                                folder="media_kampus",
+                                resource_type="auto"
+                            )
+                            cloudinary_urls.append(upload_result['secure_url'])
+                            
+                    except Exception as e:
+                        print(f"      [!] Gagal mendownload/upload media: {e}")
                             
                     # Upload Profile Pic
                     author_profile_pic = None

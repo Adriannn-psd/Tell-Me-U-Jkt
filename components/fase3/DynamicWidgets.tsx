@@ -30,8 +30,25 @@ export default function DynamicWidgets() {
     }
   }, [tasksData]);
 
-  const toggleTask = (id: number) => {
-    setLocalTasks(localTasks.map(t => (t.id === id ? { ...t, done: !t.done } : t)));
+  const toggleTask = async (id: number) => {
+    // Optimistic UI update
+    const taskToUpdate = localTasks.find(t => t.id === id);
+    if (!taskToUpdate) return;
+    
+    const newStatus = !taskToUpdate.done;
+    setLocalTasks(localTasks.map(t => (t.id === id ? { ...t, done: newStatus } : t)));
+
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus ? "done" : "todo" })
+      });
+    } catch (err) {
+      console.error("Failed to update task", err);
+      // Revert if failed
+      setLocalTasks(localTasks.map(t => (t.id === id ? { ...t, done: !newStatus } : t)));
+    }
   };
 
   const radarPosts = radarData?.success && radarData?.posts ? radarData.posts : [];

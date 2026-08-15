@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
+import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
@@ -104,9 +105,10 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col">
+      <Sidebar />
       <Header />
       
-      <main className="flex-1 w-full max-w-5xl mx-auto px-5 md:px-8 py-6 pb-24 md:pb-10 relative">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-5 md:px-8 py-6 pb-24 md:pb-10 md:pt-6 md:pl-[260px] relative">
         
         {loading ? (
           <div className="flex justify-center items-center py-20">

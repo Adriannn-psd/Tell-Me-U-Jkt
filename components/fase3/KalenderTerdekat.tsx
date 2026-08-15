@@ -223,7 +223,7 @@ export default function KalenderTerdekat({ isModal = false, onClose }: { isModal
               />
               <div className="flex gap-2">
                 <input 
-                  type="text" 
+                  type="time" 
                   placeholder="Waktu (cth: 08:00)" 
                   value={newEvent.time}
                   onChange={e => setNewEvent({...newEvent, time: e.target.value})}
