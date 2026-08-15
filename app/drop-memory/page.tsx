@@ -48,7 +48,7 @@ function DropMemoryContent() {
           title: "Kunjungan Industri",
           description: "Seru banget bisa liat langsung proses kerja di Tech Company.",
           privacy: "Khusus Prodi Saya",
-          target_group: "S1 Informatika",
+          target_group: "S1 Teknik Informasi",
           user_name: "Anisa",
           created_at: new Date(Date.now() - 86400000).toISOString(),
           likes: 45
@@ -94,7 +94,7 @@ function DropMemoryContent() {
         title,
         description,
         privacy,
-        target_group: privacy === "Khusus Kelas Saya" ? "S1 IF 01" : privacy === "Khusus Prodi Saya" ? "Informatika" : undefined,
+        target_group: privacy === "Khusus Kelas Saya" ? "S1 TI 01" : privacy === "Khusus Prodi Saya" ? "Teknik Informasi" : undefined,
         user_name: session?.user?.name || "Anonymous",
         created_at: new Date().toISOString(),
         likes: 0

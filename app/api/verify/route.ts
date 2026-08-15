@@ -118,7 +118,7 @@ function jurusanMatchesProdi(
 
   // Alias mappings for common abbreviations
   const aliases: Record<string, string[]> = {
-    "teknik informatika": ["informatika", "teknik informatika", "s1 teknik informatika", "if", "s1 informatika"],
+    "teknik informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informasi", "informatika", "teknik informatika", "s1 informatika"],
     "sistem informasi": ["sistem informasi", "s1 sistem informasi", "si"],
     "desain komunikasi visual": [
       "desain komunikasi visual",

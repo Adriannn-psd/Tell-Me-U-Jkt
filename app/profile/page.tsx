@@ -17,10 +17,12 @@ import LoginPanel from "@/components/LoginPanel";
 // Removed hardcoded MY_POSTS
 
 const getProdiAcronym = (prodi: string) => {
-  if (prodi === "Sistem Informasi") return "SI";
-  if (prodi === "Teknik Informasi") return "TI";
-  if (prodi === "Desain Komunikasi Visual") return "DKV";
-  if (prodi === "Teknik Telekomunikasi") return "TT";
+  if (!prodi) return "UNKNOWN";
+  const p = prodi.toLowerCase();
+  if (p.includes("sistem informasi")) return "SI";
+  if (p.includes("informatika") || p.includes("teknik informasi")) return "TI";
+  if (p.includes("komunikasi visual") || p.includes("dkv")) return "DKV";
+  if (p.includes("telekomunikasi")) return "TT";
   return "UNKNOWN";
 };
 
