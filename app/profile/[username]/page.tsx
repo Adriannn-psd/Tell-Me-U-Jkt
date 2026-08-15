@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { useSession } from "next-auth/react";
 import { use } from "react";
 
@@ -50,9 +51,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           username: data.profile.username || username,
           prodi: data.profile.prodi || "Unknown",
           avatarUrl: data.profile.avatar_url,
-          bio: `Mahasiswa aktif yang tertarik dengan dunia digital kreatif. Portfolio dari ${data.profile.full_name || username}.`,
+          bio: data.profile.bio || "",
           stats: data.stats,
-          skills: ["Creative Thinking", "Design", "Programming"], // Placeholder
+          skills: data.profile.skills || [],
+          instagram: data.profile.instagram,
+          kelas: data.profile.kelas,
+          is_verified: data.profile.is_verified,
           posts: mappedPosts,
           is_private: data.profile.is_private,
           followStatus: data.followStatus,
@@ -166,6 +170,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                   <h1 className="text-white font-bold text-sm md:text-base">
                     {profileData.name}
                   </h1>
+                  {profileData.is_verified && <VerifiedBadge size={16} />}
                   {profileData.is_private && (
                     <div className="flex items-center bg-black/40 border border-white/10 rounded-full px-2 py-0.5 gap-1" title="Akun Privat">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 text-[var(--color-text-2)]">
