@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import getCaretCoordinates from "textarea-caret";
 
 interface UserMention {
@@ -16,14 +16,23 @@ interface MentionTextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   onValueChange?: (val: string) => void;
 }
 
-export default function MentionTextarea({ value, onChange, onValueChange, className, ...props }: MentionTextareaProps) {
+const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(({ value, onChange, onValueChange, className, ...props }, ref) => {
   const [showHints, setShowHints] = useState(false);
   const [hints, setHints] = useState<UserMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState("");
   const [cursorPos, setCursorPos] = useState({ top: 0, left: 0 });
   
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const internalRef = useRef<HTMLTextAreaElement>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const setRefs = (element: HTMLTextAreaElement | null) => {
+    internalRef.current = element;
+    if (typeof ref === 'function') {
+      ref(element);
+    } else if (ref) {
+      ref.current = element;
+    }
+  };
 
   // Detect @ typing
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -95,9 +104,9 @@ export default function MentionTextarea({ value, onChange, onValueChange, classN
   };
 
   const insertMention = (username: string) => {
-    if (!textareaRef.current) return;
-    const text = textareaRef.current.value;
-    const caretPos = textareaRef.current.selectionStart;
+    if (!internalRef.current) return;
+    const text = internalRef.current.value;
+    const caretPos = internalRef.current.selectionStart;
 
     // Find the @ again
     let i = caretPos - 1;
@@ -124,10 +133,10 @@ export default function MentionTextarea({ value, onChange, onValueChange, classN
       
       // refocus and move caret
       setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
+        if (internalRef.current) {
+          internalRef.current.focus();
           const newCaretPos = foundAt + username.length + 2;
-          textareaRef.current.setSelectionRange(newCaretPos, newCaretPos);
+          internalRef.current.setSelectionRange(newCaretPos, newCaretPos);
         }
       }, 0);
     }
@@ -137,7 +146,7 @@ export default function MentionTextarea({ value, onChange, onValueChange, classN
     <div className="relative w-full">
       <textarea
         {...props}
-        ref={textareaRef}
+        ref={setRefs}
         value={value}
         onChange={handleInput}
         onSelect={handleSelect}
@@ -178,4 +187,6 @@ export default function MentionTextarea({ value, onChange, onValueChange, classN
       )}
     </div>
   );
-}
+});
+
+export default MentionTextarea;
