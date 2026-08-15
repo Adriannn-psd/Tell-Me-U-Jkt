@@ -142,13 +142,21 @@ export async function POST(req: NextRequest) {
     // Fetch user UUID and prodi from database using discordId
     const { data: dbUser, error: userError } = await supabase
       .from("users")
-      .select("id, discord_id, username, avatar_url, prodi")
+      .select("id, discord_id, username, avatar_url, prodi, is_verified")
       .eq("discord_id", userId)
       .single();
 
     if (userError || !dbUser) {
       console.error("User not found in database:", userError);
       return NextResponse.json({ success: false, error: "User not found in database" }, { status: 404 });
+    }
+
+    if (!dbUser.is_verified) {
+      return NextResponse.json({ success: false, error: "not_verified", message: "Anda harus verifikasi SKL terlebih dahulu" }, { status: 403 });
+    }
+
+    if (!dbUser.prodi) {
+      return NextResponse.json({ success: false, error: "no_prodi", message: "Data prodi tidak ditemukan. Silakan hubungi admin." }, { status: 400 });
     }
 
     const dbUserId = dbUser.id;
@@ -237,7 +245,7 @@ export async function POST(req: NextRequest) {
         user_id: dbUserId,
         title,
         description,
-        prodi: dbUser.prodi,
+        prodi: dbUser.prodi || "Umum",
         media_url: photoUrl,
         collaborator_id,
         collab_status: collaborator_id ? 'pending' : null
