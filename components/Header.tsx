@@ -50,7 +50,7 @@ export default function Header() {
     try {
       mutateNotif({
         ...notifData,
-        notifications: notifications.map(n => ({ ...n, is_read: true }))
+        notifications: notifications.map((n: any) => ({ ...n, is_read: true }))
       }, false);
       await fetch("/api/notifications", { method: "PUT" });
       mutateNotif();
@@ -344,7 +344,7 @@ export default function Header() {
                       </div>
                     ) : (
                       <div className="flex flex-col border-t border-[#3a3a3d]">
-                        {notifications.map((n) => {
+                        {notifications.map((n: any) => {
                           let href = '/home';
                           if (n.type === 'follow_request' || n.type === 'upload_request' || n.type === 'upload_accept' || n.type === 'collab_request') href = '/notifications';
                           else if (n.type.includes('follow')) href = `/profile/${n.actor?.username}`;
@@ -355,7 +355,7 @@ export default function Header() {
                             if (!n.is_read) {
                               mutateNotif({
                                 ...notifData,
-                                notifications: notifications.map(notif => notif.id === n.id ? { ...notif, is_read: true } : notif)
+                                notifications: notifications.map((notif: any) => notif.id === n.id ? { ...notif, is_read: true } : notif)
                               }, false);
                               try {
                                 await fetch("/api/notifications", {
@@ -488,7 +488,7 @@ export default function Header() {
                         </div>
                       ) : (
                         <div className="flex flex-col border-t border-[#3a3a3d]">
-                          {notifications.map((n) => {
+                          {notifications.map((n: any) => {
                             let href = '/home';
                             if (n.type === 'follow_request' || n.type === 'upload_request' || n.type === 'upload_accept' || n.type === 'collab_request') href = '/notifications';
                             else if (n.type.includes('follow')) href = `/profile/${n.actor?.username}`;
@@ -499,7 +499,7 @@ export default function Header() {
                               if (!n.is_read) {
                                 mutateNotif({
                                   ...notifData,
-                                  notifications: notifications.map(notif => notif.id === n.id ? { ...notif, is_read: true } : notif)
+                                  notifications: notifications.map((notif: any) => notif.id === n.id ? { ...notif, is_read: true } : notif)
                                 }, false);
                                 try {
                                   await fetch("/api/notifications", {
