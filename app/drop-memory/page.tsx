@@ -71,10 +71,16 @@ function DropMemoryContent() {
 
   useEffect(() => {
     if (searchParams.get('action') === 'add') {
-      setShowCreateModal(true);
       router.replace(pathname);
+      if (isGuest) {
+        showLoginPopup();
+      } else if (!isComplete) {
+        setShowLock(true);
+      } else {
+        setShowCreateModal(true);
+      }
     }
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, isGuest, isComplete, showLoginPopup]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,7 +221,7 @@ function DropMemoryContent() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
           <div className="relative bg-[#1c1c1e] w-full max-w-lg rounded-2xl md:rounded-3xl border border-[#2a2a30] shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-8 duration-300">
             <div className="p-5 md:p-6 border-b border-[#2a2a30] flex justify-between items-center bg-[#1c1c1e] sticky top-0 z-10">

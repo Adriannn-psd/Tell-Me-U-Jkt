@@ -10,7 +10,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import useSWR from "swr";
 import FeaturedEventCard from "@/components/fase3/FeaturedEventCard";
 import { useGuest } from "@/components/GuestProvider";
-import LoginPanel from "@/components/LoginPanel";
+import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -20,6 +20,8 @@ function DokumentasiContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { isGuest, showLoginPopup } = useGuest();
+  const { isComplete, missingInfo } = useProfileCheck();
+  const [showLock, setShowLock] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [title, setTitle] = useState("");
@@ -37,10 +39,16 @@ function DokumentasiContent() {
 
   useEffect(() => {
     if (searchParams.get('action') === 'add') {
-      setShowCreateModal(true);
       router.replace(pathname);
+      if (isGuest) {
+        showLoginPopup();
+      } else if (!isComplete) {
+        setShowLock(true);
+      } else {
+        setShowCreateModal(true);
+      }
     }
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, isGuest, isComplete, showLoginPopup]);
 
   const { data, error, isLoading, mutate } = useSWR("/api/dokumentasi", fetcher, {
     revalidateOnFocus: false,
@@ -508,6 +516,7 @@ function DokumentasiContent() {
           </div>
         </div>
       )}
+      {showLock && <ProfileLockOverlay missingInfo={missingInfo} onClose={() => setShowLock(false)} />}
     </div>
   );
 }

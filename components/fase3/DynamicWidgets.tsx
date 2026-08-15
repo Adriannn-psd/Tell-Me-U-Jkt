@@ -1,57 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useGuest } from "@/components/GuestProvider";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function DynamicWidgets() {
   const { isGuest, showLoginPopup } = useGuest();
-  const [tasks, setTasks] = useState<{ id: number; title: string; deadline: string; done: boolean }[]>([]);
-  const [radarPosts, setRadarPosts] = useState<any[]>([]);
+  const [localTasks, setLocalTasks] = useState<{ id: number; title: string; deadline: string; done: boolean }[]>([]);
+
+  const { data: tasksData } = useSWR("/api/tasks", fetcher, { revalidateOnFocus: false, dedupingInterval: 60000 });
+  const { data: radarData } = useSWR("/api/radar", fetcher, { revalidateOnFocus: false, dedupingInterval: 60000 });
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const res = await fetch("/api/tasks");
-        const data = await res.json();
-        if (data.success && data.tasks) {
-          // Get the 2 closest tasks that are not 'completed'
-          const activeTasks = data.tasks
-            .filter((t: any) => t.status !== 'completed')
-            .sort((a: any, b: any) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
-            .slice(0, 2)
-            .map((t: any) => ({
-              id: t.id,
-              title: t.title,
-              deadline: new Date(t.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-              done: false
-            }));
-          setTasks(activeTasks);
-        }
-      } catch (err) {
-        console.error("Failed to fetch tasks for widget", err);
-      }
-    };
-    
-    const fetchRadar = async () => {
-      try {
-        const res = await fetch("/api/radar");
-        const data = await res.json();
-        if (data.success && data.posts) {
-          setRadarPosts(data.posts);
-        }
-      } catch (err) {
-        console.error("Failed to fetch radar posts for widget", err);
-      }
-    };
-
-    fetchTasks();
-    fetchRadar();
-  }, []);
+    if (tasksData?.success && tasksData?.tasks) {
+      const activeTasks = tasksData.tasks
+        .filter((t: any) => t.status !== 'completed')
+        .sort((a: any, b: any) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
+        .slice(0, 2)
+        .map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          deadline: new Date(t.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          done: false
+        }));
+      setLocalTasks(activeTasks);
+    }
+  }, [tasksData]);
 
   const toggleTask = (id: number) => {
-    setTasks(tasks.map(t => (t.id === id ? { ...t, done: !t.done } : t)));
+    setLocalTasks(localTasks.map(t => (t.id === id ? { ...t, done: !t.done } : t)));
   };
+
+  const radarPosts = radarData?.success && radarData?.posts ? radarData.posts : [];
 
   return (
     <div className="px-5 md:px-0 pt-[22px] md:pt-8 pb-0">
@@ -78,7 +61,7 @@ export default function DynamicWidgets() {
             </div>
             
             <div className="flex flex-col gap-1.5 md:gap-3.5 flex-1 relative z-10 w-full xl:w-[75%]">
-              {tasks.map(task => (
+              {localTasks.map(task => (
                 <div 
                   key={task.id} 
                   className={`flex items-center gap-2 md:gap-4 p-2 md:p-4 rounded-xl md:rounded-[18px] border backdrop-blur-md transition-all cursor-pointer ${task.done ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#1a1a1c]/80 border-white/10 hover:bg-[#202022] hover:border-[#ff3b30]/40 shadow-sm'}`}
@@ -172,9 +155,14 @@ export default function DynamicWidgets() {
                   );
                 })}
 
-                {radarPosts.length === 0 && (
+                {!radarData && (
                    <div className="w-full flex items-center justify-center py-5 opacity-60">
                      <p className="text-[9px] md:text-sm text-white">Memuat...</p>
+                   </div>
+                )}
+                {radarData && radarPosts.length === 0 && (
+                   <div className="w-full flex items-center justify-center py-5 opacity-60">
+                     <p className="text-[9px] md:text-sm text-white">Belum ada radar.</p>
                    </div>
                 )}
               </div>
