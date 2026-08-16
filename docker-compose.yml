@@ -5,7 +5,33 @@ services:
     build: .
     container_name: tellmeu-web
     restart: always
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     env_file:
       - .env
+    networks:
+      - webnet
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - webnet
+    depends_on:
+      - tellmeu-app
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  webnet:

@@ -1,0 +1,3 @@
+tellmeujkt.web.id {
+    reverse_proxy tellmeu-app:3000
+}
