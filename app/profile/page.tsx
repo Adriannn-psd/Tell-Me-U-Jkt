@@ -171,7 +171,8 @@ function ProfileContent() {
   const avatarUrl = user?.avatarUrl || user?.image;
   const initial = displayName.charAt(0).toUpperCase();
   
-  const completedSteps = [user?.isVerified, !!user?.kelas, !!user?.instagram].filter(Boolean).length;
+  const isSklComplete = user?.isVerified && !!user?.fullName;
+  const completedSteps = [isSklComplete, !!user?.kelas, !!user?.instagram].filter(Boolean).length;
 
   const usernameForFetch = user?.dbUsername || user?.name;
   const { data: profileData = { posts: [], posts_count: 0, followers_count: 0, following_count: 0, stats: { karya: 0, followers: 0, following: 0 }, isPrivate: false }, isLoading: isLoadingPosts, mutate } = useSWR(
