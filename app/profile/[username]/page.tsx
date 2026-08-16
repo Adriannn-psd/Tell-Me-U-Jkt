@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
+import AvatarPreviewModal from "@/components/fase3/AvatarPreviewModal";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useSession } from "next-auth/react";
 import { use } from "react";
@@ -15,6 +16,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   const [networkModalType, setNetworkModalType] = useState<"followers" | "following" | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null);
   
   const resolvedParams = use(params);
   const username = resolvedParams.username;
@@ -111,6 +113,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col">
       <Sidebar />
       <Header />
+      {previewAvatarUrl && (
+        <AvatarPreviewModal 
+          imageUrl={previewAvatarUrl} 
+          onClose={() => setPreviewAvatarUrl(null)} 
+        />
+      )}
       
       <main className="flex-1 w-full max-w-5xl mx-auto px-5 md:px-8 py-6 pb-24 md:pb-10 md:pt-6 md:pl-[260px] relative">
         
@@ -132,7 +140,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                 <div className="relative shrink-0">
                   <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 p-[2px]">
                     {profileData.avatarUrl ? (
-                      <img src={profileData.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)]" />
+                      <img 
+                        src={profileData.avatarUrl} 
+                        alt="Avatar" 
+                        onClick={() => setPreviewAvatarUrl(profileData.avatarUrl)}
+                        className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)] cursor-pointer" 
+                      />
                     ) : (
                       <div className="w-full h-full rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-bg)] flex items-center justify-center text-3xl font-extrabold text-white">
                         {profileData.name.charAt(0)}

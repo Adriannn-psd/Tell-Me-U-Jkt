@@ -6,6 +6,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import Link from "next/link";
+import AuthGuard from "@/components/AuthGuard";
+import AvatarPreviewModal from "@/components/fase3/AvatarPreviewModal";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
 import AvatarCropModal from "@/components/fase3/AvatarCropModal";
@@ -149,6 +152,7 @@ function ProfileContent() {
   const [igCooldownTimer, setIgCooldownTimer] = useState(0);
   const [igNextStepAfterCooldown, setIgNextStepAfterCooldown] = useState<IgStep | null>(null);
   const igFileInputRef = useRef<HTMLInputElement>(null);
+  const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -605,6 +609,12 @@ function ProfileContent() {
     <div className="min-h-screen bg-[var(--color-bg)] flex flex-col">
       <Sidebar />
       <Header />
+      {previewAvatarUrl && (
+        <AvatarPreviewModal 
+          imageUrl={previewAvatarUrl} 
+          onClose={() => setPreviewAvatarUrl(null)} 
+        />
+      )}
       
       <main className="flex-1 w-full max-w-[1400px] mx-auto px-5 md:px-8 py-6 pb-28 md:pb-10 md:pt-6 md:pl-[260px] relative">
         
@@ -619,7 +629,12 @@ function ProfileContent() {
                 <div className="relative shrink-0">
                   <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 p-[2px]">
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)]" />
+                      <img 
+                        src={avatarUrl} 
+                        alt="Avatar" 
+                        onClick={() => setPreviewAvatarUrl(avatarUrl)}
+                        className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)] cursor-pointer" 
+                      />
                     ) : (
                       <div className="w-full h-full rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-bg)] flex items-center justify-center text-3xl font-extrabold text-white">
                         {initial}
