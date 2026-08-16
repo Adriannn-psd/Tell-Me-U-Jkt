@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.github
+*.md
+.dockerignore
+Dockerfile
+docker-compose.yml
+.npmrc
+scratch
+media_kampus
+ig_session_state.json
