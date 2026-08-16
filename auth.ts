@@ -5,7 +5,8 @@ import { getUser, upsertUser, supabase } from "@/lib/supabase";
 // ---- Role ID → Prodi Mapping ----
 // Ganti ROLE_ID_xxx dengan Role ID asli dari server Discord kamu
 const ROLE_TO_PRODI: Record<string, string> = {
-  "1526566212077879438": "Teknik Informasi",
+  "1538489249895292951": "Informatika",
+  "1526566212077879438": "Teknologi Informasi",
   "1526566441040478352": "Sistem Informasi",
   "1526565350731284532": "Desain Komunikasi Visual",
   "1526566818024783872": "Teknik Telekomunikasi",
@@ -85,7 +86,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // Map bot's short role names to full prodi names used by the web
             const BOT_ROLE_TO_PRODI: Record<string, string> = {
               "DKV": "Desain Komunikasi Visual",
-              "TEKINFO": "Teknik Informasi",
+              "TI": "Teknologi Informasi",
+              "INFOR": "Informatika",
               "SISFOR": "Sistem Informasi",
               "TEKTEL": "Teknik Telekomunikasi",
             };

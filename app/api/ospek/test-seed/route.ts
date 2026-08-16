@@ -11,7 +11,7 @@ export async function GET() {
         discord_id: dummyId,
         username: "dummy_user",
         full_name: "Teman Dummy",
-        prodi: "Teknik Informasi",
+        prodi: "Teknologi Informasi",
         kelas: "TI-A",
         is_verified: true,
       }, { onConflict: "discord_id" })

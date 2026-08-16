@@ -118,7 +118,8 @@ function jurusanMatchesProdi(
 
   // Alias mappings for common abbreviations
   const aliases: Record<string, string[]> = {
-    "teknik informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informatika", "teknik informatika", "s1 informatika", "teknologi informasi", "s1 teknologi informasi"],
+    "teknologi informasi": ["teknologi informasi", "s1 teknologi informasi", "ti"],
+    "informatika": ["informatika", "s1 informatika", "teknik informatika", "if"],
     "sistem informasi": ["sistem informasi", "s1 sistem informasi", "si"],
     "desain komunikasi visual": [
       "desain komunikasi visual",
@@ -135,7 +136,10 @@ function jurusanMatchesProdi(
   };
 
   const prodiAliases = aliases[normalizedProdi] || [];
-  return prodiAliases.some((alias) => normalizedJurusan.includes(alias));
+  return prodiAliases.some((alias) => {
+    const regex = new RegExp(`\\b${alias}\\b`, "i");
+    return regex.test(normalizedJurusan);
+  });
 }
 
 function deduceProdiFromJurusan(extractedJurusan: string): string | undefined {
@@ -143,7 +147,8 @@ function deduceProdiFromJurusan(extractedJurusan: string): string | undefined {
   
   const normalizedJurusan = normalize(extractedJurusan);
   const aliases: Record<string, string[]> = {
-    "Teknik Informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informatika", "teknik informatika", "s1 informatika", "teknologi informasi", "s1 teknologi informasi"],
+    "Teknologi Informasi": ["teknologi informasi", "s1 teknologi informasi", "ti"],
+    "Informatika": ["informatika", "s1 informatika", "teknik informatika", "if"],
     "Sistem Informasi": ["sistem informasi", "s1 sistem informasi", "si"],
     "Desain Komunikasi Visual": [
       "desain komunikasi visual",
@@ -160,7 +165,10 @@ function deduceProdiFromJurusan(extractedJurusan: string): string | undefined {
   };
 
   for (const [officialName, aliasList] of Object.entries(aliases)) {
-    if (aliasList.some((alias) => normalizedJurusan.includes(alias))) {
+    if (aliasList.some((alias) => {
+      const regex = new RegExp(`\\b${alias}\\b`, "i");
+      return regex.test(normalizedJurusan);
+    })) {
       return officialName;
     }
   }

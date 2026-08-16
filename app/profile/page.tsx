@@ -20,7 +20,8 @@ const getProdiAcronym = (prodi: string) => {
   if (!prodi) return "UNKNOWN";
   const p = prodi.toLowerCase();
   if (p.includes("sistem informasi")) return "SI";
-  if (p.includes("informatika") || p.includes("teknik informasi")) return "TI";
+  if (p.includes("teknologi informasi")) return "TI";
+  if (p.includes("informatika")) return "INFOR";
   if (p.includes("komunikasi visual") || p.includes("dkv")) return "DKV";
   if (p.includes("telekomunikasi")) return "TT";
   return "UNKNOWN";

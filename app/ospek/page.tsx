@@ -209,9 +209,9 @@ export default function OspekPage() {
           <OspekDashboard 
             boards={isGuest ? [
               { id: "dummy1", name: "Sistem Informasi", count: 1250 },
-              { id: "dummy2", name: "Teknik Informasi", count: 980 },
-              { id: "dummy3", name: "Desain Komunikasi Visual", count: 850 },
-              { id: "dummy4", name: "Ilmu Komunikasi", count: 640 }
+              { id: "dummy2", name: "Teknologi Informasi", count: 980 },
+              { id: "dummy3", name: "Informatika", count: 850 },
+              { id: "dummy4", name: "Desain Komunikasi Visual", count: 640 }
             ] : boards} 
             totalScanned={isGuest ? 3720 : totalScanned}
             onOpenBoard={openBoard} 
