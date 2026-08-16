@@ -22,6 +22,9 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetStep, setResetStep] = useState<1 | 2>(1);
+  const [isResetting, setIsResetting] = useState(false);
   
   const { isScrolledPastHero } = useScrollState();
   const [showAllModal, setShowAllModal] = useState(false);
@@ -582,20 +585,38 @@ export default function Header() {
                           Login
                         </button>
                       ) : (
-                        <button 
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            setShowLogoutModal(true);
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-[#E5271F] hover:bg-[#2c2c2e] font-semibold flex items-center gap-2"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                            <polyline points="16 17 21 12 16 7" />
-                            <line x1="21" y1="12" x2="9" y2="12" />
-                          </svg>
-                          Logout
-                        </button>
+                        <>
+                          <button 
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              setShowLogoutModal(true);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-[#E5271F] hover:bg-[#2c2c2e] font-semibold flex items-center gap-2"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                              <polyline points="16 17 21 12 16 7" />
+                              <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Logout
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              setResetStep(1);
+                              setShowResetModal(true);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-[#E5271F] hover:bg-red-500/10 font-bold flex items-center gap-2 mt-1 border-t border-[#3a3a3d]"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            Reset Akun
+                          </button>
+                        </>
                       )}
                     </div>
                   </>
@@ -635,20 +656,38 @@ export default function Header() {
                         Login
                       </button>
                     ) : (
-                      <button 
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setShowLogoutModal(true);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-[#E5271F] hover:bg-[#2c2c2e] font-semibold flex items-center gap-3 transition"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                          <polyline points="16 17 21 12 16 7" />
-                          <line x1="21" y1="12" x2="9" y2="12" />
-                        </svg>
-                        Logout
-                      </button>
+                      <>
+                        <button 
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setShowLogoutModal(true);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-[#E5271F] hover:bg-[#2c2c2e] font-semibold flex items-center gap-3 transition"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                          </svg>
+                          Logout
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            setResetStep(1);
+                            setShowResetModal(true);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-[#E5271F] hover:bg-red-500/10 font-bold flex items-center gap-3 mt-1 border-t border-[#3a3a3d] transition"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                          Reset Akun
+                        </button>
+                      </>
                     )}
                   </div>
                 </>
@@ -702,6 +741,88 @@ export default function Header() {
                 Logout
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Reset Account Modal */}
+    {showResetModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isResetting && setShowResetModal(false)}></div>
+        <div className="relative bg-[#1c1c1e] border border-red-500/30 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mb-4 text-[#E5271F]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            
+            {resetStep === 1 ? (
+              <>
+                <h3 className="text-white text-lg font-bold mb-2">Reset Akun?</h3>
+                <p className="text-[#a1a1aa] text-sm mb-6">
+                  Akun Anda akan kembali menjadi unverified dan data SKL beserta identitas akan dihapus. Riwayat gamifikasi Anda tidak akan dihapus.
+                </p>
+                <div className="flex gap-3 w-full">
+                  <button 
+                    onClick={() => setShowResetModal(false)}
+                    className="flex-1 py-3 rounded-xl bg-[#2c2c2e] text-white font-semibold text-sm hover:bg-[#3a3a3d] transition"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    onClick={() => setResetStep(2)}
+                    className="flex-1 py-3 rounded-xl bg-[#E5271F] text-white font-bold text-sm hover:bg-red-600 transition"
+                  >
+                    Ya, Lanjut
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-[#E5271F] text-lg font-bold mb-2">Peringatan Terakhir!</h3>
+                <p className="text-[#a1a1aa] text-sm mb-6">
+                  Anda harus mengulang proses verifikasi SKL dari awal jika ingin mengakses fitur kampus lagi. Lanjutkan?
+                </p>
+                <div className="flex flex-col gap-3 w-full">
+                  <button 
+                    onClick={async () => {
+                      setIsResetting(true);
+                      try {
+                        const res = await fetch("/api/user/reset", { method: "DELETE" });
+                        if (res.ok) {
+                          signOut({ callbackUrl: "/" });
+                        } else {
+                          console.error("Gagal reset");
+                          setIsResetting(false);
+                          setShowResetModal(false);
+                        }
+                      } catch (e) {
+                        console.error(e);
+                        setIsResetting(false);
+                      }
+                    }}
+                    disabled={isResetting}
+                    className="w-full py-3 rounded-xl bg-red-600/20 text-[#E5271F] border border-red-500/50 font-bold text-sm hover:bg-red-600 hover:text-white transition disabled:opacity-50 flex justify-center items-center"
+                  >
+                    {isResetting ? "Memproses..." : "Saya Yakin, Reset Sekarang"}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setResetStep(1);
+                      setShowResetModal(false);
+                    }}
+                    disabled={isResetting}
+                    className="w-full py-3 rounded-xl bg-[#2c2c2e] text-white font-semibold text-sm hover:bg-[#3a3a3d] transition"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
