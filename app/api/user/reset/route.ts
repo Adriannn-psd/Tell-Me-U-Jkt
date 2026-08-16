@@ -10,7 +10,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const discordId = session.user.discordId;
-    const username = session.user.dbUsername || session.user.username;
+    const username = session.user.dbUsername || session.user.name;
 
     if (!username) {
       return NextResponse.json({ error: "Username not found in session" }, { status: 400 });

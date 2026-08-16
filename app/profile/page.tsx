@@ -7,7 +7,6 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import Link from "next/link";
-import AuthGuard from "@/components/AuthGuard";
 import AvatarPreviewModal from "@/components/fase3/AvatarPreviewModal";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
