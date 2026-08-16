@@ -18,7 +18,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY package.json package-lock.json ./
 
 # Install Node modules
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Copy Python requirements
 COPY requirements.txt ./
