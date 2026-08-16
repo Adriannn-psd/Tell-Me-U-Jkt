@@ -99,12 +99,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         }
 
+        let finalAvatarUrl = avatarUrl;
+        if (existingUser?.avatar_url && !existingUser.avatar_url.includes("cdn.discordapp.com")) {
+          finalAvatarUrl = existingUser.avatar_url;
+        }
+
         // Upsert user to Supabase
         await upsertUser({
           discord_id: discordId,
           username: rawDiscordUsername,
           display_name: user.name || undefined,
-          avatar_url: avatarUrl,
+          avatar_url: finalAvatarUrl,
           prodi: botProdi,
           role_ids: roleIds,
           is_verified: botVerified,
