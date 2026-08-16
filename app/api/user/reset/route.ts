@@ -43,6 +43,7 @@ export async function DELETE(req: NextRequest) {
         full_name: null,
         prodi: null,
         kelas: null,
+        instagram: null,
         is_verified: false
       })
       .eq("discord_id", discordId);
