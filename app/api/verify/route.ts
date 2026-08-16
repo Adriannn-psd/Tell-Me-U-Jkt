@@ -118,7 +118,7 @@ function jurusanMatchesProdi(
 
   // Alias mappings for common abbreviations
   const aliases: Record<string, string[]> = {
-    "teknik informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informatika", "teknik informatika", "s1 informatika"],
+    "teknik informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informatika", "teknik informatika", "s1 informatika", "teknologi informasi", "s1 teknologi informasi"],
     "sistem informasi": ["sistem informasi", "s1 sistem informasi", "si"],
     "desain komunikasi visual": [
       "desain komunikasi visual",
@@ -143,7 +143,7 @@ function deduceProdiFromJurusan(extractedJurusan: string): string | undefined {
   
   const normalizedJurusan = normalize(extractedJurusan);
   const aliases: Record<string, string[]> = {
-    "Teknik Informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informatika", "teknik informatika", "s1 informatika"],
+    "Teknik Informasi": ["teknik informasi", "s1 teknik informasi", "ti", "informatika", "teknik informatika", "s1 informatika", "teknologi informasi", "s1 teknologi informasi"],
     "Sistem Informasi": ["sistem informasi", "s1 sistem informasi", "si"],
     "Desain Komunikasi Visual": [
       "desain komunikasi visual",
