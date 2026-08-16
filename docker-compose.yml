@@ -12,6 +12,16 @@ services:
     networks:
       - webnet
 
+  radar-scraper:
+    build: .
+    container_name: radar-scraper-daemon
+    restart: always
+    command: ["python3", "radar_daemon.py"]
+    env_file:
+      - .env
+    networks:
+      - webnet
+
   caddy:
     image: caddy:2-alpine
     container_name: caddy-proxy
