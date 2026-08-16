@@ -27,6 +27,22 @@ export async function POST(req: Request) {
     }
     instagram = instagram.replace(/\s+/g, "");
 
+    const { supabase } = await import("@/lib/supabase");
+    
+    // Check if instagram is already used
+    const { data: existingIgUser } = await supabase
+      .from("users")
+      .select("discord_id")
+      .eq("instagram", instagram)
+      .single();
+      
+    if (existingIgUser && existingIgUser.discord_id !== session.user.discordId) {
+      return NextResponse.json(
+        { error: "Username Instagram ini sudah terdaftar oleh pengguna lain. Kamu tidak bisa menggunakan username milik orang lain!" },
+        { status: 400 }
+      );
+    }
+
     const updatedUser = await updateUserInstagram(session.user.discordId, instagram);
     
     if (!updatedUser) {

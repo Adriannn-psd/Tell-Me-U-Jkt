@@ -129,6 +129,41 @@ function ProfileContent() {
   const [isSubmittingIg, setIsSubmittingIg] = useState(false);
   const [instagramInput, setInstagramInput] = useState("");
   const [igError, setIgError] = useState("");
+  
+  // Instagram multi-step verification flow
+  type IgStep = "upload" | "ai-preview" | "correction" | "correction-preview" | "confirm" | "cooldown";
+  const [igStep, setIgStep] = useState<IgStep>("upload");
+  const [igUsername, setIgUsername] = useState(""); // username from AI or correction
+  const [igProfilePicUrl, setIgProfilePicUrl] = useState(""); // profile pic from IG
+  const [igProfileData, setIgProfileData] = useState<{full_name?: string; follower_count?: number; following_count?: number; is_private?: boolean} | null>(null);
+  const [igCorrectionMethod, setIgCorrectionMethod] = useState<"link" | "manual" | null>(null);
+  const [igManualInput1, setIgManualInput1] = useState("");
+  const [igManualInput2, setIgManualInput2] = useState("");
+  const [igLinkInput, setIgLinkInput] = useState("");
+  const [igConfirmChecked, setIgConfirmChecked] = useState(false);
+  const [igScreenshot, setIgScreenshot] = useState<File | null>(null);
+  const [igScreenshotPreview, setIgScreenshotPreview] = useState("");
+  const [isProcessingIg, setIsProcessingIg] = useState(false);
+  const [isFetchingIgPic, setIsFetchingIgPic] = useState(false);
+  const [igCooldownTimer, setIgCooldownTimer] = useState(0);
+  const [igNextStepAfterCooldown, setIgNextStepAfterCooldown] = useState<IgStep | null>(null);
+  const igFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (igCooldownTimer > 0) {
+      interval = setInterval(() => {
+        setIgCooldownTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [igCooldownTimer]);
 
   const user = session?.user;
   const displayName = user?.fullName || user?.name || "User";
@@ -382,12 +417,165 @@ function ProfileContent() {
     }
   };
 
-  const handleInstagramSubmit = async () => {
-    if (!instagramInput.trim()) {
-      setIgError("Masukkan username Instagram kamu");
+  // -- IG Flow: Handle screenshot file selection --
+  const handleIgFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIgScreenshot(file);
+    setIgScreenshotPreview(URL.createObjectURL(file));
+    setIgError("");
+  };
+
+  // -- IG Flow: Upload screenshot → AI reads username --
+  const handleIgScreenshotUpload = async () => {
+    if (!igScreenshot) {
+      setIgError("Pilih screenshot profil Instagram kamu terlebih dahulu");
       return;
     }
-    
+
+    setIsProcessingIg(true);
+    setIgError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", igScreenshot);
+
+      const res = await fetch("/api/user/instagram-verify", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.username) {
+        setIgUsername(data.username);
+        // Now fetch profile pic
+        await fetchIgProfilePic(data.username, "ai-preview");
+      } else {
+        setIgError(data.error || "Gagal membaca username dari screenshot");
+      }
+    } catch (err) {
+      setIgError("Terjadi kesalahan saat memproses screenshot. Coba lagi.");
+    } finally {
+      setIsProcessingIg(false);
+    }
+  };
+
+  // -- IG Flow: Fetch profile picture from IG --
+  const fetchIgProfilePic = async (username: string, nextStep: IgStep) => {
+    setIsFetchingIgPic(true);
+    setIgError("");
+    try {
+      const res = await fetch(`/api/user/ig-profile-pic?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+
+      if (res.status === 429 && data.cooldown) {
+        setIgCooldownTimer(30);
+        setIgNextStepAfterCooldown(nextStep);
+        setIgStep("cooldown");
+        setIgProfilePicUrl("");
+        setIgProfileData(null);
+        return;
+      }
+
+      if (res.ok && data.success) {
+        setIgProfilePicUrl(data.profile_pic_url || "");
+        if (data.full_name || data.follower_count !== undefined) {
+          setIgProfileData({
+            full_name: data.full_name,
+            follower_count: data.follower_count,
+            following_count: data.following_count,
+            is_private: data.is_private,
+          });
+        } else {
+          setIgProfileData(null);
+        }
+      } else {
+        // Profile pic fetch failed, but we still have the username
+        setIgProfilePicUrl("");
+        setIgProfileData(null);
+      }
+      setIgStep(nextStep);
+    } catch {
+      setIgProfilePicUrl("");
+      setIgProfileData(null);
+      setIgStep(nextStep);
+    } finally {
+      setIsFetchingIgPic(false);
+    }
+  };
+
+  // -- IG Flow: User confirms AI result is correct → go to checkbox --
+  const handleIgConfirmCorrect = () => {
+    setIgStep("confirm");
+  };
+
+  // -- IG Flow: User says AI result is wrong → show correction options --
+  const handleIgConfirmWrong = () => {
+    setIgCorrectionMethod(null);
+    setIgManualInput1("");
+    setIgManualInput2("");
+    setIgLinkInput("");
+    setIgError("");
+    setIgStep("correction");
+  };
+
+  // -- IG Flow: Extract username from IG link --
+  const extractUsernameFromLink = (link: string): string => {
+    let cleaned = link.trim();
+    if (cleaned.includes("instagram.com/")) {
+      const parts = cleaned.split("instagram.com/");
+      cleaned = parts[parts.length - 1].split("/")[0].split("?")[0];
+    }
+    if (cleaned.startsWith("@")) cleaned = cleaned.substring(1);
+    return cleaned.replace(/\s+/g, "").toLowerCase();
+  };
+
+  // -- IG Flow: Submit correction (link or manual) --
+  const handleIgCorrectionSubmit = async () => {
+    setIgError("");
+    let correctedUsername = "";
+
+    if (igCorrectionMethod === "link") {
+      correctedUsername = extractUsernameFromLink(igLinkInput);
+      if (!correctedUsername) {
+        setIgError("Masukkan link profil Instagram yang valid");
+        return;
+      }
+    } else if (igCorrectionMethod === "manual") {
+      const u1 = igManualInput1.trim().toLowerCase().replace(/^@/, "");
+      const u2 = igManualInput2.trim().toLowerCase().replace(/^@/, "");
+      if (!u1 || !u2) {
+        setIgError("Isi kedua kolom username");
+        return;
+      }
+      if (u1 !== u2) {
+        setIgError("Username tidak cocok! Pastikan keduanya sama persis.");
+        return;
+      }
+      correctedUsername = u1;
+    } else {
+      setIgError("Pilih metode koreksi terlebih dahulu");
+      return;
+    }
+
+    setIgUsername(correctedUsername);
+    setIsProcessingIg(true);
+    await fetchIgProfilePic(correctedUsername, "correction-preview");
+    setIsProcessingIg(false);
+  };
+
+  // -- IG Flow: Final submit to save Instagram username --
+  const handleInstagramSubmit = async () => {
+    if (!igUsername.trim()) {
+      setIgError("Username Instagram tidak ditemukan");
+      return;
+    }
+    if (!igConfirmChecked) {
+      setIgError("Centang pernyataan konfirmasi terlebih dahulu");
+      return;
+    }
+
     setIsSubmittingIg(true);
     setIgError("");
 
@@ -395,7 +583,7 @@ function ProfileContent() {
       const res = await fetch("/api/user/instagram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instagram: instagramInput }),
+        body: JSON.stringify({ instagram: igUsername }),
       });
 
       const data = await res.json();
@@ -690,7 +878,7 @@ function ProfileContent() {
                   </div>
                 )}
 
-                {/* 3. Instagram SSO Card */}
+                {/* 3. Instagram Verification Card */}
                 {user?.isVerified && user?.kelas && !user?.instagram && (
                   <div className="animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex items-start gap-3 mb-5">
@@ -709,49 +897,453 @@ function ProfileContent() {
                       </div>
                     </div>
 
-                    <div className="mb-4">
-                      <label className="text-xs font-semibold text-[var(--color-text-2)] mb-2 block">Username Instagram (tanpa @)</label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-4 flex items-center text-[var(--color-text-3)] font-medium">@</span>
-                        <input
-                          type="text"
-                          placeholder="usn_kamu"
-                          value={instagramInput}
-                          onChange={(e) => setInstagramInput(e.target.value)}
-                          className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-pink-500 transition"
-                        />
-                      </div>
-                      <p className="text-[10px] text-[var(--color-text-3)] mt-1.5 flex items-start gap-1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span>Peringatan: Pastikan username sudah benar. Setelah disimpan, username Instagram tidak dapat diubah lagi!</span>
-                      </p>
-                      {igError && <p className="text-red-400 text-xs mt-2">{igError}</p>}
+                    {/* Step indicator */}
+                    <div className="flex items-center gap-1 mb-4">
+                      {["upload", "ai-preview", "confirm"].map((step, i) => (
+                        <div key={step} className="flex items-center gap-1">
+                          <div className={`w-2 h-2 rounded-full transition-colors ${
+                            (igStep === step || 
+                             (step === "ai-preview" && (igStep === "correction" || igStep === "correction-preview")) ||
+                             (step === "confirm" && igStep === "confirm"))
+                              ? "bg-pink-500" 
+                              : "bg-[var(--color-border-color)]"
+                          }`} />
+                          {i < 2 && <div className="w-6 h-px bg-[var(--color-border-color)]" />}
+                        </div>
+                      ))}
                     </div>
 
-                    <button
-                      onClick={handleInstagramSubmit}
-                      disabled={isSubmittingIg || !instagramInput.trim()}
-                      className="w-full bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isSubmittingIg ? (
-                        <>
-                          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/>
-                            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/>
+                    {/* STEP 1: Upload Screenshot */}
+                    {igStep === "upload" && (
+                      <div className="space-y-3">
+                        <label className="text-xs font-semibold text-[var(--color-text-2)] block">
+                          Screenshot Halaman Profil Instagram Kamu
+                        </label>
+                        <input
+                          ref={igFileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={handleIgFileSelect}
+                        />
+                        <div
+                          onClick={() => igFileInputRef.current?.click()}
+                          className="border-2 border-dashed border-[var(--color-border-color)] rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-pink-500/50 transition group"
+                        >
+                          {igScreenshotPreview ? (
+                            <img src={igScreenshotPreview} alt="Screenshot preview" className="max-h-48 rounded-lg object-contain" />
+                          ) : (
+                            <>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-10 h-10 text-[var(--color-text-3)] group-hover:text-pink-400 transition mb-2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" strokeLinejoin="round"/>
+                                <polyline points="17 8 12 3 7 8" strokeLinecap="round" strokeLinejoin="round"/>
+                                <line x1="12" y1="3" x2="12" y2="15" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              <span className="text-xs text-[var(--color-text-3)] group-hover:text-pink-400 transition">
+                                Tap untuk upload screenshot
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        <p className="text-[10px] text-[var(--color-text-3)] flex items-start gap-1">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                          <span>Screenshot halaman profil Instagram kamu. AI akan membaca username secara otomatis.</span>
+                        </p>
+
+                        {igError && <p className="text-red-400 text-xs">{igError}</p>}
+
+                        <button
+                          onClick={handleIgScreenshotUpload}
+                          disabled={isProcessingIg || !igScreenshot}
+                          className="w-full bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isProcessingIg ? (
+                            <>
+                              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/>
+                                <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/>
+                              </svg>
+                              AI sedang membaca...
+                            </>
+                          ) : (
+                            <>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                              Proses Screenshot
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* STEP 2: AI Preview — show profile pic + username */}
+                    {igStep === "ai-preview" && (
+                      <div className="space-y-4">
+                        <div className="bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-xl p-4">
+                          <p className="text-[10px] text-[var(--color-text-3)] mb-3 uppercase tracking-wider font-semibold">Hasil AI — Apakah ini akun kamu?</p>
+                          
+                          <div className="flex items-center gap-4">
+                            {/* Profile Picture */}
+                            <div className="shrink-0">
+                              {isFetchingIgPic ? (
+                                <div className="w-16 h-16 rounded-full bg-[var(--color-border-color)] animate-pulse" />
+                              ) : igProfilePicUrl ? (
+                                <img src={igProfilePicUrl} alt="Profile" className="w-16 h-16 rounded-full object-cover border-2 border-pink-500/30" />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white text-xl font-bold">
+                                  {igUsername.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Username + Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-bold text-base truncate">@{igUsername}</p>
+                              {igProfileData?.full_name && (
+                                <p className="text-[var(--color-text-3)] text-xs truncate">{igProfileData.full_name}</p>
+                              )}
+                              {igProfileData && (
+                                <div className="flex gap-3 mt-1">
+                                  {igProfileData.follower_count !== undefined && (
+                                    <span className="text-[10px] text-[var(--color-text-3)]">
+                                      <span className="text-white font-semibold">{igProfileData.follower_count.toLocaleString()}</span> followers
+                                    </span>
+                                  )}
+                                  {igProfileData.following_count !== undefined && (
+                                    <span className="text-[10px] text-[var(--color-text-3)]">
+                                      <span className="text-white font-semibold">{igProfileData.following_count.toLocaleString()}</span> following
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {igError && <p className="text-red-400 text-xs">{igError}</p>}
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            onClick={handleIgConfirmWrong}
+                            className="py-3 rounded-xl font-bold text-sm border border-red-500/30 text-red-400 hover:bg-red-500/10 transition flex items-center justify-center gap-1.5"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Salah
+                          </button>
+                          <button
+                            onClick={handleIgConfirmCorrect}
+                            className="py-3 rounded-xl font-bold text-sm bg-green-600 text-white hover:bg-green-500 transition flex items-center justify-center gap-1.5"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+                            Benar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 3: Correction — choose link or manual */}
+                    {igStep === "correction" && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-[var(--color-text-2)]">Pilih cara koreksi username:</p>
+
+                        {/* Option buttons */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => { setIgCorrectionMethod("link"); setIgError(""); }}
+                            className={`py-3 px-3 rounded-xl text-xs font-semibold border transition flex flex-col items-center gap-1.5 ${
+                              igCorrectionMethod === "link" 
+                                ? "border-pink-500 bg-pink-500/10 text-pink-400" 
+                                : "border-[var(--color-border-color)] text-[var(--color-text-2)] hover:border-pink-500/50"
+                            }`}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            Link Profil IG
+                          </button>
+                          <button
+                            onClick={() => { setIgCorrectionMethod("manual"); setIgError(""); }}
+                            className={`py-3 px-3 rounded-xl text-xs font-semibold border transition flex flex-col items-center gap-1.5 ${
+                              igCorrectionMethod === "manual" 
+                                ? "border-pink-500 bg-pink-500/10 text-pink-400" 
+                                : "border-[var(--color-border-color)] text-[var(--color-text-2)] hover:border-pink-500/50"
+                            }`}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Input Manual
+                          </button>
+                        </div>
+
+                        {/* Link input */}
+                        {igCorrectionMethod === "link" && (
+                          <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
+                            <label className="text-[10px] font-semibold text-[var(--color-text-3)] block">Paste link profil Instagram kamu</label>
+                            <input
+                              type="text"
+                              placeholder="https://www.instagram.com/username_kamu/"
+                              value={igLinkInput}
+                              onChange={(e) => setIgLinkInput(e.target.value)}
+                              className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition"
+                            />
+                          </div>
+                        )}
+
+                        {/* Manual double input */}
+                        {igCorrectionMethod === "manual" && (
+                          <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2">
+                            <label className="text-[10px] font-semibold text-[var(--color-text-3)] block">Ketik username kamu 2 kali (untuk memastikan tidak typo)</label>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-4 flex items-center text-[var(--color-text-3)] font-medium">@</span>
+                              <input
+                                type="text"
+                                placeholder="username pertama"
+                                value={igManualInput1}
+                                onChange={(e) => setIgManualInput1(e.target.value)}
+                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-pink-500 transition"
+                              />
+                            </div>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-4 flex items-center text-[var(--color-text-3)] font-medium">@</span>
+                              <input
+                                type="text"
+                                placeholder="ulangi username"
+                                value={igManualInput2}
+                                onChange={(e) => setIgManualInput2(e.target.value)}
+                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-pink-500 transition"
+                              />
+                            </div>
+                            {igManualInput1 && igManualInput2 && igManualInput1.trim().toLowerCase().replace(/^@/, "") !== igManualInput2.trim().toLowerCase().replace(/^@/, "") && (
+                              <p className="text-red-400 text-[10px] flex items-center gap-1">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                Username tidak cocok
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {igError && <p className="text-red-400 text-xs">{igError}</p>}
+
+                        {igCorrectionMethod && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => { setIgStep("upload"); setIgCorrectionMethod(null); setIgError(""); }}
+                              className="flex-1 py-3 rounded-xl font-bold text-sm border border-[var(--color-border-color)] text-[var(--color-text-2)] hover:bg-white/5 transition"
+                            >
+                              Kembali
+                            </button>
+                            <button
+                              onClick={handleIgCorrectionSubmit}
+                              disabled={isProcessingIg || (igCorrectionMethod === "link" ? !igLinkInput.trim() : (!igManualInput1.trim() || !igManualInput2.trim()))}
+                              className="flex-1 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] text-white hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              {isProcessingIg ? (
+                                <>
+                                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/>
+                                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/>
+                                  </svg>
+                                  Memproses...
+                                </>
+                              ) : "Verifikasi"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* STEP 3.5: Correction Preview — same as ai-preview but after correction */}
+                    {igStep === "correction-preview" && (
+                      <div className="space-y-4">
+                        <div className="bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-xl p-4">
+                          <p className="text-[10px] text-[var(--color-text-3)] mb-3 uppercase tracking-wider font-semibold">Hasil Koreksi — Apakah ini akun kamu?</p>
+                          
+                          <div className="flex items-center gap-4">
+                            <div className="shrink-0">
+                              {isFetchingIgPic ? (
+                                <div className="w-16 h-16 rounded-full bg-[var(--color-border-color)] animate-pulse" />
+                              ) : igProfilePicUrl ? (
+                                <img src={igProfilePicUrl} alt="Profile" className="w-16 h-16 rounded-full object-cover border-2 border-pink-500/30" />
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white text-xl font-bold">
+                                  {igUsername.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-bold text-base truncate">@{igUsername}</p>
+                              {igProfileData?.full_name && (
+                                <p className="text-[var(--color-text-3)] text-xs truncate">{igProfileData.full_name}</p>
+                              )}
+                              {igProfileData && (
+                                <div className="flex gap-3 mt-1">
+                                  {igProfileData.follower_count !== undefined && (
+                                    <span className="text-[10px] text-[var(--color-text-3)]">
+                                      <span className="text-white font-semibold">{igProfileData.follower_count.toLocaleString()}</span> followers
+                                    </span>
+                                  )}
+                                  {igProfileData.following_count !== undefined && (
+                                    <span className="text-[10px] text-[var(--color-text-3)]">
+                                      <span className="text-white font-semibold">{igProfileData.following_count.toLocaleString()}</span> following
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {igError && <p className="text-red-400 text-xs">{igError}</p>}
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            onClick={() => { setIgStep("correction"); setIgError(""); }}
+                            className="py-3 rounded-xl font-bold text-sm border border-red-500/30 text-red-400 hover:bg-red-500/10 transition flex items-center justify-center gap-1.5"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Masih Salah
+                          </button>
+                          <button
+                            onClick={handleIgConfirmCorrect}
+                            className="py-3 rounded-xl font-bold text-sm bg-green-600 text-white hover:bg-green-500 transition flex items-center justify-center gap-1.5"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+                            Benar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 3.6: Cooldown */}
+                    {igStep === "cooldown" && (
+                      <div className="space-y-4 text-center py-6">
+                        <div className="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
                           </svg>
-                          Menyimpan...
-                        </>
-                      ) : (
-                        <>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                          </svg>
-                          Simpan Instagram
-                        </>
-                      )}
-                    </button>
+                        </div>
+                        <h4 className="text-white font-bold">Server Sedang Sibuk</h4>
+                        <p className="text-sm text-[var(--color-text-2)]">
+                          Terlalu banyak permintaan ke Instagram. Silakan tunggu sebentar sebelum kami bisa mengambil foto profil kamu.
+                        </p>
+                        
+                        <div className="text-3xl font-mono font-bold text-orange-400 py-2">
+                          00:{igCooldownTimer.toString().padStart(2, '0')}
+                        </div>
+
+                        {igCooldownTimer > 0 ? (
+                          <p className="text-xs text-[var(--color-text-3)] animate-pulse">
+                            Tunggu {igCooldownTimer} detik...
+                          </p>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setIsProcessingIg(true);
+                              fetchIgProfilePic(igUsername, igNextStepAfterCooldown || "ai-preview").finally(() => setIsProcessingIg(false));
+                            }}
+                            disabled={isProcessingIg}
+                            className="mt-2 w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] text-white hover:opacity-90 transition disabled:opacity-40"
+                          >
+                            {isProcessingIg ? "Memproses..." : "Coba Ambil Foto Lagi"}
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => setIgStep(igNextStepAfterCooldown || "ai-preview")}
+                          className="mt-2 w-full py-3 rounded-xl font-bold text-sm border border-[var(--color-border-color)] text-[var(--color-text-2)] hover:bg-white/5 transition"
+                        >
+                          Lewati Foto (Lanjut tanpa foto)
+                        </button>
+                      </div>
+                    )}
+
+                    {/* STEP 4: Confirm — checkbox + save */}
+                    {igStep === "confirm" && (
+                      <div className="space-y-4">
+                        {/* Mini preview */}
+                        <div className="flex items-center gap-3 bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-xl p-3">
+                          {igProfilePicUrl ? (
+                            <img src={igProfilePicUrl} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-pink-500/30" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                              {igUsername.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-white font-bold text-sm truncate">@{igUsername}</p>
+                            {igProfileData?.full_name && (
+                              <p className="text-[var(--color-text-3)] text-[10px] truncate">{igProfileData.full_name}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Checkbox pernyataan */}
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <div className="relative mt-0.5">
+                            <input
+                              type="checkbox"
+                              checked={igConfirmChecked}
+                              onChange={(e) => setIgConfirmChecked(e.target.checked)}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
+                              igConfirmChecked 
+                                ? "bg-pink-500 border-pink-500" 
+                                : "border-[var(--color-border-color)] group-hover:border-pink-500/50"
+                            }`}>
+                              {igConfirmChecked && (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs text-[var(--color-text-2)] leading-relaxed">
+                            Saya menyatakan bahwa <span className="text-white font-semibold">@{igUsername}</span> adalah benar akun Instagram milik saya. Saya memahami bahwa username ini <span className="text-red-400 font-semibold">tidak dapat diubah</span> setelah disimpan.
+                          </span>
+                        </label>
+
+                        {igError && <p className="text-red-400 text-xs">{igError}</p>}
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setIgStep("upload"); setIgConfirmChecked(false); setIgError(""); }}
+                            className="flex-1 py-3 rounded-xl font-bold text-sm border border-[var(--color-border-color)] text-[var(--color-text-2)] hover:bg-white/5 transition"
+                          >
+                            Ulangi
+                          </button>
+                          <button
+                            onClick={handleInstagramSubmit}
+                            disabled={isSubmittingIg || !igConfirmChecked}
+                            className="flex-1 bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {isSubmittingIg ? (
+                              <>
+                                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/>
+                                  <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/>
+                                </svg>
+                                Menyimpan...
+                              </>
+                            ) : (
+                              <>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                                </svg>
+                                Simpan Instagram
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning footer */}
+                    <p className="text-[10px] text-[var(--color-text-3)] mt-3 flex items-start gap-1">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 mt-0.5 shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      <span>Setelah disimpan, username Instagram tidak dapat diubah lagi!</span>
+                    </p>
                   </div>
                 )}
               </div>

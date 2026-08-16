@@ -40,7 +40,7 @@ export default function TimePickerPopup({ time, onChange }: TimePickerPopupProps
           onClick={() => setIsOpen(false)}
         >
           <div 
-            className="bg-[#1c1c1e] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" 
+            className="bg-[#1c1c1e] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 transform scale-[0.85] sm:scale-100 flex items-center justify-center" 
             onClick={(e) => e.stopPropagation()}
           >
             <TimeKeeper
