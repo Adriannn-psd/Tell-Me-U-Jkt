@@ -184,9 +184,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check if already verified
+  // Check if already verified AND has full name
   const existingUser = await getUser(session.user.discordId);
-  if (existingUser?.is_verified) {
+  if (existingUser?.is_verified && existingUser?.full_name) {
     return NextResponse.json(
       { error: "Akun sudah terverifikasi" },
       { status: 400 }

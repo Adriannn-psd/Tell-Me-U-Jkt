@@ -731,7 +731,7 @@ function ProfileContent() {
                 </div>
 
                 {/* 1. SKL Verification Card */}
-                {!user?.isVerified && (
+                {(!user?.isVerified || !user?.fullName) && (
                   <div className="animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
@@ -741,9 +741,13 @@ function ProfileContent() {
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-white font-bold text-sm">1. Verifikasi Identitas</h3>
+                        <h3 className="text-white font-bold text-sm">
+                          {!user?.isVerified ? "1. Verifikasi Identitas" : "1. Lengkapi Nama (Upload SKL Lagi)"}
+                        </h3>
                         <p className="text-[var(--color-text-3)] text-xs mt-1">
-                          Upload file PDF SKL atau screenshot bagian atas SKL yang berisi nama lengkap dan jurusan untuk mendapatkan centang biru.
+                          {!user?.isVerified 
+                            ? "Upload file PDF SKL atau screenshot bagian atas SKL yang berisi nama lengkap dan jurusan untuk mendapatkan centang biru." 
+                            : "Sistem membutuhkan nama lengkap kamu. Silakan upload ulang SKL kamu (PDF atau gambar)."}
                         </p>
                       </div>
                     </div>
