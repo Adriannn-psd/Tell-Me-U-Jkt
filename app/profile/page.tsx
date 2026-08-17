@@ -336,6 +336,70 @@ function ProfileContent() {
   const acronym = getProdiAcronym(user?.prodi || "");
   const classOptions = [`${acronym}-A`, `${acronym}-B`, `${acronym}-C`, `${acronym}-D`];
 
+  // Compress image client-side sebelum upload ke server
+  // Ini mengurangi ukuran file drastis (misal 5MB → ~200KB)
+  // sehingga Gemini API lebih cepat proses dan tidak timeout di Vercel
+  const compressImage = (file: File, maxSize = 1400, quality = 0.75): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      // PDF tidak bisa di-compress via Canvas, kirim apa adanya
+      if (file.type === "application/pdf") {
+        resolve(file);
+        return;
+      }
+
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        
+        let { width, height } = img;
+        
+        // Resize kalau lebih besar dari maxSize
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(maxSize / width, maxSize / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file); // fallback: kirim aslinya
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const compressed = new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+              type: "image/jpeg",
+            });
+            console.log(`📸 Compress: ${(file.size / 1024).toFixed(0)}KB → ${(compressed.size / 1024).toFixed(0)}KB`);
+            resolve(compressed);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(file); // fallback: kirim aslinya
+      };
+
+      img.src = url;
+    });
+  };
+
   const handleFileSelect = (file: File) => {
     const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
@@ -356,13 +420,33 @@ function ProfileContent() {
     setVerifyResult(null);
 
     try {
+      // Compress gambar dulu sebelum upload
+      const fileToUpload = await compressImage(verifyFile);
+
       const formData = new FormData();
-      formData.append("file", verifyFile);
+      formData.append("file", fileToUpload);
 
       const res = await fetch("/api/verify", {
         method: "POST",
         body: formData,
       });
+
+      // Vercel bisa return HTML error page (504 timeout) bukan JSON
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        if (res.status === 504 || res.status === 502) {
+          setVerifyResult({
+            error: "Server kelamaan memproses",
+            details: ["Gambar terlalu besar atau server sedang sibuk. Coba upload gambar yang lebih kecil (crop bagian penting SKL saja)."]
+          });
+        } else {
+          setVerifyResult({
+            error: "Terjadi kesalahan server",
+            details: [`Server mengembalikan status ${res.status}. Coba lagi nanti.`]
+          });
+        }
+        return;
+      }
 
       const data = await res.json();
 
@@ -384,7 +468,7 @@ function ProfileContent() {
       setVerifyResult({ 
         error: "Terjadi kesalahan sistem", 
         details: [message === "Failed to fetch" 
-          ? "Tidak bisa menghubungi server. Cek koneksi internet kamu." 
+          ? "Server tidak merespons (kemungkinan timeout). Coba upload gambar yang lebih kecil atau coba lagi nanti." 
           : `${message}. Coba lagi nanti.`
         ] 
       });

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getUser, verifyUser } from "@/lib/supabase";
 
+// Vercel serverless function timeout (detik).
+// Hobby = max 10s, Pro = max 60s. Gemini OCR butuh waktu, jadi set max.
+export const maxDuration = 60;
+
 // ---- AI OCR: extract text from uploaded file ----
 async function extractTextWithAI(
   fileBase64: string,
