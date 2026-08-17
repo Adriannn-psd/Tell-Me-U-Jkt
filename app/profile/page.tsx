@@ -380,7 +380,14 @@ function ProfileContent() {
         });
       }
     } catch (err) {
-      setVerifyResult({ error: "Terjadi kesalahan sistem. Coba lagi nanti." });
+      const message = err instanceof Error ? err.message : "Terjadi kesalahan sistem.";
+      setVerifyResult({ 
+        error: "Terjadi kesalahan sistem", 
+        details: [message === "Failed to fetch" 
+          ? "Tidak bisa menghubungi server. Cek koneksi internet kamu." 
+          : `${message}. Coba lagi nanti.`
+        ] 
+      });
     } finally {
       setIsVerifying(false);
     }

@@ -81,6 +81,7 @@ export async function verifyUser(
   const updateData: any = {
     full_name: fullName,
     is_verified: true,
+    sync_discord: false, // eksplisit false agar bot Discord sync task pick up & assign role
     updated_at: new Date().toISOString(),
   };
   

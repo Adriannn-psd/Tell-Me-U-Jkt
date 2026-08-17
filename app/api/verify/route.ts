@@ -176,8 +176,23 @@ function deduceProdiFromJurusan(extractedJurusan: string): string | undefined {
   return undefined;
 }
 
+// Check if document mentions year 2026 or 2027
+function containsYearIndicator(rawText: string): boolean {
+  const normalized = normalize(rawText);
+  return normalized.includes("2026") || normalized.includes("2027");
+}
+
 // ---- API Route ----
 export async function POST(req: NextRequest) {
+  // Early check: is Gemini API key configured?
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("[VERIFY] GEMINI_API_KEY is not set in environment variables!");
+    return NextResponse.json(
+      { error: "Konfigurasi server belum lengkap. Hubungi admin.", details: ["GEMINI_API_KEY belum di-set di server."] },
+      { status: 500 }
+    );
+  }
+
   const session = await auth();
 
   if (!session?.user?.discordId) {
@@ -276,6 +291,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check 2.5: Year 2026/2027 present? (sama seperti bot Discord)
+    if (!containsYearIndicator(extracted.raw_text)) {
+      validationErrors.push(
+        "Tahun 2026/2027 tidak terdeteksi dalam dokumen. Pastikan SKL kamu untuk tahun ajaran yang benar."
+      );
+    }
+
     // Check 3: Jurusan matches Discord prodi? (If they already have a prodi from Discord)
     const userProdi = session.user.prodi || existingUser?.prodi;
     if (userProdi) {
@@ -337,9 +359,13 @@ export async function POST(req: NextRequest) {
       message: "Verifikasi berhasil! Nama dan centang biru sudah ditambahkan.",
     });
   } catch (error) {
-    console.error("Verification error:", error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("[VERIFY] Verification error:", errMsg, error);
     return NextResponse.json(
-      { error: "Terjadi kesalahan internal" },
+      { 
+        error: "Terjadi kesalahan internal", 
+        details: [process.env.NODE_ENV === "development" ? errMsg : "Coba lagi nanti atau hubungi admin."] 
+      },
       { status: 500 }
     );
   }
