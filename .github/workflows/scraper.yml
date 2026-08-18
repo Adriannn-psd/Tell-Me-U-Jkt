@@ -8,6 +8,10 @@ on:
   # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
 
+# Least privilege: the scraper only needs to read the repo contents.
+permissions:
+  contents: read
+
 jobs:
   scrape:
     runs-on: ubuntu-latest

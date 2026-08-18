@@ -2,8 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import time
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 urls = [
     "https://jakarta.telkomuniversity.ac.id/en/",
@@ -31,7 +29,7 @@ headers = {
 for idx, url in enumerate(urls):
     print(f"Scraping {url}...")
     try:
-        r = requests.get(url, headers=headers, timeout=10, verify=False)
+        r = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(r.text, 'html.parser')
         
         # Title

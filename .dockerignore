@@ -10,3 +10,10 @@ docker-compose.yml
 scratch
 media_kampus
 ig_session_state.json
+
+# Secrets must never be baked into the image. `COPY . .` would otherwise put
+# .env / .env.local into an image layer, readable via `docker history`.
+# Runtime values come from docker-compose `env_file`, so the build needs none.
+.env
+.env.*
+*.pem
