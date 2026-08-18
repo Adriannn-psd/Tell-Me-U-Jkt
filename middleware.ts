@@ -23,14 +23,32 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     return NextResponse.next();
   }
 
-  const isGuest = req.cookies.has("guest_mode");
+  // API routes each call auth() themselves and answer with JSON, so let them
+  // decide. This is where access to real data is enforced, which keeps the
+  // guest_mode cookie below from ever standing in for a session, and avoids
+  // redirecting fetch() calls to an HTML login page.
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
 
-  // Public routes — if logged in, redirect to home
+  // A UX flag only, set client-side in components/LoginPanel.tsx — anyone can
+  // forge it, so it gates nothing but page navigation. Guests browse the page
+  // shells (dummy content) and components/GuestAuthPopup.tsx prompts them to
+  // sign in when they attempt a real action.
+  //
+  // Compare the value rather than using cookies.has(): sign-out clears this by
+  // setting an empty value, which has() would still read as an active guest.
+  const isGuest = req.cookies.get("guest_mode")?.value === "true";
+
   if (publicRoutes.includes(pathname)) {
-    if (isLoggedIn || isGuest) {
+    if (isLoggedIn) {
       return NextResponse.redirect(new URL("/home", req.nextUrl));
     }
-    // Usually it's better to let them stay on / so they can actually log in, so we do nothing here.
+    // Send guests past the landing page, but let them open /login so they can
+    // still upgrade to a real account instead of being bounced back to /home.
+    if (isGuest && pathname === "/") {
+      return NextResponse.redirect(new URL("/home", req.nextUrl));
+    }
     return NextResponse.next();
   }
 
