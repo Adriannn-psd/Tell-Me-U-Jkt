@@ -2,8 +2,17 @@ import { createClient } from "@supabase/supabase-js";
 
 // Server-side Supabase client using service role key
 // This bypasses RLS and should ONLY be used in server-side code (API routes, auth callbacks)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Placeholders keep `next build` working when no secrets are present (the Docker
+// image is built without .env; real values arrive at runtime via env_file).
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn(
+    "[supabase] NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing — " +
+      "falling back to placeholders. Expected during build, NOT at runtime."
+  );
+}
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "dummy";
 
 export const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
