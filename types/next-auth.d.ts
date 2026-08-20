@@ -15,6 +15,8 @@ declare module "next-auth" {
       dbUsername?: string;
       kelas?: string;
       instagram?: string;
+      /** Foto profil Discord hasil login, sumber untuk "Pakai foto Discord". */
+      discordAvatarUrl?: string;
     };
   }
 }
@@ -30,5 +32,6 @@ declare module "next-auth/jwt" {
     dbUsername?: string;
     kelas?: string;
     instagram?: string;
+    discordAvatarUrl?: string;
   }
 }

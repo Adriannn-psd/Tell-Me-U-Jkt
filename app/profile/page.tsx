@@ -10,6 +10,7 @@ import Link from "next/link";
 import AvatarPreviewModal from "@/components/fase3/AvatarPreviewModal";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import Avatar from "@/components/Avatar";
+import { avatarSrc } from "@/lib/avatar";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
 import AvatarCropModal from "@/components/fase3/AvatarCropModal";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
@@ -193,6 +194,21 @@ function ProfileContent() {
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Foto Discord diambil dari sesi, bukan dari users.avatar_url — kolom itu
+  // sudah tertimpa avatar custom. `discordAvatarUrl` diisi auth.ts saat login;
+  // sesi yang dibuat sebelum field itu ada jatuh ke `user.image`, yang juga
+  // berasal dari profil Discord dan tidak pernah ditimpa. Keduanya dilewatkan
+  // avatarSrc() supaya URL `.gif` avatar Nitro (yang bisa balas HTTP 415)
+  // dinormalkan ke `.webp?size=`.
+  const discordAvatarUrl = user?.discordAvatarUrl
+    ? avatarSrc(user.discordAvatarUrl, { size: 128 })
+    : user?.image
+      ? avatarSrc(user.image, { size: 128 })
+      : undefined;
+  const isUsingDiscordAvatar =
+    !editAvatarUrl || editAvatarUrl.includes("cdn.discordapp.com");
+  const canResetAvatar = !!discordAvatarUrl && !isUsingDiscordAvatar;
 
   // Sync profile data to edit state
   useEffect(() => {
@@ -1655,7 +1671,24 @@ function ProfileContent() {
                     )}
                   </div>
                   <p className="text-[10px] text-[var(--color-text-3)] mt-2">Klik foto untuk mengganti</p>
-                  <input 
+                  {/* Balik ke foto Discord. Cuma mengubah state edit — supaya
+                      alurnya sama dengan unggah foto: baru tersimpan saat
+                      "Simpan", jadi masih bisa dibatalkan dengan menutup modal. */}
+                  {canResetAvatar && (
+                    <button
+                      type="button"
+                      onClick={() => setEditAvatarUrl(discordAvatarUrl!)}
+                      disabled={isUploadingAvatar}
+                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-text-2)] hover:text-white border border-[var(--color-border-color)] hover:border-[#4a4a4f] rounded-full px-3 py-1.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                        <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.36 2.64L3 8" />
+                        <path d="M3 3v5h5" />
+                      </svg>
+                      Pakai foto Discord
+                    </button>
+                  )}
+                  <input
                     type="file" 
                     accept="image/*" 
                     className="hidden" 

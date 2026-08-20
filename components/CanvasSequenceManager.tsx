@@ -1,416 +1,451 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useScroll, useMotionValueEvent, useSpring, useMotionValue, animate } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMotionValueEvent, useScroll, useSpring } from "framer-motion";
 
 export interface AnimationLayer {
+  /** Folder di /public, mis. "/telkom 1". Spasi dibiarkan — browser yang meng-encode. */
   folderPath: string;
+  /** Jumlah file yang benar-benar ada. Frame di-index internal 0..frameCount-1. */
   frameCount: number;
+  /** Ubah index internal jadi nama file (folder di repo ini campur 0- & 1-indexed). */
+  filenameFormat: (index: number) => string;
   zIndex: number;
   className?: string;
   fit: "contain" | "cover";
   mobileFit?: "contain" | "cover";
-  opacity?: (latest: number) => number;
-  filenameFormat?: (index: number) => string; 
-  
-  // Scroll mapping
-  startProgress?: number; // Global scroll progress (0.0 to 1.0) where this layer starts
-  endProgress?: number;   // Global scroll progress (0.0 to 1.0) where this layer finishes
-  hideBeforeStart?: boolean; // If true, canvas is opacity 0 before startProgress
-  hideAfterEnd?: boolean;    // If true, canvas is opacity 0 after endProgress
-  transform?: (progress: number) => string; // Dynamic CSS transform based on layer progress (0 to 1)
-  customProgress?: (globalProgress: number) => number; // Optional function to fully control frame progress
+  /** Cermin horizontal. Dipakai telkom 3 supaya kanopinya menghadap ke dalam. */
+  flipX?: boolean;
+  /** Jangan lompati frame di HP — untuk sekuens ringan yang harus mulus 30fps. */
+  noDecimate?: boolean;
+
+  // ---- pemetaan scroll (hanya dipakai scrollLayers) ----
+  /** Progress scroll global (0..1) tempat layer ini mulai bergerak. */
+  startProgress?: number;
+  /** Progress scroll global tempat layer ini sampai frame terakhir. */
+  endProgress?: number;
+  /** Sembunyikan sebelum startProgress. Default: tampil menahan frame 0. */
+  hideBeforeStart?: boolean;
+  /** Sembunyikan setelah endProgress. Default: FREEZE di frame terakhir. */
+  hideAfterEnd?: boolean;
 }
 
 interface CanvasSequenceManagerProps {
   introLayers: AnimationLayer[];
   scrollLayers: AnimationLayer[];
+  /** Dipanggil sekali setelah frame terakhir opening digambar. */
   onIntroComplete?: () => void;
-  onScrollLayersComplete?: () => void;
-  skipIntro?: boolean;
-  loopIntro?: boolean;
-  autoPlayScrollLayers?: boolean;
-  autoPlayDuration?: number;
+  /** 0..1 — seberapa penuh buffer awal opening. Untuk bar loading. */
+  onBufferProgress?: (ratio: number) => void;
 }
+
+type FrameEntry = { img: HTMLImageElement; ready: boolean };
+type LayerStore = Map<number, FrameEntry>;
+
+const INTRO_FPS = 30;
+/** Frame opening yang harus siap sebelum animasi mulai, supaya tidak tersendat. */
+const INTRO_BUFFER = 45;
+const LOOKAHEAD_INTRO = 40;
+const LOOKAHEAD_SCROLL = 24;
+const LOOKBEHIND_SCROLL = 8;
+/** Di bawah lebar ini frame dilompati 2-2 (kecuali layer ber-noDecimate). */
+const MOBILE_BREAKPOINT = 768;
 
 export default function CanvasSequenceManager({
   introLayers,
   scrollLayers,
   onIntroComplete,
-  onScrollLayersComplete,
-  skipIntro = false,
-  loopIntro = false,
-  autoPlayScrollLayers = false,
-  autoPlayDuration = 10
+  onBufferProgress,
 }: CanvasSequenceManagerProps) {
-  const [phase, setPhase] = useState<"intro" | "scroll">(skipIntro ? "scroll" : "intro");
-  
-  const introImagesRef = useRef<HTMLImageElement[][]>([]);
-  const scrollImagesRef = useRef<HTMLImageElement[][]>([]);
-  
-  const introCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const scrollCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const targetFrames = useRef<Record<string, number>>({});
+  // Tanpa layer opening tidak ada yang perlu diputar, jadi langsung masuk fase
+  // scroll dari initializer — bukan lewat setState di dalam effect.
+  const [phase, setPhase] = useState<"intro" | "scroll">(
+    introLayers.length === 0 ? "scroll" : "intro"
+  );
 
-  const { scrollYProgress: rawScrollYProgress } = useScroll();
-  const autoProgress = useMotionValue(0);
+  const introStores = useRef<LayerStore[]>([]);
+  const scrollStores = useRef<LayerStore[]>([]);
+  const introCanvases = useRef<(HTMLCanvasElement | null)[]>([]);
+  const scrollCanvases = useRef<(HTMLCanvasElement | null)[]>([]);
 
+  // Prop callback disimpan di ref supaya effect opening tidak perlu memasukkan
+  // keduanya ke dependency — kalau ikut, satu re-render parent akan memulai
+  // ulang animasi dari frame nol.
+  const onIntroCompleteRef = useRef(onIntroComplete);
+  const onBufferProgressRef = useRef(onBufferProgress);
   useEffect(() => {
-    if (autoPlayScrollLayers && phase === "scroll") {
-      const controls = animate(autoProgress, 1, {
-        duration: autoPlayDuration,
-        ease: "easeInOut",
-        onComplete: () => {
-          onScrollLayersComplete?.();
-        }
-      });
-      return controls.stop;
-    }
-  }, [autoPlayScrollLayers, autoPlayDuration, phase, autoProgress, onScrollLayersComplete]);
+    onIntroCompleteRef.current = onIntroComplete;
+    onBufferProgressRef.current = onBufferProgress;
+  }, [onIntroComplete, onBufferProgress]);
 
-  const effectiveProgress = autoPlayScrollLayers ? autoProgress : rawScrollYProgress;
+  // Ditentukan sekali saat mount. Sengaja tidak ikut berubah saat window
+  // di-resize: mengganti langkah frame di tengah animasi membuang frame yang
+  // sudah di-cache tanpa manfaat visual apa pun.
+  const isMobile = useRef(false);
+  const drawScheduled = useRef(false);
+  const latestProgress = useRef(0);
+  // Diisi fungsi gambar terbaru di bawah; requestDraw memanggilnya lewat ref
+  // supaya requestDraw sendiri bisa stabil (deps kosong).
+  const drawRef = useRef<() => void>(() => {});
 
-  const scrollYProgress = useSpring(effectiveProgress, {
+  const { scrollYProgress } = useScroll();
+  // Spring tipis: cukup untuk menghaluskan scroll wheel yang melompat, tapi
+  // tidak sampai terasa tertinggal dari jari.
+  const smoothProgress = useSpring(scrollYProgress, {
     stiffness: 400,
     damping: 90,
-    restDelta: 0.001
+    restDelta: 0.001,
   });
 
-  const loadImagesForLayer = (layer: AnimationLayer, isIntro: boolean): HTMLImageElement[] => {
-    const images: HTMLImageElement[] = [];
-    // Assume images might start at 0 or 1, we load up to frameCount
-    for (let i = 0; i < layer.frameCount; i++) {
+  /** Kumpulkan beberapa event scroll jadi satu gambar per frame layar. */
+  const requestDraw = useCallback(() => {
+    if (drawScheduled.current) return;
+    drawScheduled.current = true;
+    requestAnimationFrame(() => {
+      drawScheduled.current = false;
+      drawRef.current();
+    });
+  }, []);
+
+  const stepFor = useCallback((layer: AnimationLayer) => {
+    return layer.noDecimate || !isMobile.current ? 1 : 2;
+  }, []);
+
+  /** Buat + mulai muat satu frame kalau belum ada. */
+  const ensure = useCallback(
+    (
+      store: LayerStore,
+      layer: AnimationLayer,
+      index: number,
+      onReady?: () => void
+    ): FrameEntry | undefined => {
+      if (index < 0 || index >= layer.frameCount) return undefined;
+      const existing = store.get(index);
+      if (existing) return existing;
+
       const img = new Image();
-      let filename = "";
-      if (layer.filenameFormat) {
-        filename = layer.filenameFormat(i);
+      const entry: FrameEntry = { img, ready: false };
+      store.set(index, entry);
+      img.src = `${layer.folderPath}/${layer.filenameFormat(index)}`;
+
+      const markReady = () => {
+        if (entry.ready) return;
+        entry.ready = true;
+        onReady?.();
+      };
+
+      // decode() memindahkan kerja decode WebP 1280x720 keluar dari drawImage,
+      // jadi frame baru tidak menahan main thread saat digambar.
+      if (typeof img.decode === "function") {
+        img.decode().then(markReady, () => {
+          if (img.complete && img.naturalWidth > 0) markReady();
+        });
       } else {
-        // default padded format, e.g. 00001.png or 00000-frame.png
-        filename = `${i.toString().padStart(5, "0")}-frame.webp`;
+        img.onload = markReady;
       }
-      const url = `${layer.folderPath}/${filename}`;
-      (img as any).dataset_src = url;
-      
-      // Preload priority: Intro gets a head start, scroll layers only load their first frame initially.
-      if (isIntro) {
-        if (i < 30) img.src = url;
-      } else {
-        if (i === 0) img.src = url;
+      return entry;
+    },
+    []
+  );
+
+  /** Muat jendela frame di sekitar index yang sedang dipakai. */
+  const preload = useCallback(
+    (
+      store: LayerStore,
+      layer: AnimationLayer,
+      center: number,
+      ahead: number,
+      behind: number,
+      onReady?: () => void
+    ) => {
+      const step = stepFor(layer);
+      const last = layer.frameCount - 1;
+      for (let i = center - behind; i <= center + ahead; i++) {
+        if (i < 0 || i > last) continue;
+        // Frame yang dilompati tidak pernah diminta ke jaringan — hematnya di
+        // kuota, bukan cuma di layar. Frame terakhir selalu dikecualikan supaya
+        // freeze di akhir memakai frame yang benar.
+        if (i % step !== 0 && i !== last) continue;
+        ensure(store, layer, i, onReady);
       }
-      
-      images.push(img);
-    }
-    return images;
-  };
+    },
+    [ensure, stepFor]
+  );
 
-  // Preload
-  useEffect(() => {
-    introLayers.forEach((layer, idx) => {
-      introImagesRef.current[idx] = loadImagesForLayer(layer, true);
-    });
-    scrollLayers.forEach((layer, idx) => {
-      scrollImagesRef.current[idx] = loadImagesForLayer(layer, false);
-    });
-  }, [introLayers, scrollLayers]);
+  /** Progress 0..1 → index frame, dibulatkan ke langkah yang dipakai device ini. */
+  const pickFrame = useCallback(
+    (layer: AnimationLayer, progress: number) => {
+      const last = layer.frameCount - 1;
+      const raw = Math.round(progress * last);
+      if (raw >= last) return last;
+      if (raw <= 0) return 0;
+      const step = stepFor(layer);
+      return Math.min(last, Math.round(raw / step) * step);
+    },
+    [stepFor]
+  );
 
-  // Intro Auto-play logic
-  useEffect(() => {
-    if (skipIntro || introLayers.length === 0) {
-      setPhase("scroll");
-      onIntroComplete?.();
-      return;
-    }
+  const doDraw = useCallback(
+    (canvas: HTMLCanvasElement, img: HTMLImageElement, layer: AnimationLayer) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    let currentFrame = 0;
-    let hasCompleted = false;
-    const maxIntroFrames = Math.max(...introLayers.map((l) => l.frameCount));
-    let animationFrameId: number;
-    let lastTime = performance.now();
-    const fps = 30;
-    const interval = 1000 / fps;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width));
+      const h = Math.max(1, Math.round(rect.height));
+      const dpr = window.devicePixelRatio || 1;
 
-    const playIntro = (time: number) => {
-      if (currentFrame >= maxIntroFrames) {
-        if (!hasCompleted) {
-          hasCompleted = true;
-          onIntroComplete?.();
-        }
-        if (loopIntro) {
-          currentFrame = 0;
-        } else {
-          setPhase("scroll");
+      if (canvas.width !== Math.ceil(w * dpr) || canvas.height !== Math.ceil(h * dpr)) {
+        canvas.width = Math.ceil(w * dpr);
+        canvas.height = Math.ceil(h * dpr);
+      }
+
+      // Transform di-set ulang penuh tiap gambar, bukan ditumpuk: dengan begitu
+      // skala DPR dan cermin flipX tidak pernah saling menempel antar frame.
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const fit = isMobile.current && layer.mobileFit ? layer.mobileFit : layer.fit;
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const boxRatio = w / h;
+      const fitToWidth = fit === "contain" ? imgRatio > boxRatio : imgRatio <= boxRatio;
+
+      const drawW = fitToWidth ? w : h * imgRatio;
+      const drawH = fitToWidth ? w / imgRatio : h;
+      const offsetX = (w - drawW) / 2;
+      const offsetY = (h - drawH) / 2;
+
+      if (layer.flipX) {
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+    },
+    []
+  );
+
+  /**
+   * Gambar satu layer. Kalau frame yang diminta belum siap, pakai frame terdekat
+   * yang sudah siap supaya canvas tidak pernah berkedip kosong saat scroll cepat.
+   */
+  const drawLayer = useCallback(
+    (
+      canvas: HTMLCanvasElement | null,
+      store: LayerStore,
+      layer: AnimationLayer,
+      index: number
+    ) => {
+      if (!canvas) return;
+      const wanted = store.get(index);
+      if (wanted?.ready) {
+        doDraw(canvas, wanted.img, layer);
+        return;
+      }
+      for (let i = index - 1; i >= 0; i--) {
+        const entry = store.get(i);
+        if (entry?.ready) {
+          doDraw(canvas, entry.img, layer);
           return;
         }
       }
-
-      const deltaTime = time - lastTime;
-      if (deltaTime > interval) {
-        let allReady = true;
-        introLayers.forEach((layer, idx) => {
-          const progress = currentFrame / maxIntroFrames;
-          const layerFrame = Math.min(layer.frameCount - 1, Math.floor(progress * layer.frameCount));
-          const img = introImagesRef.current[idx][layerFrame];
-          if (!img || !img.complete) allReady = false;
-        });
-
-        introLayers.forEach((layer, idx) => {
-          const progress = currentFrame / maxIntroFrames;
-          const layerFrame = Math.min(layer.frameCount - 1, Math.floor(progress * layer.frameCount));
-          const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
-          drawFrame(introCanvasRefs.current[idx], layerFrame, introImagesRef.current[idx], currentFit, `intro-${idx}`);
-        });
-        
-        if (allReady) {
-          currentFrame++;
-        }
-        lastTime = time - (deltaTime % interval);
-      }
-      animationFrameId = requestAnimationFrame(playIntro);
-    };
-
-    setTimeout(() => {
-      animationFrameId = requestAnimationFrame(playIntro);
-    }, 500);
-
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [introLayers]);
-
-  const drawFrame = (
-    canvas: HTMLCanvasElement | null,
-    frameIndex: number,
-    images: HTMLImageElement[],
-    fit: "contain" | "cover",
-    layerKey?: string
-  ) => {
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    
-    if (layerKey) {
-      targetFrames.current[layerKey] = frameIndex;
-    }
-    
-    // Look ahead and lazily preload frames. Less aggressive for scroll to avoid clogging network.
-    const isIntro = layerKey?.startsWith("intro");
-    const preloadAhead = isIntro ? 30 : 15;
-    for (let i = frameIndex; i < frameIndex + preloadAhead && i < images.length; i++) {
-      const imgToPreload = images[i];
-      if (!imgToPreload.src && (imgToPreload as any).dataset_src) {
-        imgToPreload.src = (imgToPreload as any).dataset_src;
-      }
-    }
-
-    const img = images[frameIndex];
-    if (!img) return;
-
-    if (!img.complete) {
-      // If the image is not loaded yet, wait for it and re-draw if it's still the target frame
-      img.onload = () => {
-        if (layerKey && targetFrames.current[layerKey] === frameIndex) {
-          drawFrame(canvas, frameIndex, images, fit, layerKey);
-        }
-      };
-
-      // Try to find the closest loaded frame (backwards) to draw as a placeholder
-      let fallbackImg = null;
-      // Search all the way back to frame 0 if necessary to avoid blank canvas on fast scrolls
-      for (let i = frameIndex - 1; i >= 0; i--) {
-        if (images[i] && images[i].complete) {
-          fallbackImg = images[i];
-          break;
+      for (let i = index + 1; i < layer.frameCount; i++) {
+        const entry = store.get(i);
+        if (entry?.ready) {
+          doDraw(canvas, entry.img, layer);
+          return;
         }
       }
-      if (fallbackImg) {
-        doDraw(canvas, ctx, fallbackImg, fit);
-      }
-      return;
-    }
+    },
+    [doDraw]
+  );
 
-    doDraw(canvas, ctx, img, fit);
-  };
-
-  const doDraw = (
-    canvas: HTMLCanvasElement,
-    ctx: CanvasRenderingContext2D,
-    img: HTMLImageElement,
-    fit: "contain" | "cover"
-  ) => {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    
-    // Only resize if changed to avoid expensive DOM operations
-    if (canvas.width !== Math.ceil(rect.width * dpr) || canvas.height !== Math.ceil(rect.height * dpr)) {
-      canvas.width = Math.ceil(rect.width * dpr);
-      canvas.height = Math.ceil(rect.height * dpr);
-      ctx.scale(dpr, dpr);
-    }
-    
-    // Completely clear canvas avoiding any transform/scaling artifacts
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
-
-    const imgRatio = img.width / img.height;
-    const canvasRatio = rect.width / rect.height;
-    
-    let drawWidth = rect.width;
-    let drawHeight = rect.height;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (fit === "contain") {
-      if (imgRatio > canvasRatio) {
-        drawWidth = rect.width;
-        drawHeight = drawWidth / imgRatio;
-        offsetY = (rect.height - drawHeight) / 2;
-      } else {
-        drawHeight = rect.height;
-        drawWidth = drawHeight * imgRatio;
-        offsetX = (rect.width - drawWidth) / 2;
-      }
-    } else {
-      if (imgRatio > canvasRatio) {
-        drawHeight = rect.height;
-        drawWidth = drawHeight * imgRatio;
-        offsetX = (rect.width - drawWidth) / 2;
-      } else {
-        drawWidth = rect.width;
-        drawHeight = drawWidth / imgRatio;
-        offsetY = (rect.height - drawHeight) / 2;
-      }
-    }
-
-    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-  };
-
-  // Draw initial scroll frames when phase changes
-  useEffect(() => {
-    if (phase === "scroll") {
-      // Lazy preload the first 30 frames of all scroll layers now that intro is done.
-      // This ensures that fast scrolls have non-transparent fallback frames to display.
-      scrollImagesRef.current.forEach(images => {
-        for (let i = 0; i < 30 && i < images.length; i++) {
-          if (!images[i].src && (images[i] as any).dataset_src) {
-            images[i].src = (images[i] as any).dataset_src;
-          }
-        }
-      });
-
-      const latest = scrollYProgress.get();
-      scrollLayers.forEach((layer, idx) => {
-        const canvas = scrollCanvasRefs.current[idx];
-        if (!canvas) return;
-
-        const start = layer.startProgress ?? 0;
-        const end = layer.endProgress ?? 1;
-
-        let opacity = 1;
-        if (latest < start && layer.hideBeforeStart) opacity = 0;
-        else if (latest > end && layer.hideAfterEnd) opacity = 0;
-        else if (layer.opacity) opacity = layer.opacity(latest);
-        canvas.style.opacity = opacity.toString();
-
-        if (opacity === 0) return;
-
-        let layerProgress = 0;
-        if (layer.customProgress) {
-          layerProgress = layer.customProgress(latest);
-        } else {
-          if (latest <= start) layerProgress = 0;
-          else if (latest >= end) layerProgress = 1;
-          else layerProgress = (latest - start) / (end - start);
-        }
-
-        if (layer.transform) {
-          canvas.style.transform = layer.transform(layerProgress);
-        }
-
-        const frameIndex = Math.floor(layerProgress * (layer.frameCount - 1));
-        const safeFrameIndex = Math.max(0, Math.min(layer.frameCount - 1, frameIndex));
-        const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
-        drawFrame(canvas, safeFrameIndex, scrollImagesRef.current[idx], currentFit, `scroll-${idx}`);
-      });
-    }
-  }, [phase, scrollLayers, scrollYProgress]);
-
-  // Scroll logic
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    if (phase !== "scroll") return;
-
+  const drawScrollLayers = useCallback(() => {
+    const latest = latestProgress.current;
     scrollLayers.forEach((layer, idx) => {
-      const canvas = scrollCanvasRefs.current[idx];
-      if (!canvas) return;
+      const canvas = scrollCanvases.current[idx];
+      const store = scrollStores.current[idx];
+      if (!canvas || !store) return;
 
       const start = layer.startProgress ?? 0;
       const end = layer.endProgress ?? 1;
 
-      // Opacity handling
-      let opacity = 1;
-      if (latest < start && layer.hideBeforeStart) opacity = 0;
-      else if (latest > end && layer.hideAfterEnd) opacity = 0;
-      else if (layer.opacity) opacity = layer.opacity(latest);
-      canvas.style.opacity = opacity.toString();
+      const hidden =
+        (latest < start && layer.hideBeforeStart) ||
+        (latest > end && layer.hideAfterEnd);
+      canvas.style.opacity = hidden ? "0" : "1";
+      if (hidden) return;
 
-      if (opacity === 0) return; // Don't bother drawing if hidden
+      const progress =
+        latest <= start ? 0 : latest >= end ? 1 : (latest - start) / (end - start);
+      const frame = pickFrame(layer, progress);
 
-      // Calculate progress WITHIN the layer's defined range
-      let layerProgress = 0;
-      if (layer.customProgress) {
-        layerProgress = layer.customProgress(latest);
-      } else {
-        if (latest <= start) {
-          layerProgress = 0;
-        } else if (latest >= end) {
-          layerProgress = 1;
+      preload(store, layer, frame, LOOKAHEAD_SCROLL, LOOKBEHIND_SCROLL, requestDraw);
+      drawLayer(canvas, store, layer, frame);
+    });
+  }, [scrollLayers, pickFrame, preload, drawLayer, requestDraw]);
+
+  // Dipasang lewat effect, bukan saat render, dan sengaja dideklarasikan di atas
+  // effect-effect yang memanggil requestDraw supaya ref-nya sudah terisi.
+  useEffect(() => {
+    drawRef.current = drawScrollLayers;
+  }, [drawScrollLayers]);
+
+  // ---- Tentukan langkah frame + siapkan store scroll ----
+  useEffect(() => {
+    isMobile.current = window.innerWidth < MOBILE_BREAKPOINT;
+    scrollStores.current = scrollLayers.map(() => new Map());
+    // Frame pertama tiap scroll layer dimuat lebih dulu supaya pergantian dari
+    // opening ke bagian scroll tidak sempat memperlihatkan canvas kosong.
+    scrollLayers.forEach((layer, idx) => {
+      ensure(scrollStores.current[idx], layer, 0);
+    });
+  }, [scrollLayers, ensure]);
+
+  // ---- Opening: autoplay 30fps ----
+  useEffect(() => {
+    if (introLayers.length === 0) {
+      onIntroCompleteRef.current?.();
+      return;
+    }
+
+    const stores = introLayers.map(() => new Map<number, FrameEntry>());
+    introStores.current = stores;
+
+    const totalFrames = Math.max(...introLayers.map((l) => l.frameCount));
+    const bufferTarget = Math.min(INTRO_BUFFER, totalFrames);
+    let readyCount = 0;
+    let lastReportedPercent = -1;
+    let started = false;
+    let currentFrame = 0;
+    let outroWarmed = false;
+    let rafId = 0;
+    let lastTick = 0;
+
+    const countReady = () => {
+      readyCount++;
+      const percent = Math.min(100, Math.round((readyCount / bufferTarget) * 100));
+      // Lapor hanya saat angka bulatnya berubah: tiap laporan memicu re-render
+      // parent, dan 154 frame x re-render tidak ada gunanya.
+      if (percent !== lastReportedPercent) {
+        lastReportedPercent = percent;
+        onBufferProgressRef.current?.(percent / 100);
+      }
+    };
+
+    introLayers.forEach((layer, idx) => {
+      preload(stores[idx], layer, 0, INTRO_BUFFER, 0, countReady);
+    });
+
+    const tick = (now: number) => {
+      // Tunggu buffer awal terisi, kalau tidak frame-frame pertama tersendat.
+      if (!started) {
+        if (readyCount >= bufferTarget) {
+          started = true;
+          lastTick = now;
         } else {
-          layerProgress = (latest - start) / (end - start);
+          rafId = requestAnimationFrame(tick);
+          return;
         }
       }
 
-      if (layer.transform) {
-        canvas.style.transform = layer.transform(layerProgress);
+      const interval = 1000 / INTRO_FPS;
+      const elapsed = now - lastTick;
+
+      if (elapsed >= interval) {
+        let allReady = true;
+        introLayers.forEach((layer, idx) => {
+          const frame = Math.min(layer.frameCount - 1, currentFrame);
+          preload(stores[idx], layer, frame, LOOKAHEAD_INTRO, 0, countReady);
+          if (!stores[idx].get(frame)?.ready) allReady = false;
+          drawLayer(introCanvases.current[idx], stores[idx], layer, frame);
+        });
+
+        // Mulai menyiapkan sekuens scroll pertama sebelum opening habis, tapi
+        // jangan lebih awal — request-nya akan berebut bandwidth dengan opening.
+        if (!outroWarmed && currentFrame > totalFrames * 0.7 && scrollLayers[0]) {
+          outroWarmed = true;
+          preload(scrollStores.current[0], scrollLayers[0], 0, LOOKAHEAD_SCROLL, 0);
+        }
+
+        // Frame hanya maju kalau gambarnya memang sudah ada, jadi saat jaringan
+        // lambat animasi ikut melambat alih-alih melompat-lompat.
+        if (allReady) currentFrame++;
+        lastTick = now - (elapsed % interval);
       }
 
-      const frameIndex = Math.floor(layerProgress * (layer.frameCount - 1));
-      
-      // Ensure we don't exceed array bounds
-      const safeFrameIndex = Math.max(0, Math.min(layer.frameCount - 1, frameIndex));
-      const currentFit = (window.innerWidth < 1024 && layer.mobileFit) ? layer.mobileFit : layer.fit;
-      drawFrame(canvas, safeFrameIndex, scrollImagesRef.current[idx], currentFit, `scroll-${idx}`);
-    });
+      if (currentFrame >= totalFrames) {
+        onBufferProgressRef.current?.(1);
+        onIntroCompleteRef.current?.();
+        setPhase("scroll");
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+    // scrollLayers hanya dipakai untuk memanaskan outro; kalau ikut jadi
+    // dependency, animasi opening bisa dimulai ulang di tengah jalan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [introLayers, preload, drawLayer]);
+
+  // ---- Bagian scroll ----
+  useEffect(() => {
+    if (phase !== "scroll") return;
+    latestProgress.current = smoothProgress.get();
+    requestDraw();
+  }, [phase, smoothProgress, requestDraw]);
+
+  useMotionValueEvent(smoothProgress, "change", (latest) => {
+    latestProgress.current = latest;
+    if (phase !== "scroll") return;
+    requestDraw();
   });
+
+  // Canvas memakai ukuran CSS-nya, jadi tiap resize harus digambar ulang.
+  useEffect(() => {
+    let timer: number | undefined;
+    const onResize = () => {
+      // Digambar ulang setelah jeda, bukan langsung: satu rAF sesudah event
+      // resize masih bisa membaca layout lama, sehingga backing store canvas
+      // dibuat seukuran viewport baru tapi gambarnya dihitung dari ukuran lama
+      // — hasilnya komposisi menempel di kiri atas. Jeda ini juga meredam
+      // puluhan event saat jendela di-drag.
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(requestDraw, 180);
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, [requestDraw]);
 
   return (
     <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-      {/* Intro layers remain mounted but are hidden after intro finishes */}
       {introLayers.map((layer, idx) => (
         <canvas
           key={`intro-${idx}`}
           ref={(el) => {
-            introCanvasRefs.current[idx] = el;
+            introCanvases.current[idx] = el;
           }}
           className={`absolute w-full h-full ${layer.className || ""}`}
-          style={{ 
-            zIndex: layer.zIndex,
-            opacity: phase === "intro" ? 1 : 0,
-            transition: "opacity 0ms"
-          }}
+          style={{ zIndex: layer.zIndex, opacity: phase === "intro" ? 1 : 0 }}
         />
       ))}
 
-      {/* Scroll layers are only visible when in scroll phase */}
       {scrollLayers.map((layer, idx) => (
         <canvas
           key={`scroll-${idx}`}
           ref={(el) => {
-            scrollCanvasRefs.current[idx] = el;
+            scrollCanvases.current[idx] = el;
           }}
           className={`absolute w-full h-full ${layer.className || ""}`}
-          style={{ 
+          style={{
             zIndex: layer.zIndex,
             opacity: phase === "scroll" && !layer.hideBeforeStart ? 1 : 0,
-            transition: "opacity 0ms"
           }}
         />
       ))}
