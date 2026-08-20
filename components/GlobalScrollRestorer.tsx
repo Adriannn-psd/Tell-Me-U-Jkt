@@ -9,8 +9,10 @@ export default function GlobalScrollRestorer() {
   useEffect(() => {
     if (typeof window === "undefined" || !pathname) return;
 
-    // Jangan terapkan di halaman profile
-    if (pathname.startsWith('/profile')) {
+    // Jangan terapkan di halaman profile, dan jangan di landing page: animasi
+    // openingnya dipetakan ke posisi scroll, jadi memulihkan posisi lama sama
+    // dengan mendarat di tengah-tengah animasi.
+    if (pathname.startsWith('/profile') || pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }

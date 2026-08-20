@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { INTRO_COOKIE, INTRO_VERSION } from "@/lib/intro";
 import { NextRequest, NextResponse } from "next/server";
 
 // Routes that don't require authentication
@@ -48,6 +49,17 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     // still upgrade to a real account instead of being bounced back to /home.
     if (isGuest && pathname === "/") {
       return NextResponse.redirect(new URL("/home", req.nextUrl));
+    }
+    // The landing page is a one-time 38 MB scroll animation. Once someone has
+    // watched it, skip straight to the login form — reading the flag here rather
+    // than client-side means no flash of the landing page before the redirect.
+    // The cookie name carries a version, so bumping it replays the animation for
+    // everyone without having to clear anything in their browser.
+    if (
+      pathname === "/" &&
+      req.cookies.get(INTRO_COOKIE)?.value === INTRO_VERSION
+    ) {
+      return NextResponse.redirect(new URL("/login", req.nextUrl));
     }
     return NextResponse.next();
   }
