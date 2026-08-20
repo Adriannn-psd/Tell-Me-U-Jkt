@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
+import Avatar from "@/components/Avatar";
 
 interface AvatarPreviewModalProps {
   imageUrl: string;
@@ -33,10 +34,17 @@ export default function AvatarPreviewModal({ imageUrl, onClose }: AvatarPreviewM
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="relative max-w-[90vw] max-h-[90vh] md:max-w-md w-full aspect-square rounded-full overflow-hidden shadow-2xl z-10 border-2 border-[#3a3a3d]"
         >
-          <img 
-            src={imageUrl} 
-            alt="Profile Preview" 
-            className="w-full h-full object-cover"
+          {/*
+            size 512 untuk versi statis (modal ini nyaris selebar layar), tapi
+            versi bergeraknya dijepit di 256 — di atas itu satu avatar animasi
+            bisa 350 KB+ sementara bedanya tidak kelihatan di lingkaran.
+          */}
+          <Avatar
+            src={imageUrl}
+            size={512}
+            animatedSize={256}
+            animate="always"
+            alt="Profile Preview"
           />
         </motion.div>
         

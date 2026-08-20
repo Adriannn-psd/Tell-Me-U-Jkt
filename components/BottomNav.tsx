@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
+import Avatar from "@/components/Avatar";
 import { useGuest } from "@/components/GuestProvider";
 
 export default function BottomNav() {
@@ -145,13 +146,16 @@ export default function BottomNav() {
         {/* Profile */}
         <Link href="/profile" className={getLinkClass("/profile")} replace={pathname !== "/"}>
           <div className="w-[38px] h-[38px] rounded-full overflow-hidden flex items-center justify-center shrink-0">
-            {!isGuest && avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#3a3a3d] to-[#1c1c1e] flex items-center justify-center text-white text-[12px] font-bold">
-                {isGuest ? "?" : initial}
-              </div>
-            )}
+            <Avatar
+              src={isGuest ? null : avatarUrl}
+              size={38}
+              alt="Profile"
+              fallback={
+                <div className="w-full h-full bg-gradient-to-br from-[#3a3a3d] to-[#1c1c1e] flex items-center justify-center text-white text-[12px] font-bold">
+                  {isGuest ? "?" : initial}
+                </div>
+              }
+            />
           </div>
         </Link>
 

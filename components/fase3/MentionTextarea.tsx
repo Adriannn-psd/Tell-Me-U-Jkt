@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, forwardRef } from "react";
 import getCaretCoordinates from "textarea-caret";
+import Avatar from "@/components/Avatar";
 
 interface UserMention {
   id: string;
@@ -168,13 +169,16 @@ const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(({
                 className="flex items-center gap-3 p-2.5 hover:bg-[var(--color-surface)] cursor-pointer transition"
               >
                 <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] overflow-hidden shrink-0">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.username} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold bg-gradient-to-br from-pink-500 to-yellow-500">
-                      {(user.full_name || user.username).charAt(0)}
-                    </div>
-                  )}
+                  <Avatar
+                    src={user.avatar_url}
+                    size={32}
+                    alt={user.username}
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold bg-gradient-to-br from-pink-500 to-yellow-500">
+                        {(user.full_name || user.username).charAt(0)}
+                      </div>
+                    }
+                  />
                 </div>
                 <div className="flex flex-col overflow-hidden">
                   <span className="text-white text-sm font-bold truncate">{user.username}</span>

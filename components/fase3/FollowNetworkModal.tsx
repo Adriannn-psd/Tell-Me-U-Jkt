@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useGuest } from "../GuestProvider";
+import Avatar from "@/components/Avatar";
 
 export default function FollowNetworkModal({
   username,
@@ -141,11 +142,14 @@ export default function FollowNetworkModal({
               <div key={u.id} className="flex items-center justify-between group">
                 <Link href={`/profile/${u.username}`} onClick={onClose} className="flex items-center gap-3 flex-1 overflow-hidden">
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface)] shrink-0 flex items-center justify-center overflow-hidden border border-[var(--color-border-color)]">
-                    {u.avatar_url && u.avatar_url.length > 2 ? (
-                      <img src={u.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-white text-sm font-bold">{u.full_name?.charAt(0) || u.username?.charAt(0)}</span>
-                    )}
+                    <Avatar
+                      src={u.avatar_url}
+                      size={40}
+                      alt="avatar"
+                      fallback={
+                        <span className="text-white text-sm font-bold">{u.full_name?.charAt(0) || u.username?.charAt(0)}</span>
+                      }
+                    />
                   </div>
                   <div className="flex flex-col overflow-hidden pr-2">
                     <span className="text-white font-bold text-sm truncate group-hover:underline">{u.username}</span>

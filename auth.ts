@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import { getUser, upsertUser, supabase } from "@/lib/supabase";
+import { avatarSrc } from "@/lib/avatar";
 
 // ---- Role ID → Prodi Mapping ----
 // Ganti ROLE_ID_xxx dengan Role ID asli dari server Discord kamu
@@ -57,8 +58,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Build avatar URL
         const discordId = account.providerAccountId;
-        const avatarUrl =
-          user.image || `https://cdn.discordapp.com/embed/avatars/${parseInt(discordId) % 5}.png`;
+        // Provider Discord Auth.js menyusun URL `.gif` untuk avatar Nitro (hash
+        // diawali `a_`), padahal `.gif` tidak tersedia untuk semua avatar animasi
+        // — sebagian membalas HTTP 415 alias gambar rusak. avatarSrc() menormalkan
+        // ke `.webp?size=N` yang selalu ada dan bisa dikecilkan, tanpa membuang
+        // penanda `a_` di hash, jadi saat render tetap bisa dianimasikan.
+        const avatarUrl = avatarSrc(
+          user.image || `https://cdn.discordapp.com/embed/avatars/${parseInt(discordId) % 5}.png`,
+          { size: 128 }
+        );
 
         // Fetch existing user to preserve verification status
         const existingUser = await getUser(discordId);

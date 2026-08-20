@@ -5,6 +5,7 @@ import { Post } from "./MasonryGrid";
 import Link from "next/link";
 import { renderWithMentions } from "@/lib/mentions";
 import MentionTextarea from "./MentionTextarea";
+import Avatar from "@/components/Avatar";
 
 
 export default function PostDetailModal({ 
@@ -237,7 +238,7 @@ export default function PostDetailModal({
               <Link href={`/profile/${post.username}`} onClick={onClose}>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand-red)] to-purple-600 p-0.5">
                   <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                    {post.avatar && post.avatar.length > 2 ? <img src={post.avatar} alt="avatar" className="w-full h-full object-cover"/> : post.author.charAt(0)}
+                    <Avatar src={post.avatar} size={40} alt="avatar" fallback={post.author.charAt(0)} />
                   </div>
                 </div>
               </Link>
@@ -245,7 +246,12 @@ export default function PostDetailModal({
                 <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0">
                     <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                      {(post.collaborator as any).avatar_url || post.collaborator.avatar ? <img src={(post.collaborator as any).avatar_url || post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : (post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
+                      <Avatar
+                        src={(post.collaborator as any).avatar_url || post.collaborator.avatar}
+                        size={40}
+                        alt="Collab Avatar"
+                        fallback={(post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
+                      />
                     </div>
                   </div>
                 </Link>
@@ -332,7 +338,7 @@ export default function PostDetailModal({
                 <Link href={`/profile/${post.username}`} onClick={onClose}>
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand-red)] to-purple-600 p-0.5">
                     <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                      {post.avatar && post.avatar.length > 2 ? <img src={post.avatar} alt="avatar" className="w-full h-full object-cover"/> : post.author.charAt(0)}
+                      <Avatar src={post.avatar} size={40} alt="avatar" fallback={post.author.charAt(0)} />
                     </div>
                   </div>
                 </Link>
@@ -340,7 +346,12 @@ export default function PostDetailModal({
                   <Link href={`/profile/${post.collaborator.username}`} onClick={onClose}>
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-green-500 p-0.5 absolute left-6 top-0 z-0">
                       <div className="w-full h-full bg-[var(--color-surface)] rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm">
-                        {(post.collaborator as any).avatar_url || post.collaborator.avatar ? <img src={(post.collaborator as any).avatar_url || post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : (post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
+                        <Avatar
+                          src={(post.collaborator as any).avatar_url || post.collaborator.avatar}
+                          size={40}
+                          alt="Collab Avatar"
+                          fallback={(post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
+                        />
                       </div>
                     </div>
                   </Link>
@@ -419,7 +430,7 @@ export default function PostDetailModal({
                       {/* Root Comment */}
                       <div className="flex gap-3 group">
                         <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] overflow-hidden flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {comment.user?.avatar_url ? <img src={comment.user.avatar_url} className="w-full h-full object-cover"/> : (comment.user?.full_name?.[0] || 'U')}
+                          <Avatar src={comment.user?.avatar_url} size={32} fallback={comment.user?.full_name?.[0] || 'U'} />
                         </div>
                         <div className="flex-1">
                           <p className="text-white text-xs font-bold mb-0.5">
@@ -460,7 +471,7 @@ export default function PostDetailModal({
                               {replies.map((reply: any) => (
                                 <div key={reply.id} className="flex gap-3 group">
                                   <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] overflow-hidden flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                                    {reply.user?.avatar_url ? <img src={reply.user.avatar_url} className="w-full h-full object-cover"/> : (reply.user?.full_name?.[0] || 'U')}
+                                    <Avatar src={reply.user?.avatar_url} size={24} fallback={reply.user?.full_name?.[0] || 'U'} />
                                   </div>
                                   <div className="flex-1">
                                     <p className="text-white text-[11px] font-bold mb-0.5">

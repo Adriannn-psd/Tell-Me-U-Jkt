@@ -9,6 +9,7 @@ import BottomNav from "@/components/BottomNav";
 import Link from "next/link";
 import AvatarPreviewModal from "@/components/fase3/AvatarPreviewModal";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
+import Avatar from "@/components/Avatar";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
 import AvatarCropModal from "@/components/fase3/AvatarCropModal";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
@@ -725,18 +726,19 @@ function ProfileContent() {
                 {/* Avatar */}
                 <div className="relative shrink-0">
                   <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 p-[2px]">
-                    {avatarUrl ? (
-                      <img 
-                        src={avatarUrl} 
-                        alt="Avatar" 
-                        onClick={() => setPreviewAvatarUrl(avatarUrl)}
-                        className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)] cursor-pointer" 
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-bg)] flex items-center justify-center text-3xl font-extrabold text-white">
-                        {initial}
-                      </div>
-                    )}
+                    <Avatar
+                      src={avatarUrl}
+                      size={96}
+                      alt="Avatar"
+                      animate="always"
+                      onClick={() => setPreviewAvatarUrl(avatarUrl ?? null)}
+                      className="rounded-full border-2 border-[var(--color-bg)] cursor-pointer"
+                      fallback={
+                        <div className="w-full h-full rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-bg)] flex items-center justify-center text-3xl font-extrabold text-white">
+                          {initial}
+                        </div>
+                      }
+                    />
                   </div>
                   <button 
                     onClick={() => setIsUploading(true)}
@@ -1640,11 +1642,12 @@ function ProfileContent() {
                       <div className="w-8 h-8 border-4 border-[var(--color-brand-red)] border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <>
-                        {editAvatarUrl ? (
-                          <img src={editAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-3xl font-bold text-[#8e8e93]">{initial}</span>
-                        )}
+                        <Avatar
+                          src={editAvatarUrl}
+                          size={96}
+                          alt="Avatar"
+                          fallback={<span className="text-3xl font-bold text-[#8e8e93]">{initial}</span>}
+                        />
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>

@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useGuest } from "@/components/GuestProvider";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
+import Avatar from "@/components/Avatar";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -64,13 +65,16 @@ export default function Sidebar() {
         {/* Profile Card */}
         <Link href="/profile" className="flex items-center gap-3 p-3 rounded-2xl bg-[#1c1c1e] border border-[#2a2a30] hover:bg-[#2a2a30] transition">
           <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-[var(--color-border-color)]">
-            {!isGuest && avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#3a3a3d] to-[#1c1c1e] flex items-center justify-center text-white text-[12px] font-bold">
-                {isGuest ? "?" : initial}
-              </div>
-            )}
+            <Avatar
+              src={isGuest ? null : avatarUrl}
+              size={40}
+              alt="Profile"
+              fallback={
+                <div className="w-full h-full bg-gradient-to-br from-[#3a3a3d] to-[#1c1c1e] flex items-center justify-center text-white text-[12px] font-bold">
+                  {isGuest ? "?" : initial}
+                </div>
+              }
+            />
           </div>
           <div className="flex flex-col overflow-hidden">
             <span className="text-white text-xs font-bold truncate uppercase">{isGuest ? "Mode Tamu" : (user?.name || "Unknown")}</span>

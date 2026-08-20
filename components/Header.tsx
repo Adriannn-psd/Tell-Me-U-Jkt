@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import useSWR from "swr";
 import UploadMediaModal from "@/components/fase3/UploadMediaModal";
 import PortalKampusModal from "@/components/fase3/PortalKampusModal";
+import Avatar from "@/components/Avatar";
 import { useScrollState } from "./ScrollContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuest } from "@/components/GuestProvider";
@@ -203,13 +204,16 @@ export default function Header() {
                             className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
                           >
                             <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
-                              {u.avatar_url ? (
-                                <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                                  {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
-                                </div>
-                              )}
+                              <Avatar
+                                src={u.avatar_url}
+                                size={32}
+                                alt={u.full_name || u.username}
+                                fallback={
+                                  <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                    {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
+                                  </div>
+                                }
+                              />
                             </div>
                             <div>
                               <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
@@ -294,13 +298,16 @@ export default function Header() {
                           className="flex items-center gap-3 p-3 hover:bg-[#2a2a30] rounded-lg text-left transition"
                         >
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-[#2a2a30]">
-                            {u.avatar_url ? (
-                              <img src={u.avatar_url} alt={u.full_name || u.username} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                                {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                            <Avatar
+                              src={u.avatar_url}
+                              size={32}
+                              alt={u.full_name || u.username}
+                              fallback={
+                                <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                  {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
+                                </div>
+                              }
+                            />
                           </div>
                           <div>
                             <p className="text-white text-sm font-medium line-clamp-1">{u.full_name || u.username}</p>
@@ -374,13 +381,15 @@ export default function Header() {
                           return (
                           <Link href={href} key={n.id} onClick={handleNotificationClick} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                             <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
-                              {n.actor?.avatar_url ? (
-                                <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                                  {(n.actor?.full_name || n.actor?.username || "?").charAt(0).toUpperCase()}
-                                </div>
-                              )}
+                              <Avatar
+                                src={n.actor?.avatar_url}
+                                size={40}
+                                fallback={
+                                  <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                                    {(n.actor?.full_name || n.actor?.username || "?").charAt(0).toUpperCase()}
+                                  </div>
+                                }
+                              />
                             </div>
                             <div className="flex-1">
                               <p className="text-sm text-white line-clamp-2">
@@ -518,13 +527,15 @@ export default function Header() {
                             return (
                             <Link href={href} key={n.id} onClick={handleNotificationClick} className={`flex gap-3 px-4 py-3 hover:bg-[#2a2a30] transition ${!n.is_read ? 'bg-[#2a2a30]/50' : ''}`}>
                               <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden bg-[#3a3a3d]">
-                                {n.actor?.avatar_url ? (
-                                  <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                                    {(n.actor?.full_name || n.actor?.username || "?").charAt(0).toUpperCase()}
-                                  </div>
-                                )}
+                                <Avatar
+                                  src={n.actor?.avatar_url}
+                                  size={40}
+                                  fallback={
+                                    <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                                      {(n.actor?.full_name || n.actor?.username || "?").charAt(0).toUpperCase()}
+                                    </div>
+                                  }
+                                />
                               </div>
                               <div className="flex-1 text-left">
                                 <p className="text-sm text-white line-clamp-2">
@@ -695,13 +706,17 @@ export default function Header() {
             </div>
           ) : (
             <Link href="/profile" className="relative w-9 h-9 shrink-0 cursor-pointer hidden md:block">
-              {!isGuest && avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover border-[1.5px] border-[#333]" />
-              ) : (
-                <div className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-sm border-[1.5px] border-[#333] bg-gradient-to-br from-[#3a3a3d] to-[#1c1c1e]">
-                  {isGuest ? "?" : initial}
-                </div>
-              )}
+              <Avatar
+                src={isGuest ? null : avatarUrl}
+                size={36}
+                alt="Avatar"
+                className="rounded-full border-[1.5px] border-[#333]"
+                fallback={
+                  <div className="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-sm border-[1.5px] border-[#333] bg-gradient-to-br from-[#3a3a3d] to-[#1c1c1e]">
+                    {isGuest ? "?" : initial}
+                  </div>
+                }
+              />
               {!isGuest && <span className="absolute bottom-0 right-0 w-[10px] h-[10px] bg-[var(--color-brand-green)] rounded-full border-[1.5px] border-[var(--color-bg)]"></span>}
             </Link>
           )}
