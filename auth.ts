@@ -138,6 +138,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account && user) {
         token.discordId = account.providerAccountId;
         token.accessToken = account.access_token;
+        // Foto Discord disimpan terpisah dari users.avatar_url: kolom DB itu
+        // bisa tertimpa avatar custom, sementara fitur "pakai foto Discord" di
+        // /profile butuh sumber aslinya yang tidak ikut tertimpa. Dinormalkan
+        // lewat avatarSrc() dengan alasan yang sama seperti di signIn().
+        token.discordAvatarUrl = avatarSrc(
+          user.image ||
+            `https://cdn.discordapp.com/embed/avatars/${parseInt(account.providerAccountId) % 5}.png`,
+          { size: 128 }
+        );
       }
 
       // Fetch latest user data from Supabase
@@ -167,6 +176,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.dbUsername = token.dbUsername as string | undefined;
       session.user.kelas = token.kelas as string | undefined;
       session.user.instagram = token.instagram as string | undefined;
+      // Hanya URL CDN publik, bukan access token Discord-nya — itu tetap
+      // tinggal di JWT dan tidak pernah ikut ke client.
+      session.user.discordAvatarUrl = token.discordAvatarUrl as string | undefined;
       return session;
     },
   },
