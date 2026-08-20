@@ -34,6 +34,56 @@ export interface UserData {
   updated_at?: string;
 }
 
+/**
+ * Klaim no_reg SKL untuk satu Discord ID.
+ *
+ * Dulu ini `upsert({ no_reg, username }, { onConflict: "no_reg" })` — upsert buta
+ * begitu bisa menimpa pemilik lama, jadi sekarang ditulis eksplisit dan diikat ke
+ * `discord_id` (username Discord bisa diganti kapan saja). Baris warisan yang
+ * `discord_id`-nya masih NULL hanya bisa diisi oleh pemilik sah, yaitu yang
+ * username-nya masih cocok.
+ */
+async function claimSklRegistry(no_reg: string, username: string, discordId: string) {
+  const { data: existing, error: selectError } = await supabase
+    .from("skl_registry")
+    .select("no_reg, username, discord_id")
+    .eq("no_reg", no_reg)
+    .maybeSingle();
+
+  if (selectError) {
+    console.error("Supabase skl_registry select error:", selectError);
+    return;
+  }
+
+  if (!existing) {
+    const { error } = await supabase
+      .from("skl_registry")
+      .insert({ no_reg, username, discord_id: discordId });
+    if (error) console.error("Supabase skl_registry insert error:", error);
+    return;
+  }
+
+  const isOwner = existing.discord_id
+    ? existing.discord_id === discordId
+    : existing.username?.toLowerCase() === username.toLowerCase();
+
+  if (!isOwner) {
+    // Route verify sudah menolak lebih dulu; kalau sampai ke sini berarti ada
+    // jalur lain yang bocor — jangan tulis apa pun, cukup catat.
+    console.error(
+      `[skl_registry] no_reg ${no_reg} milik ${existing.discord_id || existing.username}, ` +
+        `bukan ${discordId}. Penulisan dibatalkan.`
+    );
+    return;
+  }
+
+  const { error } = await supabase
+    .from("skl_registry")
+    .update({ username, discord_id: discordId })
+    .eq("no_reg", no_reg);
+  if (error) console.error("Supabase skl_registry update error:", error);
+}
+
 export async function getUser(discordId: string): Promise<UserData | null> {
   const { data, error } = await supabase
     .from("users")
@@ -111,33 +161,41 @@ export async function verifyUser(
   }
   
   if (username && noReg) {
-    const { error: regError } = await supabase
-      .from("skl_registry")
-      .upsert(
-        { no_reg: noReg, username },
-        { onConflict: "no_reg" }
-      );
-    if (regError) {
-      console.error("Supabase skl_registry upsert error:", regError);
-    }
+    await claimSklRegistry(noReg, username, discordId);
   }
 
   return data as UserData;
 }
 
-export async function updateUserClass(discordId: string, kelas: string) {
+/**
+ * Kunci kelas user. Kelas bersifat PATEN: sekali terisi tidak bisa diganti,
+ * termasuk oleh user itu sendiri lewat reset akun.
+ *
+ * `.is("kelas", null)` adalah guard-nya — kalau kolomnya sudah terisi, update
+ * mengenai 0 baris dan fungsi ini balik `null`, jadi double-submit atau dua tab
+ * tidak bisa saling menimpa tanpa perlu transaksi.
+ *
+ * `sync_kelas: false` memicu loop `sync_web_kelas` di bot Discord untuk membuat
+ * /menemukan role kelas dan memasangnya — pola yang sama dengan `sync_discord`.
+ */
+export async function lockUserClass(discordId: string, kelas: string) {
   const { data, error } = await supabase
     .from("users")
-    .update({ kelas, updated_at: new Date().toISOString() })
+    .update({ kelas, sync_kelas: false, updated_at: new Date().toISOString() })
     .eq("discord_id", discordId)
+    .is("kelas", null)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
-    console.error("Supabase update class error:", error);
-    return null;
+    console.error("Supabase lock class error:", error);
+    return { user: null, alreadyLocked: false };
   }
-  return data as UserData;
+
+  // 0 baris = kelas sudah pernah diisi (atau user tidak ada)
+  if (!data) return { user: null, alreadyLocked: true };
+
+  return { user: data as UserData, alreadyLocked: false };
 }
 
 export async function updateUserInstagram(discordId: string, instagram: string) {

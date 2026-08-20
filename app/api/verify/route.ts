@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getUser, verifyUser } from "@/lib/supabase";
+import { prodiForKelas } from "@/lib/kelas";
 
 // Vercel serverless function timeout (detik).
 // Hobby = max 10s, Pro = max 60s. Gemini OCR butuh waktu, jadi set max.
@@ -279,12 +280,20 @@ export async function POST(req: NextRequest) {
       const { supabase } = await import("@/lib/supabase");
       const { data: existingReg } = await supabase
         .from("skl_registry")
-        .select("username")
+        .select("username, discord_id")
         .eq("no_reg", no_reg)
-        .single();
-        
-      if (existingReg && existingReg.username?.toLowerCase() !== existingUser?.username?.toLowerCase()) {
-        validationErrors.push(`Nomor registrasi **${no_reg}** sudah tertaut dengan akun Discord lain (\`${existingReg.username}\`). Kamu tidak bisa menggunakan SKL milik orang lain!`);
+        .maybeSingle();
+
+      if (existingReg) {
+        // Pemilik diikat ke Discord ID — username Discord bisa diganti kapan saja.
+        // Baris warisan yang discord_id-nya masih NULL jatuh ke perbandingan username.
+        const isOwner = existingReg.discord_id
+          ? existingReg.discord_id === session.user.discordId
+          : existingReg.username?.toLowerCase() === existingUser?.username?.toLowerCase();
+
+        if (!isOwner) {
+          validationErrors.push(`Nomor registrasi **${no_reg}** sudah tertaut dengan akun Discord lain (\`${existingReg.username}\`). Kamu tidak bisa menggunakan SKL milik orang lain!`);
+        }
       }
     }
 
@@ -320,6 +329,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check 3.5: Kelas sudah terkunci? Prodi ikut terkunci.
+    // Prefix kelas (JS1DKV, JS1SI, ...) terikat ke prodi, jadi user yang kelasnya
+    // sudah paten tidak boleh verifikasi ulang pakai SKL prodi lain. Ini backstop
+    // untuk Check 3: kalau kolom `prodi` pernah kosong (akun lama yang direset
+    // sebelum perbaikan), Check 3 dilewati dan prodi bisa melenceng.
+    const prodiTerkunci = prodiForKelas(existingUser?.kelas);
+    if (prodiTerkunci) {
+      const prodiSkl = extracted.jurusan ? deduceProdiFromJurusan(extracted.jurusan) : undefined;
+      if (prodiSkl && prodiSkl !== prodiTerkunci) {
+        validationErrors.push(
+          `Kelas kamu sudah terkunci di **${existingUser?.kelas}** (${prodiTerkunci}), ` +
+            `sedangkan SKL yang kamu upload prodinya **${prodiSkl}**. ` +
+            `Kalau ini keliru, minta admin jalankan \`!resetkelas\` di Discord.`
+        );
+      }
+    }
+
     // If there are validation errors, return them
     if (validationErrors.length > 0) {
       return NextResponse.json(
@@ -338,7 +364,11 @@ export async function POST(req: NextRequest) {
     // Step 3: All checks passed — verify user in Supabase
     // Dedukdi prodi jika user belum milih di web
     let finalProdi = session.user.prodi || existingUser?.prodi;
-    if (!finalProdi && extracted.jurusan) {
+    if (prodiTerkunci) {
+      // Kelas paten = prodi paten. Sekalian memulihkan kolom prodi yang pernah
+      // dikosongkan reset akun lama, tanpa bisa digeser oleh isi SKL.
+      finalProdi = prodiTerkunci;
+    } else if (!finalProdi && extracted.jurusan) {
       finalProdi = deduceProdiFromJurusan(extracted.jurusan);
     }
 

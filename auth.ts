@@ -87,6 +87,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             const BOT_ROLE_TO_PRODI: Record<string, string> = {
               "DKV": "Desain Komunikasi Visual",
               "TI": "Teknologi Informasi",
+              "TEKINFO": "Teknologi Informasi", // nama role yang benar-benar ditulis bot
               "INFOR": "Informatika",
               "SISFOR": "Sistem Informasi",
               "TEKTEL": "Teknik Telekomunikasi",

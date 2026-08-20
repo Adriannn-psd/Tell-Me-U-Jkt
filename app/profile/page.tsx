@@ -15,19 +15,15 @@ import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useGuest } from "@/components/GuestProvider";
 import LoginPanel from "@/components/LoginPanel";
+import ClassWheelPicker from "@/components/fase3/ClassWheelPicker";
+import {
+  KELAS_DEFAULT_NUMBER,
+  KELAS_DEFAULT_YEAR,
+  buildKelas,
+  prefixForProdi,
+} from "@/lib/kelas";
 
 // Removed hardcoded MY_POSTS
-
-const getProdiAcronym = (prodi: string) => {
-  if (!prodi) return "UNKNOWN";
-  const p = prodi.toLowerCase();
-  if (p.includes("sistem informasi")) return "SI";
-  if (p.includes("teknologi informasi")) return "TI";
-  if (p.includes("informatika")) return "INFOR";
-  if (p.includes("komunikasi visual") || p.includes("dkv")) return "DKV";
-  if (p.includes("telekomunikasi")) return "TT";
-  return "UNKNOWN";
-};
 
 import useSWR from "swr";
 
@@ -103,7 +99,10 @@ function ProfileContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isSubmittingClass, setIsSubmittingClass] = useState(false);
-  const [selectedClass, setSelectedClass] = useState("");
+  const [classYear, setClassYear] = useState(KELAS_DEFAULT_YEAR);
+  const [classTail, setClassTail] = useState(KELAS_DEFAULT_NUMBER);
+  const [classManual, setClassManual] = useState(false);
+  const [isConfirmingClass, setIsConfirmingClass] = useState(false);
   const [classError, setClassError] = useState("");
   const [bioError, setBioError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -332,9 +331,10 @@ function ProfileContent() {
     );
   }
 
-  // Generate class options based on prodi
-  const acronym = getProdiAcronym(user?.prodi || "");
-  const classOptions = [`${acronym}-A`, `${acronym}-B`, `${acronym}-C`, `${acronym}-D`];
+  // Prefix kelas mengikuti prodi hasil SKL — user tidak bisa memilih prodi lain.
+  // Server juga menyusun prefix sendiri dari users.prodi, ini cuma untuk tampilan.
+  const classPrefix = prefixForProdi(user?.prodi);
+  const classPreview = classPrefix ? buildKelas(classPrefix, classYear, classTail) : "";
 
   // Compress image client-side sebelum upload ke server
   // Ini mengurangi ukuran file drastis (misal 5MB → ~200KB)
@@ -485,11 +485,12 @@ function ProfileContent() {
   };
 
   const handleClassSubmit = async () => {
-    if (!selectedClass) {
-      setClassError("Pilih kelas terlebih dahulu");
+    if (!classTail) {
+      setClassError("Isi kode kelas dulu");
+      setIsConfirmingClass(false);
       return;
     }
-    
+
     setIsSubmittingClass(true);
     setClassError("");
 
@@ -497,17 +498,23 @@ function ProfileContent() {
       const res = await fetch("/api/user/kelas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kelas: selectedClass }),
+        body: JSON.stringify({ tahun: classYear, nomor: classTail, manual: classManual }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        await update(); 
+        setIsConfirmingClass(false);
+        await update();
       } else {
         setClassError(data.error || "Gagal menyimpan kelas");
+        setIsConfirmingClass(false);
+        // 409 = kelas sudah terkunci (mis. dari tab lain), segarkan sesi
+        // supaya kartu langsung berubah jadi tampilan terkunci.
+        if (res.status === 409) await update();
       }
     } catch (err) {
       setClassError("Terjadi kesalahan. Coba lagi.");
+      setIsConfirmingClass(false);
     } finally {
       setIsSubmittingClass(false);
     }
@@ -949,43 +956,111 @@ function ProfileContent() {
                       </div>
                     </div>
 
-                    <div className="mb-4">
-                      <label className="text-xs font-semibold text-[var(--color-text-2)] mb-2 block">Pilih Kelas</label>
-                      <div className="relative">
-                        <select
-                          value={selectedClass}
-                          onChange={(e) => setSelectedClass(e.target.value)}
-                          className="w-full bg-[var(--color-bg)] border border-[var(--color-border-color)] text-white text-sm rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-[var(--color-brand-red)] transition cursor-pointer"
-                        >
-                          <option value="" disabled>-- Pilih Kelas --</option>
-                          {classOptions.map(cls => (
-                            <option key={cls} value={cls}>{cls}</option>
-                          ))}
-                        </select>
-                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-[var(--color-text-3)]">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="m6 9 6 6 6-6"/></svg>
-                        </div>
+                    {!classPrefix ? (
+                      <div className="rounded-xl border border-[var(--color-border-color)] bg-[var(--color-bg)] p-4">
+                        <p className="text-[var(--color-text-2)] text-xs leading-relaxed">
+                          Prodi kamu belum terdeteksi, jadi kelas belum bisa dipilih. Upload ulang SKL kamu di
+                          langkah 1 atau hubungi admin di Discord.
+                        </p>
                       </div>
-                      {classError && <p className="text-red-400 text-xs mt-2">{classError}</p>}
-                    </div>
+                    ) : (
+                      <>
+                        <div className="mb-4">
+                          <label className="text-xs font-semibold text-[var(--color-text-2)] mb-2 block">
+                            Pilih Kelas <span className="text-[var(--color-text-3)] font-normal">— scroll atas/bawah</span>
+                          </label>
+                          <ClassWheelPicker
+                            prefix={classPrefix}
+                            tahun={classYear}
+                            nomor={classTail}
+                            manual={classManual}
+                            disabled={isSubmittingClass}
+                            onChange={({ tahun, nomor, manual }) => {
+                              setClassYear(tahun);
+                              setClassTail(nomor);
+                              setClassManual(manual);
+                              setClassError("");
+                              setIsConfirmingClass(false);
+                            }}
+                          />
+                          {classError && <p className="text-red-400 text-xs mt-3">{classError}</p>}
+                        </div>
 
-                    <button
-                      onClick={handleClassSubmit}
-                      disabled={isSubmittingClass || !selectedClass}
-                      className="w-full bg-[var(--color-brand-red)] text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isSubmittingClass ? (
-                        <>
-                          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/>
-                            <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/>
-                          </svg>
-                          Menyimpan...
-                        </>
-                      ) : (
-                        "Simpan Kelas"
-                      )}
-                    </button>
+                        {isConfirmingClass ? (
+                          <div className="rounded-xl border border-[rgba(229,39,31,0.35)] bg-[rgba(229,39,31,0.08)] p-4">
+                            <p className="text-white text-xs font-bold">Kelas ini permanen</p>
+                            <p className="text-[var(--color-text-2)] text-xs mt-1 leading-relaxed">
+                              Setelah disimpan, <span className="font-mono font-bold text-white">{classPreview}</span> tidak
+                              bisa kamu ganti sendiri. Kalau keliru, cuma admin yang bisa membukanya lagi lewat Discord.
+                            </p>
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={() => setIsConfirmingClass(false)}
+                                disabled={isSubmittingClass}
+                                className="flex-1 bg-[var(--color-surface)] border border-[#3a3a3d] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#2a2a30] transition disabled:opacity-40"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                onClick={handleClassSubmit}
+                                disabled={isSubmittingClass}
+                                className="flex-1 bg-[var(--color-brand-red)] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                              >
+                                {isSubmittingClass ? (
+                                  <>
+                                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/>
+                                      <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/>
+                                    </svg>
+                                    Menyimpan...
+                                  </>
+                                ) : (
+                                  "Ya, kunci kelas ini"
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (!classTail) {
+                                setClassError("Isi kode kelas dulu");
+                                return;
+                              }
+                              setClassError("");
+                              setIsConfirmingClass(true);
+                            }}
+                            disabled={isSubmittingClass || !classTail}
+                            className="w-full bg-[var(--color-brand-red)] text-white py-3 rounded-xl font-bold text-sm hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            Simpan Kelas
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* 2b. Kelas sudah terkunci — read-only */}
+                {user?.isVerified && user?.kelas && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 mb-4">
+                    <div className="rounded-xl border border-[var(--color-border-color)] bg-[var(--color-bg)] p-4 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--color-brand-green)]/15 flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-[var(--color-brand-green)]">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-3)]">
+                          Kelas kamu · paten
+                        </p>
+                        <p className="text-white font-mono font-bold text-sm mt-0.5 break-all">{user.kelas}</p>
+                        <p className="text-[var(--color-text-3)] text-xs mt-1.5 leading-relaxed">
+                          Role kelas di Discord dibuat otomatis dalam 1 menit. Salah kelas? Hubungi admin di Discord.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
