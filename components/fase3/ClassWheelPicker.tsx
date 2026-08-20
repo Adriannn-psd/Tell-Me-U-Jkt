@@ -99,7 +99,7 @@ function Wheel({
       tabIndex={0}
       onScroll={handleScroll}
       onKeyDown={handleKeyDown}
-      className="relative h-[132px] w-16 overflow-y-auto snap-y snap-mandatory rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-red)]"
+      className="relative h-[132px] w-11 shrink-0 overflow-y-auto snap-y snap-mandatory rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-red)] sm:w-16"
       style={{
         // scrollbar sudah disembunyikan global di app/globals.css, ini untuk Firefox
         scrollbarWidth: "none",
@@ -117,7 +117,7 @@ function Wheel({
           role="option"
           aria-selected={item === value}
           onClick={() => move(items.indexOf(item) - index)}
-          className={`flex h-11 cursor-pointer snap-center items-center justify-center font-mono text-lg transition-colors ${
+          className={`flex h-11 cursor-pointer snap-center items-center justify-center font-mono text-sm transition-colors sm:text-lg ${
             item === value
               ? "font-bold text-white"
               : "text-[var(--color-text-3)]"
@@ -133,9 +133,18 @@ function Wheel({
 
 function FixedSegment({ text }: { text: string }) {
   return (
-    <div className="flex h-11 items-center justify-center rounded-xl bg-[var(--color-surface-2)] px-3 font-mono text-lg font-bold text-white">
+    <div className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-surface-2)] px-1.5 font-mono text-sm font-bold text-white sm:px-3 sm:text-lg">
       {text}
     </div>
+  );
+}
+
+/** Tanda hubung antar segmen — sengaja kecil di HP, di situ tiap piksel dihitung. */
+function Dash() {
+  return (
+    <span className="shrink-0 font-mono text-xs text-[var(--color-text-3)] sm:text-lg">
+      -
+    </span>
   );
 }
 
@@ -167,11 +176,24 @@ export default function ClassWheelPicker({
 
   return (
     <div className={disabled ? "pointer-events-none opacity-50" : ""}>
-      <div className="flex items-center justify-center gap-1.5 rounded-2xl border border-[var(--color-border-color)] bg-[var(--color-bg)] p-3 sm:gap-2 sm:p-4">
+      {/*
+        overflow-x + `safe center`: di layar sangat sempit baris ini jadi bisa
+        digeser, bukan terpotong. `justify-center` biasa punya jebakan klasik —
+        kalau kontennya lebih lebar dari kontainer, ia meluber ke DUA sisi dan
+        bagian kiri tidak bisa dijangkau scroll sama sekali.
+        `safe center` ditaruh inline, bukan sebagai class: kalau browsernya tidak
+        mengenal kata kunci `safe`, penugasannya diabaikan dan `justify-center`
+        dari class tetap berlaku. Kalau dipasang sebagai class, nilai tak dikenal
+        itu justru bikin justify-content jatuh ke flex-start (desktop rata kiri).
+      */}
+      <div
+        style={{ justifyContent: "safe center" }}
+        className="flex items-center justify-center gap-1 overflow-x-auto rounded-2xl border border-[var(--color-border-color)] bg-[var(--color-bg)] p-2 sm:gap-2 sm:p-4"
+      >
         <FixedSegment text={prefix} />
-        <span className="font-mono text-lg text-[var(--color-text-3)]">-</span>
+        <Dash />
 
-        <div className="relative">
+        <div className="relative shrink-0">
           {/* band highlight di tengah */}
           <div
             className="pointer-events-none absolute inset-x-0 top-1/2 h-11 -translate-y-1/2 rounded-lg border-y border-[rgba(229,39,31,0.35)] bg-[rgba(229,39,31,0.08)]"
@@ -185,9 +207,9 @@ export default function ClassWheelPicker({
           />
         </div>
 
-        <span className="font-mono text-lg text-[var(--color-text-3)]">-</span>
+        <Dash />
         <FixedSegment text={KELAS_MIDDLE} />
-        <span className="font-mono text-lg text-[var(--color-text-3)]">-</span>
+        <Dash />
 
         {manual ? (
           <input
@@ -200,10 +222,15 @@ export default function ClassWheelPicker({
             maxLength={KELAS_TAIL_MAX_LENGTH}
             placeholder="GAB01"
             aria-label="Kode kelas manual"
-            className="h-11 w-24 rounded-xl border border-[var(--color-brand-red)] bg-[var(--color-surface)] px-2 text-center font-mono text-lg font-bold uppercase text-white outline-none placeholder:text-[var(--color-text-3)] placeholder:font-normal"
+            /*
+              Di HP input ini ikut melar/menyusut mengisi ruang sisa (roda punya
+              lebar tetap), dengan lantai 56px supaya masih bisa dibaca. Di >=sm
+              ruangnya lega, jadi kembali ke lebar tetap.
+            */
+            className="h-11 min-w-[56px] shrink grow basis-[68px] rounded-xl border border-[var(--color-brand-red)] bg-[var(--color-surface)] px-1.5 text-center font-mono text-sm font-bold uppercase text-white outline-none placeholder:font-normal placeholder:text-[var(--color-text-3)] sm:w-24 sm:shrink-0 sm:grow-0 sm:basis-auto sm:px-2 sm:text-lg"
           />
         ) : (
-          <div className="relative">
+          <div className="relative shrink-0">
             <div
               className="pointer-events-none absolute inset-x-0 top-1/2 h-11 -translate-y-1/2 rounded-lg border-y border-[rgba(229,39,31,0.35)] bg-[rgba(229,39,31,0.08)]"
               aria-hidden
