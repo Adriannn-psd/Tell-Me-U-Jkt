@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Avatar from "@/components/Avatar";
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
@@ -115,11 +116,14 @@ export default function SearchBar() {
                     className="flex items-center gap-3 p-3 hover:bg-[var(--color-surface-2)] rounded-lg text-left transition"
                   >
                     <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-[var(--color-text-2)] overflow-hidden shrink-0">
-                      {u.avatar_url ? (
-                        <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover" />
-                      ) : (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      )}
+                      <Avatar
+                        src={u.avatar_url}
+                        size={32}
+                        alt={u.full_name}
+                        fallback={
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        }
+                      />
                     </div>
                     <div>
                       <p className="text-white text-sm font-semibold">{u.full_name} <span className="text-[var(--color-text-3)] font-normal">@{u.username}</span></p>

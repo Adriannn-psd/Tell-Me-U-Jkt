@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PostDetailModal from "./PostDetailModal";
 import { useGuest } from "@/components/GuestProvider";
+import Avatar from "@/components/Avatar";
 
 function QueryParamHandler({ posts, setSelectedPost, selectedPost }: { posts: Post[], setSelectedPost: (p: Post) => void, selectedPost: Post | null }) {
   const searchParams = useSearchParams();
@@ -172,13 +173,18 @@ export default function MasonryGrid({ posts }: { posts: Post[] }) {
             <div className="flex items-center gap-2 relative">
               <Link href={`/profile/${post.username}`}>
                 <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-[10px] font-bold border border-[var(--color-border-color)] overflow-hidden">
-                  {post.avatar ? <img src={post.avatar} alt="Avatar" className="w-full h-full object-cover" /> : post.author.charAt(0)}
+                  <Avatar src={post.avatar} size={24} alt="Avatar" fallback={post.author.charAt(0)} />
                 </div>
               </Link>
               {post.collaborator && post.collab_status === 'accepted' && (
                 <Link href={`/profile/${post.collaborator.username}`}>
                   <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] flex items-center justify-center text-white text-[10px] font-bold border border-[var(--color-border-color)] overflow-hidden absolute left-4 top-0">
-                    {(post.collaborator as any).avatar_url || post.collaborator.avatar ? <img src={(post.collaborator as any).avatar_url || post.collaborator.avatar} alt="Collab Avatar" className="w-full h-full object-cover" /> : (post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
+                    <Avatar
+                      src={(post.collaborator as any).avatar_url || post.collaborator.avatar}
+                      size={24}
+                      alt="Collab Avatar"
+                      fallback={(post.collaborator.full_name || post.collaborator.username || "U").charAt(0)}
+                    />
                   </div>
                 </Link>
               )}

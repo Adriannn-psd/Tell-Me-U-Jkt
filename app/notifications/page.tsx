@@ -12,6 +12,7 @@ import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useGuest } from "@/components/GuestProvider";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
+import Avatar from "@/components/Avatar";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -357,13 +358,16 @@ export default function NotificationsPage() {
                       >
                         <div className="flex gap-4">
                           <div className="w-10 h-10 rounded-full bg-[var(--color-surface-2)] shrink-0 overflow-hidden border border-[var(--color-border-color)]">
-                            {actorAvatar ? (
-                              <img src={actorAvatar} alt={actorName} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
-                                {actorName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                            <Avatar
+                              src={actorAvatar}
+                              size={40}
+                              alt={actorName}
+                              fallback={
+                                <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
+                                  {actorName.charAt(0).toUpperCase()}
+                                </div>
+                              }
+                            />
                           </div>
                           <div className="flex-1">
                             <p className="text-sm text-[var(--color-text-2)] leading-snug">

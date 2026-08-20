@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Avatar from "@/components/Avatar";
 
 export interface MediaData {
   id: string;
@@ -172,13 +173,16 @@ export default function MediaCard({ media, currentUserId, isEventOwner, onLike, 
           {/* Uploader info */}
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 rounded-full bg-[var(--color-surface-2)] overflow-hidden shrink-0">
-              {media.author.avatar_url ? (
-                <img src={media.author.avatar_url} alt={media.author.username} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-white bg-blue-500">
-                  {media.author.full_name?.charAt(0) || "U"}
-                </div>
-              )}
+              <Avatar
+                src={media.author.avatar_url}
+                size={24}
+                alt={media.author.username}
+                fallback={
+                  <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-white bg-blue-500">
+                    {media.author.full_name?.charAt(0) || "U"}
+                  </div>
+                }
+              />
             </div>
             <span className="text-[var(--color-text-2)] text-xs">Diunggah oleh <span className="font-bold text-white">{media.author.full_name || media.author.username}</span></span>
           </div>
@@ -243,13 +247,16 @@ export default function MediaCard({ media, currentUserId, isEventOwner, onLike, 
               {localComments.map((c: any) => (
                 <div key={c.id} className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-[var(--color-surface-2)] overflow-hidden shrink-0">
-                    {c.author?.avatar_url ? (
-                      <img src={c.author.avatar_url} alt={c.author.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white bg-blue-500">
-                        {c.author?.full_name?.charAt(0) || "U"}
-                      </div>
-                    )}
+                    <Avatar
+                      src={c.author?.avatar_url}
+                      size={32}
+                      alt={c.author?.username}
+                      fallback={
+                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white bg-blue-500">
+                          {c.author?.full_name?.charAt(0) || "U"}
+                        </div>
+                      }
+                    />
                   </div>
                   <div className="flex-1">
                     <span className="font-bold text-white text-sm mr-2">{c.author?.full_name || c.author?.username}</span>

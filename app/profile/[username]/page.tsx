@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import MasonryGrid, { Post } from "@/components/fase3/MasonryGrid";
 import FollowNetworkModal from "@/components/fase3/FollowNetworkModal";
 import AvatarPreviewModal from "@/components/fase3/AvatarPreviewModal";
+import Avatar from "@/components/Avatar";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useSession } from "next-auth/react";
 import { use } from "react";
@@ -139,18 +140,19 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
                 {/* Avatar */}
                 <div className="relative shrink-0">
                   <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 p-[2px]">
-                    {profileData.avatarUrl ? (
-                      <img 
-                        src={profileData.avatarUrl} 
-                        alt="Avatar" 
-                        onClick={() => setPreviewAvatarUrl(profileData.avatarUrl)}
-                        className="w-full h-full rounded-full object-cover border-2 border-[var(--color-bg)] cursor-pointer" 
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-bg)] flex items-center justify-center text-3xl font-extrabold text-white">
-                        {profileData.name.charAt(0)}
-                      </div>
-                    )}
+                    <Avatar
+                      src={profileData.avatarUrl}
+                      size={96}
+                      alt="Avatar"
+                      animate="always"
+                      onClick={() => setPreviewAvatarUrl(profileData.avatarUrl ?? null)}
+                      className="rounded-full border-2 border-[var(--color-bg)] cursor-pointer"
+                      fallback={
+                        <div className="w-full h-full rounded-full bg-[var(--color-surface)] border-2 border-[var(--color-bg)] flex items-center justify-center text-3xl font-extrabold text-white">
+                          {profileData.name.charAt(0)}
+                        </div>
+                      }
+                    />
                   </div>
                 </div>
 
