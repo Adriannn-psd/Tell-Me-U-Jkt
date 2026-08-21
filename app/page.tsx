@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
 import { useLandingVoice, VoiceName } from "@/lib/useLandingVoice";
@@ -40,7 +41,8 @@ const T3_FRAMES = 240;
  *   telkom 3  3,83 s   -> 7,83 s
  *   telkom 1  7,83 s   -> 10,82 s  (baru muncul setelah 2 & 3 sampai akhir)
  *
- * Ditambah opening 5,13 s dan jeda 3 detik sebelum pop up, totalnya ~19 detik.
+ * Ditambah opening 5,13 s, totalnya ~16 detik sampai gedung beku — lalu
+ * langsung disusul layar loading 3 detik menuju /login.
  */
 const OUTRO_AT = 0;
 const SIDES_AT = OUTRO_FRAMES / FPS;
@@ -53,8 +55,13 @@ const CENTER_AT = SIDES_AT + Math.max(T2_FRAMES, T3_FRAMES) / TELKOM_FPS;
  */
 const TELKOM_CUE_AT = SIDES_AT + 10 / TELKOM_FPS;
 
-/** Jeda setelah ketiga gedung beku, sebelum pop up menutupinya. */
-const POPUP_DELAY_MS = 3000;
+/**
+ * Lama layar loading akhir sebelum pindah sendiri ke /login. Angka yang sama
+ * dipakai untuk durasi animasi bar-nya, lewat properti kustom --tmuj-outro-ms,
+ * supaya bar tidak pernah selesai lebih dulu atau ketinggalan dari pindahnya
+ * halaman.
+ */
+const REDIRECT_AFTER_MS = 3000;
 
 /** Tombol "Lewati" muncul setelah animasi berjalan sekian lama. */
 const SKIP_AFTER_MS = 3000;
@@ -185,9 +192,10 @@ function LandingContent() {
   const [load, setLoad] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
   const [canSkip, setCanSkip] = useState(false);
   const voice = useLandingVoice();
+  const stopVoice = voice.stopAll;
+  const router = useRouter();
 
   // Halaman ini tidak punya apa pun untuk di-scroll. Dulu tingginya 560vh untuk
   // mendorong animasi; sekarang animasinya jalan sendiri, jadi scrollbar-nya
@@ -213,13 +221,28 @@ function LandingContent() {
     return () => window.clearTimeout(timer);
   }, [playing]);
 
-  // Pop up menyusul beberapa detik setelah animasi beku, supaya komposisi
-  // ketiga gedung sempat dilihat utuh dulu sebelum ditutupi.
+  // /login diambil di depan supaya perpindahan di akhir tidak menambah jeda
+  // sendiri: tanpa ini, tiga detik loading habis lalu masih harus menunggu
+  // bundle halaman login diunduh.
+  useEffect(() => {
+    router.prefetch("/login");
+  }, [router]);
+
+  // Layar loading akhir tampil BERSAMAAN dengan gelapnya latar, tidak menunggu
+  // apa pun, lalu pindah sendiri ke /login tiga detik kemudian — tidak ada
+  // tombol yang perlu ditekan.
+  //
+  // `replace`, bukan `push`: kalau user menekan tombol back dari /login, yang
+  // pantas muncul adalah halaman sebelum animasi, bukan animasi yang sudah
+  // selesai dan akan langsung memindahkannya lagi.
   useEffect(() => {
     if (!finished) return;
-    const timer = window.setTimeout(() => setShowPopup(true), POPUP_DELAY_MS);
+    const timer = window.setTimeout(() => {
+      stopVoice();
+      router.replace("/login");
+    }, REDIRECT_AFTER_MS);
     return () => window.clearTimeout(timer);
-  }, [finished]);
+  }, [finished, router, stopVoice]);
 
   const showLoader = load < 1;
 
@@ -238,15 +261,13 @@ function LandingContent() {
       />
 
       {/*
-        Semua canvas dibungkus satu wrapper supaya bisa diblur sekaligus di akhir.
-        Blur-nya SENGAJA tidak dianimasikan: mem-blur elemen selebar layar itu
-        operasi termahal yang ada di halaman ini, dan menganimasikannya berarti
-        menghitungnya ulang tiap frame. Sekali pasang cuma sekali bayar.
+        Canvas-nya dibiarkan apa adanya di akhir — TIDAK diblur. Mem-blur elemen
+        selebar layar adalah operasi termahal di halaman ini, dan di HP hasilnya
+        terasa seperti animasi yang menggantung sebelum layar berikutnya muncul.
+        Yang menutupinya sekarang cuma lapisan gelap, yang biayanya satu kali
+        penggambaran warna.
       */}
-      <div
-        className="fixed inset-0 z-0"
-        style={{ filter: finished ? "blur(10px)" : undefined }}
-      >
+      <div className="fixed inset-0 z-0">
         <CanvasSequenceManager
           introLayers={INTRO_LAYERS}
           timelineLayers={TIMELINE_LAYERS}
@@ -311,7 +332,7 @@ function LandingContent() {
         terjadi, hook-nya menahan cue terakhir dan petunjuk ini muncul; sentuhan
         di mana saja langsung memutarnya, di-seek sesuai keterlambatannya.
       */}
-      {voice.blocked && !showLoader && !showPopup && (
+      {voice.blocked && !showLoader && !finished && (
         <div className="fixed top-6 left-0 right-0 z-40 flex justify-center px-6 pointer-events-none">
           <span className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-[11px] font-medium text-white/70">
             <svg
@@ -334,10 +355,10 @@ function LandingContent() {
 
       {/*
         Lewati animasi. Muncul 3 detik setelah animasi mulai dan hilang begitu
-        pop up sambutan mengambil alih — di titik itu tombol "Lanjutkan ke Login"
-        sudah melakukan hal yang sama.
+        layar loading akhir mengambil alih — di titik itu halaman sudah menuju
+        /login sendiri, jadi tombolnya tidak ada gunanya lagi.
       */}
-      {canSkip && !showPopup && (
+      {canSkip && !finished && (
         <motion.div
           className="fixed bottom-8 left-0 right-0 z-40 flex justify-center px-6"
           initial={{ opacity: 0 }}
@@ -366,76 +387,67 @@ function LandingContent() {
         </motion.div>
       )}
 
-      {/* Pop up sambutan di akhir sekuens */}
-      {showPopup && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+      {/*
+        Layar penutup. Muncul PERSIS saat gedung terakhir beku — latarnya
+        digelapkan, bukan diblur, dan gelapnya ikut naik bersama isinya dalam satu
+        fade 450 ms, jadi tidak ada lagi jeda "sudah gelap tapi belum ada apa-apa"
+        seperti versi sebelumnya.
+
+        Animasinya sengaja cuma menyentuh opacity dan transform — dua properti
+        yang bisa dikerjakan compositor tanpa layout atau repaint — supaya di HP
+        lemah tidak ada satu pun frame yang tersendat. Tidak ada backdrop-filter
+        di sini, itu justru yang membuat versi lamanya berat.
+
+        Durasi bar dan durasi timer pindah halaman dibaca dari satu angka yang
+        sama (REDIRECT_AFTER_MS), lewat properti kustom, supaya bar tidak pernah
+        penuh sebelum waktunya atau masih setengah jalan saat halaman berganti.
+      */}
+      {finished && (
+        <div
+          className="tmuj-outro fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 px-10 bg-[#060607]/90"
+          style={{ "--tmuj-outro-ms": `${REDIRECT_AFTER_MS}ms` } as CSSProperties}
+          role="status"
+          aria-live="polite"
         >
-          <div className="absolute inset-0 bg-black/40 pointer-events-auto" />
+          <div className="relative w-28 h-28 flex items-center justify-center">
+            {/* Cincin berputar: satu elemen, satu transform rotate. */}
+            <svg
+              className="tmuj-outro-ring absolute inset-0 w-full h-full"
+              viewBox="0 0 100 100"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle cx="50" cy="50" r="46" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                stroke="var(--color-brand-red)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray="72 217"
+              />
+            </svg>
 
-          <div
-            className="relative z-10 pointer-events-auto flex flex-col items-center gap-6 p-8 sm:p-10 rounded-[2rem] w-[90%] max-w-sm"
-            style={{
-              background: "rgba(12, 12, 14, 0.7)",
-              boxShadow:
-                "0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              // Dibaca dari properti kustom supaya device lemah bisa mematikannya
-              // lewat satu aturan di globals.css — style inline tidak bisa
-              // ditimpa selector biasa, tapi properti kustomnya bisa.
-              backdropFilter: "var(--panel-blur, blur(24px))",
-              WebkitBackdropFilter: "var(--panel-blur, blur(24px))",
-            }}
-          >
-            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-
-            <div className="relative z-10 w-24 h-24 mb-1">
+            <div className="relative w-16 h-16">
               <Image
                 src="/logo.png"
-                alt="Tell Me U Logo"
+                alt="Tell Me U Jakarta"
                 fill
+                priority
                 className="object-contain drop-shadow-2xl"
               />
             </div>
-
-            <div className="text-center space-y-2 relative z-10">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">
-                Selamat Datang
-              </h2>
-              <p className="text-white/60 text-sm leading-relaxed max-w-[260px] mx-auto font-medium">
-                Rumah digital mahasiswa Telkom University Jakarta. Masuk dulu, lalu
-                jelajahi karya, event, dan teman-teman satu kampus.
-              </p>
-            </div>
-
-            <Link
-              href="/login"
-              onClick={voice.stopAll}
-              className="group relative mt-4 w-full flex items-center justify-center overflow-hidden rounded-xl bg-[#c81e2c] px-8 py-4 font-bold text-white transition-all duration-300 hover:scale-[1.03] hover:bg-[#e62837] shadow-[0_8px_20px_rgba(200,30,44,0.4)]"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-in-out" />
-              <span className="relative z-10 flex items-center gap-2 tracking-wide text-[15px]">
-                Lanjutkan ke Login
-                <svg
-                  className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M14 5l7 7m0 0l-7 7m7-7H3"
-                  />
-                </svg>
-              </span>
-            </Link>
           </div>
-        </motion.div>
+
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-white/70 text-sm font-medium">Menyiapkan halaman masuk</p>
+
+            <div className="w-44 h-[3px] rounded-full bg-white/10 overflow-hidden">
+              <div className="tmuj-outro-bar h-full w-full rounded-full bg-[var(--color-brand-red)]" />
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
