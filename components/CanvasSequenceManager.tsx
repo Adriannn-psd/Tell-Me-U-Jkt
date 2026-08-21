@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useMotionValueEvent, useScroll, useSpring } from "framer-motion";
 
 export interface AnimationLayer {
   /** Folder di /public, mis. "/telkom 1". Spasi dibiarkan — browser yang meng-encode. */
@@ -16,194 +15,145 @@ export interface AnimationLayer {
   mobileFit?: "contain" | "cover";
   /** Cermin horizontal. Dipakai telkom 3 supaya kanopinya menghadap ke dalam. */
   flipX?: boolean;
-  /** Jangan lompati frame di HP — untuk sekuens ringan yang harus mulus 30fps. */
+  /** Jangan lompati frame di HP — untuk sekuens ringan yang harus mulus. */
   noDecimate?: boolean;
-  /**
-   * Berapa frame awal layer ini yang disiapkan lebih dulu selagi opening
-   * berjalan. Scroll baru dibuka setelah semua layer memenuhi angkanya, jadi
-   * user tidak pernah menyusul unduhan. Default WARMUP_FRAMES.
-   */
-  warmupFrames?: number;
-
-  // ---- pemetaan scroll (hanya dipakai scrollLayers) ----
-  /** Progress scroll global (0..1) tempat layer ini mulai bergerak. */
-  startProgress?: number;
-  /** Progress scroll global tempat layer ini sampai frame terakhir. */
-  endProgress?: number;
-  /** Sembunyikan sebelum startProgress. Default: tampil menahan frame 0. */
+  /** Detik ke berapa (dari awal timeline) layer ini mulai diputar. */
+  startAt?: number;
+  /** Frame per detik saat diputar. */
+  fps?: number;
+  /** Sembunyikan sebelum startAt. Default: tampil menahan frame 0. */
   hideBeforeStart?: boolean;
-  /** Sembunyikan setelah endProgress. Default: FREEZE di frame terakhir. */
+  /** Sembunyikan setelah frame terakhir. Default: FREEZE di frame terakhir. */
   hideAfterEnd?: boolean;
 }
 
 interface CanvasSequenceManagerProps {
+  /** Diputar lebih dulu, selagi sisa aset diunduh di belakang. */
   introLayers: AnimationLayer[];
-  scrollLayers: AnimationLayer[];
+  /** Diputar otomatis setelah SEMUA asetnya selesai diunduh. */
+  timelineLayers: AnimationLayer[];
+  /** 0..1 — unduhan opening, sebelum apa pun diputar. */
+  onBufferProgress?: (ratio: number) => void;
   /** Dipanggil sekali setelah frame terakhir opening digambar. */
   onIntroComplete?: () => void;
-  /** 0..1 — seberapa penuh buffer awal opening. Untuk bar loading. */
-  onBufferProgress?: (ratio: number) => void;
-  /** 0..1 — pemanasan frame sekuens scroll, berjalan selagi opening diputar. */
-  onWarmupProgress?: (ratio: number) => void;
-  /** Dipanggil sekali saat pemanasan selesai; saat itu scroll aman dibuka. */
-  onWarmupComplete?: () => void;
+  /** 0..1 — unduhan seluruh sekuens timeline. */
+  onPreloadProgress?: (ratio: number) => void;
+  /** Dipanggil sekali saat semua segmen timeline sampai frame terakhirnya. */
+  onTimelineComplete?: () => void;
 }
 
-type FrameEntry = { img: HTMLImageElement; ready: boolean };
+type FrameSource = ImageBitmap | HTMLImageElement;
+type FrameEntry = { src?: FrameSource; ready: boolean };
 type LayerStore = Map<number, FrameEntry>;
 
 const INTRO_FPS = 30;
-/** Frame opening yang harus siap sebelum animasi mulai, supaya tidak tersendat. */
-const INTRO_BUFFER = 45;
-const LOOKAHEAD_INTRO = 40;
-const LOOKAHEAD_SCROLL = 24;
-const LOOKBEHIND_SCROLL = 8;
-/** Default frame awal tiap scroll layer yang dipanaskan selagi opening jalan. */
-const WARMUP_FRAMES = 24;
-/** Di bawah lebar ini frame dilompati 2-2 (kecuali layer ber-noDecimate). */
+/** Di bawah lebar ini: pakai frame 960px dan lompati frame 2-2. */
 const MOBILE_BREAKPOINT = 768;
+/** Folder frame versi HP, dibuat oleh scripts/make-mobile-frames.js. */
+const MOBILE_FOLDER_SUFFIX = "-960";
+/** Unduhan paralel. Cukup untuk memenuhi bandwidth tanpa membuka ratusan koneksi. */
+const DOWNLOAD_CONCURRENCY = 6;
+/** Frame yang di-decode di depan posisi sekarang (~0,4 detik runway di 30fps). */
+const DECODE_AHEAD = 12;
+/** Frame di belakang yang masih ditahan sebelum dilepas. */
+const KEEP_BEHIND = 2;
+/**
+ * Di HP, mem-blit ke 3x kepadatan piksel tidak menambah apa pun yang terlihat
+ * untuk gedung yang di-zoom besar, tapi biaya fill-rate-nya naik 2,25x.
+ */
+const MOBILE_MAX_DPR = 2;
 
 export default function CanvasSequenceManager({
   introLayers,
-  scrollLayers,
-  onIntroComplete,
+  timelineLayers,
   onBufferProgress,
-  onWarmupProgress,
-  onWarmupComplete,
+  onIntroComplete,
+  onPreloadProgress,
+  onTimelineComplete,
 }: CanvasSequenceManagerProps) {
-  // Tanpa layer opening tidak ada yang perlu diputar, jadi langsung masuk fase
-  // scroll dari initializer — bukan lewat setState di dalam effect.
-  const [phase, setPhase] = useState<"intro" | "scroll">(
-    introLayers.length === 0 ? "scroll" : "intro"
+  /**
+   * buffering → opening diunduh, belum ada yang diputar
+   * intro     → opening diputar, sisa aset diunduh di belakang
+   * hold      → opening habis; kalau unduhan belum penuh, frame terakhirnya ditahan
+   *
+   * Fase timeline TIDAK ikut di sini: begitu `introDone` dan `assetsReady`
+   * dua-duanya true, timeline pasti sedang jalan — jadi bisa diturunkan, tidak
+   * perlu state sendiri.
+   */
+  const [phase, setPhase] = useState<"buffering" | "intro" | "hold">(
+    introLayers.length === 0 ? "hold" : "buffering"
   );
-  // Menandai opening sudah benar-benar mulai diputar. Pemanasan sekuens scroll
-  // menunggu ini supaya request-nya tidak berebut bandwidth dengan buffer awal.
-  const [introStarted, setIntroStarted] = useState(introLayers.length === 0);
-  // Dibaca dari dalam drawScrollLayers, yang disimpan di ref sehingga tidak bisa
-  // ikut punya `phase` sebagai dependency.
   const phaseRef = useRef(phase);
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
+  /**
+   * Sekali true, tidak pernah kembali false. Effect timeline bergantung pada ini
+   * dan BUKAN pada `phase` — kalau bergantung pada `phase`, `setPhase("timeline")`
+   * di dalamnya akan memicu effect itu dijalankan ulang, cleanup-nya membatalkan
+   * rAF yang baru saja dimulai, dan animasinya tidak pernah jalan.
+   */
+  const [introDone, setIntroDone] = useState(introLayers.length === 0);
 
   const introStores = useRef<LayerStore[]>([]);
-  const scrollStores = useRef<LayerStore[]>([]);
+  const timelineStores = useRef<LayerStore[]>([]);
   const introCanvases = useRef<(HTMLCanvasElement | null)[]>([]);
-  const scrollCanvases = useRef<(HTMLCanvasElement | null)[]>([]);
+  const timelineCanvases = useRef<(HTMLCanvasElement | null)[]>([]);
 
-  // Prop callback disimpan di ref supaya effect opening tidak perlu memasukkan
-  // keduanya ke dependency — kalau ikut, satu re-render parent akan memulai
-  // ulang animasi dari frame nol.
-  const onIntroCompleteRef = useRef(onIntroComplete);
-  const onBufferProgressRef = useRef(onBufferProgress);
-  const onWarmupProgressRef = useRef(onWarmupProgress);
-  const onWarmupCompleteRef = useRef(onWarmupComplete);
+  // Prop callback disimpan di ref supaya effect animasi tidak perlu memasukkannya
+  // ke dependency — kalau ikut, satu re-render parent akan memulai ulang animasi
+  // dari frame nol.
+  const cb = useRef({
+    onBufferProgress,
+    onIntroComplete,
+    onPreloadProgress,
+    onTimelineComplete,
+  });
   useEffect(() => {
-    onIntroCompleteRef.current = onIntroComplete;
-    onBufferProgressRef.current = onBufferProgress;
-    onWarmupProgressRef.current = onWarmupProgress;
-    onWarmupCompleteRef.current = onWarmupComplete;
-  }, [onIntroComplete, onBufferProgress, onWarmupProgress, onWarmupComplete]);
+    cb.current = {
+      onBufferProgress,
+      onIntroComplete,
+      onPreloadProgress,
+      onTimelineComplete,
+    };
+  }, [onBufferProgress, onIntroComplete, onPreloadProgress, onTimelineComplete]);
 
   // Ditentukan sekali saat mount. Sengaja tidak ikut berubah saat window
-  // di-resize: mengganti langkah frame di tengah animasi membuang frame yang
-  // sudah di-cache tanpa manfaat visual apa pun.
+  // di-resize: mengganti set frame di tengah animasi membuang yang sudah
+  // di-cache tanpa manfaat visual apa pun.
   const isMobile = useRef(false);
-  const drawScheduled = useRef(false);
-  const latestProgress = useRef(0);
-  // Diisi fungsi gambar terbaru di bawah; requestDraw memanggilnya lewat ref
-  // supaya requestDraw sendiri bisa stabil (deps kosong).
-  const drawRef = useRef<() => void>(() => {});
-
-  const { scrollYProgress } = useScroll();
-  // Spring tipis: cukup untuk menghaluskan scroll wheel yang melompat, tapi
-  // tidak sampai terasa tertinggal dari jari.
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 400,
-    damping: 90,
-    restDelta: 0.001,
-  });
-
-  /** Kumpulkan beberapa event scroll jadi satu gambar per frame layar. */
-  const requestDraw = useCallback(() => {
-    if (drawScheduled.current) return;
-    drawScheduled.current = true;
-    requestAnimationFrame(() => {
-      drawScheduled.current = false;
-      drawRef.current();
-    });
-  }, []);
+  /** Apakah folder frame 960px benar-benar ada. Diprobe sekali saat mount. */
+  const useMobileFrames = useRef(false);
+  /**
+   * Beres saat probe di atas sudah menjawab. Kedua tahap unduhan menunggunya
+   * sebelum menyusun URL — kalau tidak, opening bisa diunduh sebagai 1280px lalu
+   * di-decode dari URL 960px (atau sebaliknya), sehingga seluruh preload
+   * terbuang dan pemutaran justru menyentuh jaringan.
+   */
+  const frameSetProbed = useRef<Promise<void> | null>(null);
+  /** Unduhan timeline sudah 100%. */
+  const [assetsReady, setAssetsReady] = useState(timelineLayers.length === 0);
 
   const stepFor = useCallback((layer: AnimationLayer) => {
     return layer.noDecimate || !isMobile.current ? 1 : 2;
   }, []);
 
-  /** Buat + mulai muat satu frame kalau belum ada. */
-  const ensure = useCallback(
-    (
-      store: LayerStore,
-      layer: AnimationLayer,
-      index: number,
-      onReady?: () => void
-    ): FrameEntry | undefined => {
-      if (index < 0 || index >= layer.frameCount) return undefined;
-      const existing = store.get(index);
-      if (existing) return existing;
+  const folderFor = useCallback((layer: AnimationLayer) => {
+    return useMobileFrames.current
+      ? `${layer.folderPath}${MOBILE_FOLDER_SUFFIX}`
+      : layer.folderPath;
+  }, []);
 
-      const img = new Image();
-      const entry: FrameEntry = { img, ready: false };
-      store.set(index, entry);
-      img.src = `${layer.folderPath}/${layer.filenameFormat(index)}`;
-
-      const markReady = () => {
-        if (entry.ready) return;
-        entry.ready = true;
-        onReady?.();
-      };
-
-      // decode() memindahkan kerja decode WebP 1280x720 keluar dari drawImage,
-      // jadi frame baru tidak menahan main thread saat digambar.
-      if (typeof img.decode === "function") {
-        img.decode().then(markReady, () => {
-          if (img.complete && img.naturalWidth > 0) markReady();
-        });
-      } else {
-        img.onload = markReady;
-      }
-      return entry;
-    },
-    []
+  const urlFor = useCallback(
+    (layer: AnimationLayer, index: number) =>
+      `${folderFor(layer)}/${layer.filenameFormat(index)}`,
+    [folderFor]
   );
 
-  /** Muat jendela frame di sekitar index yang sedang dipakai. */
-  const preload = useCallback(
-    (
-      store: LayerStore,
-      layer: AnimationLayer,
-      center: number,
-      ahead: number,
-      behind: number,
-      onReady?: () => void
-    ) => {
-      const step = stepFor(layer);
+  /** Index frame yang benar-benar dipakai device ini (mengikuti langkah). */
+  const snapToStep = useCallback(
+    (layer: AnimationLayer, raw: number) => {
       const last = layer.frameCount - 1;
-      for (let i = center - behind; i <= center + ahead; i++) {
-        if (i < 0 || i > last) continue;
-        // Frame yang dilompati tidak pernah diminta ke jaringan — hematnya di
-        // kuota, bukan cuma di layar. Frame terakhir selalu dikecualikan supaya
-        // freeze di akhir memakai frame yang benar.
-        if (i % step !== 0 && i !== last) continue;
-        ensure(store, layer, i, onReady);
-      }
-    },
-    [ensure, stepFor]
-  );
-
-  /** Progress 0..1 → index frame, dibulatkan ke langkah yang dipakai device ini. */
-  const pickFrame = useCallback(
-    (layer: AnimationLayer, progress: number) => {
-      const last = layer.frameCount - 1;
-      const raw = Math.round(progress * last);
       if (raw >= last) return last;
       if (raw <= 0) return 0;
       const step = stepFor(layer);
@@ -212,15 +162,127 @@ export default function CanvasSequenceManager({
     [stepFor]
   );
 
+  /** Semua index yang akan dipakai layer ini, dari awal sampai akhir. */
+  const indicesFor = useCallback(
+    (layer: AnimationLayer) => {
+      const step = stepFor(layer);
+      const last = layer.frameCount - 1;
+      const out: number[] = [];
+      for (let i = 0; i <= last; i += step) out.push(i);
+      // Frame terakhir selalu ikut walau tidak jatuh di kelipatan langkah —
+      // freeze di akhir harus memakai frame yang benar.
+      if (out[out.length - 1] !== last) out.push(last);
+      return out;
+    },
+    [stepFor]
+  );
+
+  // ---- Decode & pelepasan ----
+
+  const decode = useCallback(async (url: string): Promise<FrameSource> => {
+    // createImageBitmap men-decode di luar main thread, jadi main thread cuma
+    // mem-blit. Ini yang membuat 3 sekuens bisa diputar bersamaan di CPU lemah.
+    // Filenya sudah ada di cache disk (immutable), jadi fetch di sini tidak
+    // menyentuh jaringan.
+    if (typeof createImageBitmap === "function") {
+      const res = await fetch(url, { cache: "force-cache" });
+      if (!res.ok) throw new Error(`frame ${url}: ${res.status}`);
+      return await createImageBitmap(await res.blob());
+    }
+    const img = new Image();
+    img.src = url;
+    if (typeof img.decode === "function") {
+      await img.decode();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`frame ${url} gagal`));
+      });
+    }
+    return img;
+  }, []);
+
+  const ensure = useCallback(
+    (store: LayerStore, layer: AnimationLayer, index: number) => {
+      if (index < 0 || index >= layer.frameCount) return;
+      if (store.has(index)) return;
+      const entry: FrameEntry = { ready: false };
+      store.set(index, entry);
+      decode(urlFor(layer, index)).then(
+        (src) => {
+          // Bisa saja sudah dilepas selagi decode berjalan.
+          if (store.get(index) !== entry) {
+            if ("close" in src) src.close();
+            return;
+          }
+          entry.src = src;
+          entry.ready = true;
+        },
+        () => {
+          store.delete(index);
+        }
+      );
+    },
+    [decode, urlFor]
+  );
+
+  const releaseEntry = useCallback((entry: FrameEntry) => {
+    const src = entry.src;
+    entry.src = undefined;
+    entry.ready = false;
+    if (!src) return;
+    if ("close" in src) src.close();
+    else src.src = "";
+  }, []);
+
+  /**
+   * Lepas frame yang sudah dilewati. Ini yang membuat memori berbatas: timeline
+   * lurus satu arah, jadi frame di belakang tidak akan dipakai lagi. Tanpa ini
+   * 865 frame menumpuk sampai ratusan MB dan HP RAM kecil kehabisan.
+   */
+  const releaseBefore = useCallback(
+    (store: LayerStore, layer: AnimationLayer, current: number) => {
+      const last = layer.frameCount - 1;
+      const cutoff = current - KEEP_BEHIND;
+      if (cutoff <= 0) return;
+      store.forEach((entry, index) => {
+        // Frame terakhir dipertahankan: dia yang dipakai freeze di akhir.
+        if (index >= cutoff || index === last) return;
+        releaseEntry(entry);
+        store.delete(index);
+      });
+    },
+    [releaseEntry]
+  );
+
+  /** Siapkan jendela frame di depan posisi sekarang. */
+  const ensureWindow = useCallback(
+    (store: LayerStore, layer: AnimationLayer, from: number) => {
+      const step = stepFor(layer);
+      const last = layer.frameCount - 1;
+      for (let n = 0; n <= DECODE_AHEAD; n++) {
+        const i = from + n * step;
+        if (i > last) break;
+        ensure(store, layer, i);
+      }
+      // Frame terakhir disiapkan lebih awal supaya freeze tidak pernah kosong.
+      ensure(store, layer, last);
+    },
+    [ensure, stepFor]
+  );
+
+  // ---- Menggambar ----
+
   const doDraw = useCallback(
-    (canvas: HTMLCanvasElement, img: HTMLImageElement, layer: AnimationLayer) => {
+    (canvas: HTMLCanvasElement, src: FrameSource, layer: AnimationLayer) => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
       const rect = canvas.getBoundingClientRect();
       const w = Math.max(1, Math.round(rect.width));
       const h = Math.max(1, Math.round(rect.height));
-      const dpr = window.devicePixelRatio || 1;
+      const rawDpr = window.devicePixelRatio || 1;
+      const dpr = isMobile.current ? Math.min(rawDpr, MOBILE_MAX_DPR) : rawDpr;
 
       if (canvas.width !== Math.ceil(w * dpr) || canvas.height !== Math.ceil(h * dpr)) {
         canvas.width = Math.ceil(w * dpr);
@@ -232,8 +294,12 @@ export default function CanvasSequenceManager({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
+      const srcW = "naturalWidth" in src ? src.naturalWidth : src.width;
+      const srcH = "naturalHeight" in src ? src.naturalHeight : src.height;
+      if (!srcW || !srcH) return;
+
       const fit = isMobile.current && layer.mobileFit ? layer.mobileFit : layer.fit;
-      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const imgRatio = srcW / srcH;
       const boxRatio = w / h;
       const fitToWidth = fit === "contain" ? imgRatio > boxRatio : imgRatio <= boxRatio;
 
@@ -246,264 +312,294 @@ export default function CanvasSequenceManager({
         ctx.translate(w, 0);
         ctx.scale(-1, 1);
       }
-      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+      ctx.drawImage(src, offsetX, offsetY, drawW, drawH);
     },
     []
   );
 
-  /**
-   * Gambar satu layer. Kalau frame yang diminta belum siap, pakai frame terdekat
-   * yang sudah siap supaya canvas tidak pernah berkedip kosong saat scroll cepat.
-   */
-  const drawLayer = useCallback(
-    (
-      canvas: HTMLCanvasElement | null,
-      store: LayerStore,
-      layer: AnimationLayer,
-      index: number
-    ) => {
-      if (!canvas) return;
-      const wanted = store.get(index);
-      if (wanted?.ready) {
-        doDraw(canvas, wanted.img, layer);
-        return;
-      }
-      for (let i = index - 1; i >= 0; i--) {
-        const entry = store.get(i);
-        if (entry?.ready) {
-          doDraw(canvas, entry.img, layer);
-          return;
-        }
-      }
-      // Sengaja TIDAK mencari ke depan. Frame yang datang lebih dulu bukan
-      // berarti frame yang lebih awal: kalau frame 12 sudah siap sementara
-      // frame 0 belum, menggambar frame 12 berarti memperlihatkan keadaan masa
-      // depan sebelum animasinya sampai di sana. Lebih baik kosong sebentar.
-    },
-    [doDraw]
-  );
-
-  const drawScrollLayers = useCallback(() => {
-    // Selama opening, canvas scroll tidak terlihat sama sekali. Tanpa gerbang
-    // ini setiap frame pemanasan yang tiba memicu gambar ulang 4 canvas —
-    // ratusan kali selama opening — dan itu merebut main thread dari animasi
-    // opening yang sedang diputar.
-    if (phaseRef.current !== "scroll") return;
-    const latest = latestProgress.current;
-    scrollLayers.forEach((layer, idx) => {
-      const canvas = scrollCanvases.current[idx];
-      const store = scrollStores.current[idx];
-      if (!canvas || !store) return;
-
-      const start = layer.startProgress ?? 0;
-      const end = layer.endProgress ?? 1;
-
-      const hidden =
-        (latest < start && layer.hideBeforeStart) ||
-        (latest > end && layer.hideAfterEnd);
-      canvas.style.opacity = hidden ? "0" : "1";
-      if (hidden) return;
-
-      const progress =
-        latest <= start ? 0 : latest >= end ? 1 : (latest - start) / (end - start);
-      const frame = pickFrame(layer, progress);
-
-      preload(store, layer, frame, LOOKAHEAD_SCROLL, LOOKBEHIND_SCROLL, requestDraw);
-      drawLayer(canvas, store, layer, frame);
-    });
-  }, [scrollLayers, pickFrame, preload, drawLayer, requestDraw]);
-
-  // Dipasang lewat effect, bukan saat render, dan sengaja dideklarasikan di atas
-  // effect-effect yang memanggil requestDraw supaya ref-nya sudah terisi.
-  useEffect(() => {
-    drawRef.current = drawScrollLayers;
-  }, [drawScrollLayers]);
-
-  // ---- Tentukan langkah frame + siapkan store scroll ----
+  // ---- Probe set frame HP + siapkan store ----
+  // Jalan lebih dulu daripada kedua tahap unduhan (keduanya menunggu
+  // frameSetProbed), dan dipasang sinkron di sini supaya promise-nya sudah ada
+  // sebelum effect mana pun membacanya.
   useEffect(() => {
     isMobile.current = window.innerWidth < MOBILE_BREAKPOINT;
-    scrollStores.current = scrollLayers.map(() => new Map());
-    // Frame pertama tiap scroll layer dimuat lebih dulu supaya pergantian dari
-    // opening ke bagian scroll tidak sempat memperlihatkan canvas kosong.
-    scrollLayers.forEach((layer, idx) => {
-      ensure(scrollStores.current[idx], layer, 0);
-    });
-  }, [scrollLayers, ensure]);
+    introStores.current = introLayers.map(() => new Map());
+    timelineStores.current = timelineLayers.map(() => new Map());
 
-  // ---- Opening: autoplay 30fps ----
-  useEffect(() => {
-    if (introLayers.length === 0) {
-      onIntroCompleteRef.current?.();
+    const probeLayer = timelineLayers[0] ?? introLayers[0];
+    if (!isMobile.current || !probeLayer) {
+      frameSetProbed.current = Promise.resolve();
       return;
     }
 
-    const stores = introLayers.map(() => new Map<number, FrameEntry>());
-    introStores.current = stores;
-
-    const totalFrames = Math.max(...introLayers.map((l) => l.frameCount));
-    const bufferTarget = Math.min(INTRO_BUFFER, totalFrames);
-    let readyCount = 0;
-    let lastReportedPercent = -1;
-    let started = false;
-    let currentFrame = 0;
-    let rafId = 0;
-    let lastTick = 0;
-
-    const countReady = () => {
-      readyCount++;
-      const percent = Math.min(100, Math.round((readyCount / bufferTarget) * 100));
-      // Lapor hanya saat angka bulatnya berubah: tiap laporan memicu re-render
-      // parent, dan 154 frame x re-render tidak ada gunanya.
-      if (percent !== lastReportedPercent) {
-        lastReportedPercent = percent;
-        onBufferProgressRef.current?.(percent / 100);
+    // Satu probe menentukan set frame untuk seluruh sesi. Kalau folder 960px
+    // belum digenerate, jatuh ke frame 1280px — animasinya tetap jalan, cuma
+    // lebih berat.
+    const url = `${probeLayer.folderPath}${MOBILE_FOLDER_SUFFIX}/${probeLayer.filenameFormat(0)}`;
+    frameSetProbed.current = fetch(url, { method: "HEAD" }).then(
+      (res) => {
+        useMobileFrames.current = res.ok;
+      },
+      () => {
+        useMobileFrames.current = false;
       }
-    };
+    );
+  }, [introLayers, timelineLayers]);
 
-    introLayers.forEach((layer, idx) => {
-      preload(stores[idx], layer, 0, INTRO_BUFFER, 0, countReady);
-    });
+  // ---- Tahap 1: unduh opening penuh, lalu putar ----
+  useEffect(() => {
+    if (introLayers.length === 0) return;
+    let cancelled = false;
+    let rafId = 0;
 
-    const tick = (now: number) => {
-      // Tunggu buffer awal terisi, kalau tidak frame-frame pertama tersendat.
-      if (!started) {
-        if (readyCount >= bufferTarget) {
-          started = true;
-          lastTick = now;
-          // Lapor 100% lalu lewati satu frame. Tanpa jeda ini animasi mulai di
-          // frame yang sama saat hitungan mencapai target, sebelum React sempat
-          // melukis bar-nya — jadi bar terlihat berhenti di ~97% dan seolah
-          // opening jalan padahal unduhan belum selesai.
-          onBufferProgressRef.current?.(1);
-          setIntroStarted(true);
-          rafId = requestAnimationFrame(tick);
+    const run = async () => {
+      // Tunggu set frame ditentukan, supaya yang diunduh dan yang di-decode
+      // nanti menunjuk folder yang sama.
+      await frameSetProbed.current;
+      if (cancelled) return;
+
+      const stores = introStores.current;
+      const jobs = introLayers.flatMap((layer) =>
+        indicesFor(layer).map((i) => ({ layer, i }))
+      );
+      let done = 0;
+      let lastPercent = -1;
+
+      // Opening cuma ~2 MB, jadi dituntaskan seluruhnya sebelum diputar. Dengan
+      // begitu jam pemutarannya tidak pernah perlu menunggu unduhan.
+      //
+      // Hanya diunduh ke cache disk, TIDAK di-decode: men-decode 154 frame
+      // 1280x720 sekaligus berarti menahan ~570 MB bitmap, langsung menghabisi
+      // HP RAM kecil. Decode-nya diserahkan ke jendela geser saat diputar.
+      await pool(jobs, DOWNLOAD_CONCURRENCY, async ({ layer, i }) => {
+        if (cancelled) return;
+        try {
+          const res = await fetch(urlFor(layer, i), { cache: "force-cache" });
+          await res.arrayBuffer();
+        } catch {
+          // Satu frame gagal tidak boleh menggantung seluruh animasi.
+        }
+        done++;
+        const percent = Math.round((done / jobs.length) * 100);
+        if (percent !== lastPercent) {
+          lastPercent = percent;
+          cb.current.onBufferProgress?.(percent / 100);
+        }
+      });
+      if (cancelled) return;
+
+      // Tunggu frame-frame awal benar-benar ter-decode sebelum jam mulai.
+      introLayers.forEach((layer, idx) => ensureWindow(stores[idx], layer, 0));
+      await waitReady(stores, introLayers, 4);
+      if (cancelled) return;
+
+      cb.current.onBufferProgress?.(1);
+      setPhase("intro");
+
+      const totalFrames = Math.max(...introLayers.map((l) => l.frameCount));
+      const t0 = performance.now();
+      const lastDrawn = introLayers.map(() => -1);
+
+      const tick = (now: number) => {
+        if (cancelled) return;
+        const frame = Math.floor(((now - t0) / 1000) * INTRO_FPS);
+
+        if (frame >= totalFrames) {
+          cb.current.onIntroComplete?.();
+          setPhase("hold");
+          setIntroDone(true);
           return;
         }
-        rafId = requestAnimationFrame(tick);
-        return;
-      }
 
-      const interval = 1000 / INTRO_FPS;
-      const elapsed = now - lastTick;
-
-      if (elapsed >= interval) {
-        let allReady = true;
         introLayers.forEach((layer, idx) => {
-          const frame = Math.min(layer.frameCount - 1, currentFrame);
-          preload(stores[idx], layer, frame, LOOKAHEAD_INTRO, 0, countReady);
-          if (!stores[idx].get(frame)?.ready) allReady = false;
-          drawLayer(introCanvases.current[idx], stores[idx], layer, frame);
+          const canvas = introCanvases.current[idx];
+          const store = stores[idx];
+          if (!canvas || !store) return;
+          const wanted = Math.min(layer.frameCount - 1, frame);
+          ensureWindow(store, layer, wanted);
+          if (lastDrawn[idx] !== wanted) {
+            const entry = store.get(wanted);
+            if (entry?.ready && entry.src) {
+              doDraw(canvas, entry.src, layer);
+              lastDrawn[idx] = wanted;
+            }
+          }
+          releaseBefore(store, layer, wanted);
         });
 
-        // Frame hanya maju kalau gambarnya memang sudah ada, jadi saat jaringan
-        // lambat animasi ikut melambat alih-alih melompat-lompat.
-        if (allReady) currentFrame++;
-        lastTick = now - (elapsed % interval);
-      }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    };
 
-      if (currentFrame >= totalFrames) {
-        onBufferProgressRef.current?.(1);
-        onIntroCompleteRef.current?.();
-        setPhase("scroll");
+    run();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+    };
+  }, [introLayers, indicesFor, urlFor, ensureWindow, releaseBefore, doDraw]);
+
+  // ---- Tahap 2: unduh SEMUA frame timeline, jalan selagi opening diputar ----
+  useEffect(() => {
+    if (timelineLayers.length === 0) return;
+    let cancelled = false;
+
+    const run = async () => {
+      await frameSetProbed.current;
+      // Menunggu opening mulai diputar dulu supaya request-nya tidak berebut
+      // bandwidth dengan unduhan opening.
+      while (!cancelled && phaseRef.current === "buffering") {
+        await sleep(80);
+      }
+      if (cancelled) return;
+
+      const jobs = timelineLayers.flatMap((layer) =>
+        indicesFor(layer).map((i) => ({ layer, i }))
+      );
+      let done = 0;
+      let lastPercent = -1;
+
+      // Hanya diunduh ke cache disk, TIDAK di-decode dan TIDAK disimpan. Ini
+      // yang memenuhi "semua aset sudah terunduh di awal" tanpa menahan ratusan
+      // bitmap di memori: decode baru terjadi saat frame-nya mau digambar, dan
+      // waktu itu sudah tidak menyentuh jaringan lagi.
+      await pool(jobs, DOWNLOAD_CONCURRENCY, async ({ layer, i }) => {
+        if (cancelled) return;
+        try {
+          const res = await fetch(urlFor(layer, i), { cache: "force-cache" });
+          await res.arrayBuffer();
+        } catch {
+          // Satu frame gagal tidak boleh menggantung seluruh animasi.
+        }
+        done++;
+        const percent = Math.round((done / jobs.length) * 100);
+        if (percent !== lastPercent) {
+          lastPercent = percent;
+          cb.current.onPreloadProgress?.(percent / 100);
+        }
+      });
+      if (cancelled) return;
+      cb.current.onPreloadProgress?.(1);
+      setAssetsReady(true);
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [timelineLayers, indicesFor, urlFor]);
+
+  // ---- Tahap 3: putar timeline ----
+  // Sengaja bergantung pada `introDone`/`assetsReady` (sekali true, selamanya
+  // true) dan BUKAN pada `phase`, supaya setPhase di dalamnya tidak memicu
+  // effect ini dijalankan ulang dan membatalkan rAF-nya sendiri.
+  useEffect(() => {
+    if (timelineLayers.length === 0) return;
+    if (!introDone || !assetsReady) return;
+
+    const stores = timelineStores.current;
+    const lastDrawn = timelineLayers.map(() => -1);
+    const t0 = performance.now();
+    let rafId = 0;
+    let cancelled = false;
+
+    const tick = (now: number) => {
+      if (cancelled) return;
+      const t = (now - t0) / 1000;
+      let allDone = true;
+
+      timelineLayers.forEach((layer, idx) => {
+        const canvas = timelineCanvases.current[idx];
+        const store = stores[idx];
+        if (!canvas || !store) return;
+
+        const last = layer.frameCount - 1;
+        const local = t - (layer.startAt ?? 0);
+
+        if (local < 0) {
+          allDone = false;
+          if (layer.hideBeforeStart) canvas.style.opacity = "0";
+          // Disiapkan lebih dulu supaya frame pertamanya tidak telat.
+          ensureWindow(store, layer, 0);
+          return;
+        }
+        canvas.style.opacity = "1";
+
+        const raw = Math.floor(local * (layer.fps ?? INTRO_FPS));
+        if (raw < last) allDone = false;
+        const wanted = snapToStep(layer, raw);
+
+        // Outro berakhir dengan menghilangkan logo, jadi frame terakhirnya
+        // disembunyikan alih-alih dibiarkan menutupi gedung di belakangnya.
+        if (raw >= last && layer.hideAfterEnd) {
+          canvas.style.opacity = "0";
+          releaseBefore(store, layer, wanted);
+          return;
+        }
+
+        ensureWindow(store, layer, wanted);
+        if (lastDrawn[idx] !== wanted) {
+          const entry = store.get(wanted);
+          if (entry?.ready && entry.src) {
+            doDraw(canvas, entry.src, layer);
+            lastDrawn[idx] = wanted;
+          }
+          // Kalau frame-nya belum ter-decode, jam TIDAK ditahan. Frame ini
+          // dilewati dan frame berikutnya yang sudah siap yang digambar —
+          // animasinya tetap selesai tepat waktu alih-alih jadi slow-mo.
+        }
+        releaseBefore(store, layer, wanted);
+      });
+
+      if (allDone) {
+        cb.current.onTimelineComplete?.();
         return;
       }
       rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [introLayers, preload, drawLayer]);
-
-  // ---- Pemanasan sekuens scroll, jalan selagi opening diputar ----
-  // Opening berdurasi ~5 detik dan hanya ~2 MB, jadi jendela itu dipakai untuk
-  // mengunduh awal tiap sekuens gedung. Tanpa ini, frame telkom (33,7 MB) baru
-  // diminta saat user sudah menggeser, dan animasinya tersendat.
-  useEffect(() => {
-    if (!introStarted || scrollLayers.length === 0) return;
-    const stores = scrollStores.current;
-    if (stores.length !== scrollLayers.length) return;
-
-    const plan = scrollLayers.map((layer, idx) => ({
-      layer,
-      store: stores[idx],
-      upTo: Math.min(layer.frameCount, layer.warmupFrames ?? WARMUP_FRAMES),
-    }));
-
-    // Diminta bergelombang, satu layer tiap 600 ms, bukan ~190 request sekaligus.
-    // Di HTTP/2 semua request jalan paralel dan bandwidth-nya terbagi, jadi
-    // ledakan sekaligus membuat frame opening sendiri datang terlambat — dan
-    // opening hanya maju kalau frame berikutnya sudah ada, jadi animasinya ikut
-    // tersendat. Urutannya sengaja: outro dipakai persis saat scroll pertama,
-    // lalu gedung sesuai urutan kemunculannya.
-    //
-    // requestDraw sengaja TIDAK diteruskan: selama opening tidak ada canvas
-    // scroll yang terlihat, dan setelah fase berganti penggambaran sudah
-    // dipicu oleh effect fase + event scroll.
-    const timers = plan.map(({ layer, store, upTo }, i) =>
-      window.setTimeout(() => preload(store, layer, 0, upTo - 1, 0), i * 600)
-    );
-
-    const countPlanned = (
-      { layer, store, upTo }: (typeof plan)[number],
-      onlyReady: boolean
-    ) => {
-      const step = stepFor(layer);
-      let n = 0;
-      for (let i = 0; i < upTo; i++) {
-        if (i % step !== 0) continue;
-        if (!onlyReady || store.get(i)?.ready) n++;
-      }
-      return n;
-    };
-
-    const target = plan.reduce((sum, p) => sum + countPlanned(p, false), 0);
-    if (target === 0) {
-      timers.forEach(window.clearTimeout);
-      onWarmupProgressRef.current?.(1);
-      onWarmupCompleteRef.current?.();
-      return;
-    }
-
-    // Kesiapan dihitung dengan polling, bukan callback: callback `onReady` di
-    // ensure() hanya menyala untuk frame yang baru dibuat, sementara sebagian
-    // frame di sini sudah lebih dulu diminta di tempat lain — hitungannya jadi
-    // tidak pernah penuh.
-    let lastPercent = -1;
-    const timer = window.setInterval(() => {
-      const ready = plan.reduce((sum, p) => sum + countPlanned(p, true), 0);
-      const percent = Math.min(100, Math.round((ready / target) * 100));
-      if (percent !== lastPercent) {
-        lastPercent = percent;
-        onWarmupProgressRef.current?.(percent / 100);
-      }
-      if (ready >= target) {
-        window.clearInterval(timer);
-        onWarmupCompleteRef.current?.();
-      }
-    }, 250);
-
     return () => {
-      timers.forEach(window.clearTimeout);
-      window.clearInterval(timer);
+      cancelled = true;
+      cancelAnimationFrame(rafId);
     };
-  }, [introStarted, scrollLayers, preload, stepFor]);
+  }, [
+    introDone,
+    assetsReady,
+    timelineLayers,
+    ensureWindow,
+    releaseBefore,
+    snapToStep,
+    doDraw,
+  ]);
 
-  // ---- Bagian scroll ----
-  useEffect(() => {
-    if (phase !== "scroll") return;
-    latestProgress.current = smoothProgress.get();
-    requestDraw();
-  }, [phase, smoothProgress, requestDraw]);
-
-  useMotionValueEvent(smoothProgress, "change", (latest) => {
-    latestProgress.current = latest;
-    if (phase !== "scroll") return;
-    requestDraw();
-  });
-
-  // Canvas memakai ukuran CSS-nya, jadi tiap resize harus digambar ulang.
+  // ---- Gambar ulang saat resize ----
   useEffect(() => {
     let timer: number | undefined;
+    const redraw = () => {
+      // Semua canvas digambar ulang dari frame yang terakhir tergambar. Dipakai
+      // terutama untuk fase `done`, saat tidak ada rAF yang berjalan lagi.
+      const paint = (
+        layers: AnimationLayer[],
+        stores: LayerStore[],
+        canvases: (HTMLCanvasElement | null)[]
+      ) => {
+        layers.forEach((layer, idx) => {
+          const canvas = canvases[idx];
+          const store = stores[idx];
+          if (!canvas || !store) return;
+          let best = -1;
+          store.forEach((entry, index) => {
+            if (entry.ready && index > best) best = index;
+          });
+          const entry = best >= 0 ? store.get(best) : undefined;
+          if (entry?.src) doDraw(canvas, entry.src, layer);
+        });
+      };
+      paint(introLayers, introStores.current, introCanvases.current);
+      paint(timelineLayers, timelineStores.current, timelineCanvases.current);
+    };
+
     const onResize = () => {
       // Digambar ulang setelah jeda, bukan langsung: satu rAF sesudah event
       // resize masih bisa membaca layout lama, sehingga backing store canvas
@@ -511,7 +607,7 @@ export default function CanvasSequenceManager({
       // — hasilnya komposisi menempel di kiri atas. Jeda ini juga meredam
       // puluhan event saat jendela di-drag.
       if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(requestDraw, 180);
+      timer = window.setTimeout(redraw, 180);
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
@@ -520,7 +616,28 @@ export default function CanvasSequenceManager({
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
-  }, [requestDraw]);
+  }, [introLayers, timelineLayers, doDraw]);
+
+  // ---- Lepas semua saat unmount ----
+  useEffect(() => {
+    const intro = introStores;
+    const timeline = timelineStores;
+    return () => {
+      [...intro.current, ...timeline.current].forEach((store) => {
+        store.forEach((entry) => {
+          const src = entry.src;
+          if (!src) return;
+          if ("close" in src) src.close();
+          else src.src = "";
+        });
+        store.clear();
+      });
+    };
+  }, []);
+
+  // Canvas opening tetap terlihat sampai timeline benar-benar mulai — itulah yang
+  // menahan frame terakhir opening selama unduhan belum penuh.
+  const introVisible = !(introDone && assetsReady);
 
   return (
     <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
@@ -531,23 +648,64 @@ export default function CanvasSequenceManager({
             introCanvases.current[idx] = el;
           }}
           className={`absolute w-full h-full ${layer.className || ""}`}
-          style={{ zIndex: layer.zIndex, opacity: phase === "intro" ? 1 : 0 }}
+          style={{ zIndex: layer.zIndex, opacity: introVisible ? 1 : 0 }}
         />
       ))}
 
-      {scrollLayers.map((layer, idx) => (
+      {timelineLayers.map((layer, idx) => (
         <canvas
-          key={`scroll-${idx}`}
+          key={`timeline-${idx}`}
           ref={(el) => {
-            scrollCanvases.current[idx] = el;
+            timelineCanvases.current[idx] = el;
           }}
           className={`absolute w-full h-full ${layer.className || ""}`}
           style={{
             zIndex: layer.zIndex,
-            opacity: phase === "scroll" && !layer.hideBeforeStart ? 1 : 0,
+            opacity: introVisible || layer.hideBeforeStart ? 0 : 1,
           }}
         />
       ))}
     </div>
   );
+}
+
+// ---- Pembantu ----
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+/** Jalankan `work` untuk tiap item, maksimal `limit` sekaligus. */
+async function pool<T>(
+  items: T[],
+  limit: number,
+  work: (item: T) => Promise<void>
+) {
+  let next = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      await work(items[index]);
+    }
+  });
+  await Promise.all(runners);
+}
+
+/** Tunggu `count` frame pertama tiap layer benar-benar siap dipakai. */
+async function waitReady(
+  stores: LayerStore[],
+  layers: AnimationLayer[],
+  count: number
+) {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const semua = layers.every((layer, idx) => {
+      const store = stores[idx];
+      const target = Math.min(count, layer.frameCount);
+      let ready = 0;
+      for (let i = 0; i < target; i++) if (store.get(i)?.ready) ready++;
+      return ready >= target;
+    });
+    if (semua) return;
+    await sleep(50);
+  }
 }
