@@ -56,7 +56,7 @@ const INTRO_FPS = 30;
 /** Frame opening yang harus siap sebelum animasi mulai, supaya tidak tersendat. */
 const INTRO_BUFFER = 45;
 const LOOKAHEAD_INTRO = 40;
-const LOOKAHEAD_SCROLL = 40;
+const LOOKAHEAD_SCROLL = 24;
 const LOOKBEHIND_SCROLL = 8;
 /** Default frame awal tiap scroll layer yang dipanaskan selagi opening jalan. */
 const WARMUP_FRAMES = 24;
@@ -79,6 +79,12 @@ export default function CanvasSequenceManager({
   // Menandai opening sudah benar-benar mulai diputar. Pemanasan sekuens scroll
   // menunggu ini supaya request-nya tidak berebut bandwidth dengan buffer awal.
   const [introStarted, setIntroStarted] = useState(introLayers.length === 0);
+  // Dibaca dari dalam drawScrollLayers, yang disimpan di ref sehingga tidak bisa
+  // ikut punya `phase` sebagai dependency.
+  const phaseRef = useRef(phase);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const introStores = useRef<LayerStore[]>([]);
   const scrollStores = useRef<LayerStore[]>([]);
@@ -269,18 +275,20 @@ export default function CanvasSequenceManager({
           return;
         }
       }
-      for (let i = index + 1; i < layer.frameCount; i++) {
-        const entry = store.get(i);
-        if (entry?.ready) {
-          doDraw(canvas, entry.img, layer);
-          return;
-        }
-      }
+      // Sengaja TIDAK mencari ke depan. Frame yang datang lebih dulu bukan
+      // berarti frame yang lebih awal: kalau frame 12 sudah siap sementara
+      // frame 0 belum, menggambar frame 12 berarti memperlihatkan keadaan masa
+      // depan sebelum animasinya sampai di sana. Lebih baik kosong sebentar.
     },
     [doDraw]
   );
 
   const drawScrollLayers = useCallback(() => {
+    // Selama opening, canvas scroll tidak terlihat sama sekali. Tanpa gerbang
+    // ini setiap frame pemanasan yang tiba memicu gambar ulang 4 canvas —
+    // ratusan kali selama opening — dan itu merebut main thread dari animasi
+    // opening yang sedang diputar.
+    if (phaseRef.current !== "scroll") return;
     const latest = latestProgress.current;
     scrollLayers.forEach((layer, idx) => {
       const canvas = scrollCanvases.current[idx];
@@ -421,11 +429,19 @@ export default function CanvasSequenceManager({
       upTo: Math.min(layer.frameCount, layer.warmupFrames ?? WARMUP_FRAMES),
     }));
 
-    // Diminta berurutan sesuai urutan layer — outro lebih dulu karena dipakai
-    // persis saat scroll pertama, lalu gedung sesuai urutan kemunculannya.
-    plan.forEach(({ layer, store, upTo }) => {
-      preload(store, layer, 0, upTo - 1, 0, requestDraw);
-    });
+    // Diminta bergelombang, satu layer tiap 600 ms, bukan ~190 request sekaligus.
+    // Di HTTP/2 semua request jalan paralel dan bandwidth-nya terbagi, jadi
+    // ledakan sekaligus membuat frame opening sendiri datang terlambat — dan
+    // opening hanya maju kalau frame berikutnya sudah ada, jadi animasinya ikut
+    // tersendat. Urutannya sengaja: outro dipakai persis saat scroll pertama,
+    // lalu gedung sesuai urutan kemunculannya.
+    //
+    // requestDraw sengaja TIDAK diteruskan: selama opening tidak ada canvas
+    // scroll yang terlihat, dan setelah fase berganti penggambaran sudah
+    // dipicu oleh effect fase + event scroll.
+    const timers = plan.map(({ layer, store, upTo }, i) =>
+      window.setTimeout(() => preload(store, layer, 0, upTo - 1, 0), i * 600)
+    );
 
     const countPlanned = (
       { layer, store, upTo }: (typeof plan)[number],
@@ -442,6 +458,7 @@ export default function CanvasSequenceManager({
 
     const target = plan.reduce((sum, p) => sum + countPlanned(p, false), 0);
     if (target === 0) {
+      timers.forEach(window.clearTimeout);
       onWarmupProgressRef.current?.(1);
       onWarmupCompleteRef.current?.();
       return;
@@ -465,8 +482,11 @@ export default function CanvasSequenceManager({
       }
     }, 250);
 
-    return () => window.clearInterval(timer);
-  }, [introStarted, scrollLayers, preload, stepFor, requestDraw]);
+    return () => {
+      timers.forEach(window.clearTimeout);
+      window.clearInterval(timer);
+    };
+  }, [introStarted, scrollLayers, preload, stepFor]);
 
   // ---- Bagian scroll ----
   useEffect(() => {
