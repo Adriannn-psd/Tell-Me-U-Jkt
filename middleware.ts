@@ -20,11 +20,18 @@ export default auth((req: NextRequest & { auth: unknown }) => {
   // dianggap route terlindungi dan dijawab redirect ke /login — permintaannya
   // tetap 200, tapi isinya HTML halaman login, jadi audio-nya gagal diputar
   // tanpa satu pun error yang kelihatan. Sama halnya untuk file .mp4 di public/.
+  //
+  // ".webmanifest" ikut karena app/manifest.ts disajikan di
+  // "/manifest.webmanifest": tanpa ini, pengunjung yang belum login (yaitu
+  // SEMUA orang yang melihat animasi pembuka) mendapat HTML halaman login
+  // sebagai isi manifest-nya, dan situsnya tidak bisa dipasang sama sekali —
+  // padahal status terpasang itulah yang mengizinkan audio berbunyi tanpa
+  // ketukan.
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.match(
-      /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|mp3|m4a|ogg|opus|wav|mp4|webm)$/
+      /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|mp3|m4a|ogg|opus|wav|mp4|webm|webmanifest)$/
     )
   ) {
     return NextResponse.next();
