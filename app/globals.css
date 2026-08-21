@@ -76,3 +76,60 @@ html[data-lowfx] {
   --panel-blur: none;
 }
 
+/* ---------------------------------------------------------------------------
+   Layar penutup landing page (app/page.tsx): logo, cincin berputar, bar 3 detik.
+
+   Ditulis sebagai keyframes CSS, bukan animasi JS, dengan alasan yang sangat
+   spesifik: keduanya cuma menyentuh opacity dan transform, dua properti yang
+   bisa dijalankan compositor tanpa layout maupun repaint — jadi tetap mulus
+   walau main thread masih sibuk melepas ratusan bitmap frame animasi yang baru
+   selesai diputar. Animasi berbasis rAF akan ikut tersendat di momen itu.
+
+   Durasi bar dibaca dari --tmuj-outro-ms yang dipasang komponennya dari
+   REDIRECT_AFTER_MS, supaya bar dan timer pindah halaman tidak bisa berbeda.
+   --------------------------------------------------------------------------- */
+@keyframes tmuj-outro-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tmuj-outro-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tmuj-outro-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tmuj-outro {
+  animation: tmuj-outro-in 450ms ease-out both;
+}
+
+.tmuj-outro-bar {
+  transform-origin: left center;
+  animation: tmuj-outro-bar var(--tmuj-outro-ms, 3000ms) linear both;
+}
+
+.tmuj-outro-ring {
+  animation: tmuj-outro-spin 1.6s linear infinite;
+}
+
+/* Yang berputar dihentikan kalau user memang minta gerakan dikurangi; bar-nya
+   dibiarkan karena itu satu-satunya penanda bahwa halaman sedang berpindah. */
+@media (prefers-reduced-motion: reduce) {
+  .tmuj-outro-ring {
+    animation: none;
+  }
+}
+
