@@ -46,6 +46,13 @@ const OUTRO_AT = 0;
 const SIDES_AT = OUTRO_FRAMES / FPS;
 const CENTER_AT = SIDES_AT + Math.max(T2_FRAMES, T3_FRAMES) / TELKOM_FPS;
 
+/**
+ * Suara "telkom" dibunyikan 10 frame setelah gedung kiri & kanan muncul, bukan
+ * saat gedung tengah mulai. Dihitung dalam frame (bukan detik) supaya tetap di
+ * titik gambar yang sama kalau TELKOM_FPS diubah lagi.
+ */
+const TELKOM_CUE_AT = SIDES_AT + 10 / TELKOM_FPS;
+
 /** Jeda setelah ketiga gedung beku, sebelum pop up menutupinya. */
 const POPUP_DELAY_MS = 3000;
 
@@ -57,11 +64,14 @@ const SKIP_AFTER_MS = 3000;
  *
  *   welcome  -> saat frame pertama opening digambar (lewat onIntroStart)
  *   telyu    -> detik 0 timeline, yaitu saat outro mulai
- *   telkom   -> saat gedung tengah mulai, setelah gedung kiri & kanan selesai
+ *   telkom   -> 10 frame setelah gedung kiri & kanan muncul (4,00 s timeline /
+ *               9,13 s absolut). Klipnya 5,16 s, jadi berhenti di 14,29 s —
+ *               masih ~4,7 detik sebelum pop up, dan tidak menabrak telyu yang
+ *               selesai di 8,20 s.
  */
 const TIMELINE_CUES: { at: number; name: VoiceName }[] = [
   { at: OUTRO_AT, name: "telyu" },
-  { at: CENTER_AT, name: "telkom" },
+  { at: TELKOM_CUE_AT, name: "telkom" },
 ];
 
 /** Folder outro & telkom 1-indexed: index internal 0 → file 0001.webp. */
