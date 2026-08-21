@@ -18,6 +18,12 @@ export interface AnimationLayer {
   flipX?: boolean;
   /** Jangan lompati frame di HP — untuk sekuens ringan yang harus mulus 30fps. */
   noDecimate?: boolean;
+  /**
+   * Berapa frame awal layer ini yang disiapkan lebih dulu selagi opening
+   * berjalan. Scroll baru dibuka setelah semua layer memenuhi angkanya, jadi
+   * user tidak pernah menyusul unduhan. Default WARMUP_FRAMES.
+   */
+  warmupFrames?: number;
 
   // ---- pemetaan scroll (hanya dipakai scrollLayers) ----
   /** Progress scroll global (0..1) tempat layer ini mulai bergerak. */
@@ -37,6 +43,10 @@ interface CanvasSequenceManagerProps {
   onIntroComplete?: () => void;
   /** 0..1 — seberapa penuh buffer awal opening. Untuk bar loading. */
   onBufferProgress?: (ratio: number) => void;
+  /** 0..1 — pemanasan frame sekuens scroll, berjalan selagi opening diputar. */
+  onWarmupProgress?: (ratio: number) => void;
+  /** Dipanggil sekali saat pemanasan selesai; saat itu scroll aman dibuka. */
+  onWarmupComplete?: () => void;
 }
 
 type FrameEntry = { img: HTMLImageElement; ready: boolean };
@@ -46,8 +56,10 @@ const INTRO_FPS = 30;
 /** Frame opening yang harus siap sebelum animasi mulai, supaya tidak tersendat. */
 const INTRO_BUFFER = 45;
 const LOOKAHEAD_INTRO = 40;
-const LOOKAHEAD_SCROLL = 24;
+const LOOKAHEAD_SCROLL = 40;
 const LOOKBEHIND_SCROLL = 8;
+/** Default frame awal tiap scroll layer yang dipanaskan selagi opening jalan. */
+const WARMUP_FRAMES = 24;
 /** Di bawah lebar ini frame dilompati 2-2 (kecuali layer ber-noDecimate). */
 const MOBILE_BREAKPOINT = 768;
 
@@ -56,12 +68,17 @@ export default function CanvasSequenceManager({
   scrollLayers,
   onIntroComplete,
   onBufferProgress,
+  onWarmupProgress,
+  onWarmupComplete,
 }: CanvasSequenceManagerProps) {
   // Tanpa layer opening tidak ada yang perlu diputar, jadi langsung masuk fase
   // scroll dari initializer — bukan lewat setState di dalam effect.
   const [phase, setPhase] = useState<"intro" | "scroll">(
     introLayers.length === 0 ? "scroll" : "intro"
   );
+  // Menandai opening sudah benar-benar mulai diputar. Pemanasan sekuens scroll
+  // menunggu ini supaya request-nya tidak berebut bandwidth dengan buffer awal.
+  const [introStarted, setIntroStarted] = useState(introLayers.length === 0);
 
   const introStores = useRef<LayerStore[]>([]);
   const scrollStores = useRef<LayerStore[]>([]);
@@ -73,10 +90,14 @@ export default function CanvasSequenceManager({
   // ulang animasi dari frame nol.
   const onIntroCompleteRef = useRef(onIntroComplete);
   const onBufferProgressRef = useRef(onBufferProgress);
+  const onWarmupProgressRef = useRef(onWarmupProgress);
+  const onWarmupCompleteRef = useRef(onWarmupComplete);
   useEffect(() => {
     onIntroCompleteRef.current = onIntroComplete;
     onBufferProgressRef.current = onBufferProgress;
-  }, [onIntroComplete, onBufferProgress]);
+    onWarmupProgressRef.current = onWarmupProgress;
+    onWarmupCompleteRef.current = onWarmupComplete;
+  }, [onIntroComplete, onBufferProgress, onWarmupProgress, onWarmupComplete]);
 
   // Ditentukan sekali saat mount. Sengaja tidak ikut berubah saat window
   // di-resize: mengganti langkah frame di tengah animasi membuang frame yang
@@ -317,7 +338,6 @@ export default function CanvasSequenceManager({
     let lastReportedPercent = -1;
     let started = false;
     let currentFrame = 0;
-    let outroWarmed = false;
     let rafId = 0;
     let lastTick = 0;
 
@@ -342,10 +362,17 @@ export default function CanvasSequenceManager({
         if (readyCount >= bufferTarget) {
           started = true;
           lastTick = now;
-        } else {
+          // Lapor 100% lalu lewati satu frame. Tanpa jeda ini animasi mulai di
+          // frame yang sama saat hitungan mencapai target, sebelum React sempat
+          // melukis bar-nya — jadi bar terlihat berhenti di ~97% dan seolah
+          // opening jalan padahal unduhan belum selesai.
+          onBufferProgressRef.current?.(1);
+          setIntroStarted(true);
           rafId = requestAnimationFrame(tick);
           return;
         }
+        rafId = requestAnimationFrame(tick);
+        return;
       }
 
       const interval = 1000 / INTRO_FPS;
@@ -359,13 +386,6 @@ export default function CanvasSequenceManager({
           if (!stores[idx].get(frame)?.ready) allReady = false;
           drawLayer(introCanvases.current[idx], stores[idx], layer, frame);
         });
-
-        // Mulai menyiapkan sekuens scroll pertama sebelum opening habis, tapi
-        // jangan lebih awal — request-nya akan berebut bandwidth dengan opening.
-        if (!outroWarmed && currentFrame > totalFrames * 0.7 && scrollLayers[0]) {
-          outroWarmed = true;
-          preload(scrollStores.current[0], scrollLayers[0], 0, LOOKAHEAD_SCROLL, 0);
-        }
 
         // Frame hanya maju kalau gambarnya memang sudah ada, jadi saat jaringan
         // lambat animasi ikut melambat alih-alih melompat-lompat.
@@ -384,10 +404,69 @@ export default function CanvasSequenceManager({
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-    // scrollLayers hanya dipakai untuk memanaskan outro; kalau ikut jadi
-    // dependency, animasi opening bisa dimulai ulang di tengah jalan.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [introLayers, preload, drawLayer]);
+
+  // ---- Pemanasan sekuens scroll, jalan selagi opening diputar ----
+  // Opening berdurasi ~5 detik dan hanya ~2 MB, jadi jendela itu dipakai untuk
+  // mengunduh awal tiap sekuens gedung. Tanpa ini, frame telkom (33,7 MB) baru
+  // diminta saat user sudah menggeser, dan animasinya tersendat.
+  useEffect(() => {
+    if (!introStarted || scrollLayers.length === 0) return;
+    const stores = scrollStores.current;
+    if (stores.length !== scrollLayers.length) return;
+
+    const plan = scrollLayers.map((layer, idx) => ({
+      layer,
+      store: stores[idx],
+      upTo: Math.min(layer.frameCount, layer.warmupFrames ?? WARMUP_FRAMES),
+    }));
+
+    // Diminta berurutan sesuai urutan layer — outro lebih dulu karena dipakai
+    // persis saat scroll pertama, lalu gedung sesuai urutan kemunculannya.
+    plan.forEach(({ layer, store, upTo }) => {
+      preload(store, layer, 0, upTo - 1, 0, requestDraw);
+    });
+
+    const countPlanned = (
+      { layer, store, upTo }: (typeof plan)[number],
+      onlyReady: boolean
+    ) => {
+      const step = stepFor(layer);
+      let n = 0;
+      for (let i = 0; i < upTo; i++) {
+        if (i % step !== 0) continue;
+        if (!onlyReady || store.get(i)?.ready) n++;
+      }
+      return n;
+    };
+
+    const target = plan.reduce((sum, p) => sum + countPlanned(p, false), 0);
+    if (target === 0) {
+      onWarmupProgressRef.current?.(1);
+      onWarmupCompleteRef.current?.();
+      return;
+    }
+
+    // Kesiapan dihitung dengan polling, bukan callback: callback `onReady` di
+    // ensure() hanya menyala untuk frame yang baru dibuat, sementara sebagian
+    // frame di sini sudah lebih dulu diminta di tempat lain — hitungannya jadi
+    // tidak pernah penuh.
+    let lastPercent = -1;
+    const timer = window.setInterval(() => {
+      const ready = plan.reduce((sum, p) => sum + countPlanned(p, true), 0);
+      const percent = Math.min(100, Math.round((ready / target) * 100));
+      if (percent !== lastPercent) {
+        lastPercent = percent;
+        onWarmupProgressRef.current?.(percent / 100);
+      }
+      if (ready >= target) {
+        window.clearInterval(timer);
+        onWarmupCompleteRef.current?.();
+      }
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [introStarted, scrollLayers, preload, stepFor, requestDraw]);
 
   // ---- Bagian scroll ----
   useEffect(() => {

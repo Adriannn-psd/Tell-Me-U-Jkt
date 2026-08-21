@@ -49,6 +49,10 @@ const INTRO_LAYERS: AnimationLayer[] = [
 //   telkom 3  isi 66.3% x 96.1% frame  (agak ke tengah; setelah flipX: 14.2%-80.5%)
 // Tinggi kotak selalu 9/16 dari lebarnya supaya rasio frame terjaga dan `contain`
 // tidak menyisakan celah.
+// Angka HP dihitung untuk rasio layar HP nyata (~0.465: iPhone 390x844,
+// Android 412x915), BUKAN untuk rasio referensi 1080x1920 (0.5625) — tidak ada
+// HP modern yang seselebar itu, jadi memakai angka referensi apa adanya membuat
+// gedungnya duduk terlalu rendah dengan celah kosong di atas.
 const SCROLL_LAYERS: AnimationLayer[] = [
   {
     // Menghilangkan logo Tell Me U JKT. Frame 0001-nya persis sama dengan frame
@@ -62,6 +66,9 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     startProgress: 0,
     endProgress: OUTRO_END,
     hideAfterEnd: true,
+    // Dipanaskan seluruhnya: ini yang dipakai persis saat scroll pertama, dan
+    // frame-nya paling ringan (~18 KB) jadi murah dituntaskan lebih dulu.
+    warmupFrames: 115,
   },
   {
     // Menara putih, kiri atas.
@@ -74,7 +81,7 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     endProgress: SIDE_END,
     hideBeforeStart: true,
     className:
-      "!w-[65vw] !h-[36.6vw] !left-[5vw] !top-[18vh] md:!w-[42vw] md:!h-[23.6vw] md:!left-[3vw] md:!top-[3vh]",
+      "!w-[117.3vw] !h-[66vw] !left-[-35vw] !top-[17.8vh] md:!w-[42vw] md:!h-[23.6vw] md:!left-[0vw] md:!top-[4vh]",
   },
   {
     // Gedung kaca, kanan atas. Sumbernya menghadap ke kanan, jadi dicermin
@@ -89,7 +96,7 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     endProgress: SIDE_END,
     hideBeforeStart: true,
     className:
-      "!w-[66vw] !h-[37.1vw] !right-[-12vw] !top-[21vh] md:!w-[40vw] md:!h-[22.5vw] md:!right-[-7vw] md:!top-[5vh]",
+      "!w-[103.6vw] !h-[58.3vw] !right-[-43.5vw] !top-[21.8vh] md:!w-[40vw] md:!h-[22.5vw] md:!right-[-7vw] md:!top-[5vh]",
   },
   {
     // Gedung merah lebar di tengah, muncul paling akhir dan paling depan.
@@ -102,13 +109,15 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     endProgress: CENTER_END,
     hideBeforeStart: true,
     className:
-      "!w-[222vw] !h-[125vw] !left-[-61vw] !bottom-[-1vh] md:!w-[101vw] md:!h-[56.8vw] md:!left-[-0.5vw] md:!bottom-[-18.5vh]",
+      "!w-[264vw] !h-[148.5vw] !left-[-82vw] !bottom-[-1vh] md:!w-[101vw] md:!h-[56.8vw] md:!left-[-0.5vw] md:!bottom-[-18.5vh]",
   },
 ];
 
 function LandingContent() {
   const [buffer, setBuffer] = useState(0);
   const [introDone, setIntroDone] = useState(false);
+  const [warmup, setWarmup] = useState(0);
+  const [warmupDone, setWarmupDone] = useState(false);
   const [hintHidden, setHintHidden] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
@@ -141,11 +150,13 @@ function LandingContent() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
-  // Kunci scroll selama opening supaya user tidak mendahului animasinya.
-  // Dipasang di html sekaligus body: overflow:hidden di body saja masih
-  // menyisakan html sebagai elemen yang bisa di-scroll di sebagian browser.
+  // Scroll dikunci sampai frame sekuens gedung punya cukup runway — bukan cuma
+  // sampai opening selesai. Kalau dibuka lebih awal, user menyusul unduhan dan
+  // animasi gedungnya tersendat. Dipasang di html sekaligus body: overflow
+  // hidden di body saja masih menyisakan html sebagai elemen yang bisa
+  // di-scroll di sebagian browser.
   useEffect(() => {
-    if (introDone) return;
+    if (warmupDone) return;
     const root = document.documentElement;
     const prevRoot = root.style.overflow;
     const prevBody = document.body.style.overflow;
@@ -155,7 +166,7 @@ function LandingContent() {
       root.style.overflow = prevRoot;
       document.body.style.overflow = prevBody;
     };
-  }, [introDone]);
+  }, [warmupDone]);
 
   useMotionValueEvent(scrollYProgress, "change", (latest) => {
     // Selama opening, apa pun yang dibaca dari posisi scroll diabaikan. Browser
@@ -171,7 +182,8 @@ function LandingContent() {
   });
 
   const showLoader = !introDone && buffer < 1;
-  const showHint = introDone && !hintHidden;
+  const showWarmup = introDone && !warmupDone;
+  const showHint = introDone && warmupDone && !hintHidden;
 
   return (
     <main className="page relative" suppressHydrationWarning>
@@ -193,6 +205,8 @@ function LandingContent() {
           introLayers={INTRO_LAYERS}
           scrollLayers={SCROLL_LAYERS}
           onBufferProgress={setBuffer}
+          onWarmupProgress={setWarmup}
+          onWarmupComplete={() => setWarmupDone(true)}
           onIntroComplete={() => {
             // Dikembalikan ke atas sekali lagi, dan sengaja SEBELUM introDone
             // dibuka. history.scrollRestoration hanya bisa disetel setelah
@@ -221,6 +235,22 @@ function LandingContent() {
           </div>
           <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
             Memuat {Math.round(buffer * 100)}%
+          </span>
+        </div>
+      )}
+
+      {/* Bar kedua: menyiapkan frame gedung. Muncul setelah opening selesai dan
+          scroll masih dikunci, supaya user tidak menyusul unduhan. */}
+      {showWarmup && (
+        <div className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2">
+          <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[var(--color-brand-red)] transition-all duration-300"
+              style={{ width: `${Math.round(warmup * 100)}%` }}
+            />
+          </div>
+          <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
+            Menyiapkan animasi {Math.round(warmup * 100)}%
           </span>
         </div>
       )}
