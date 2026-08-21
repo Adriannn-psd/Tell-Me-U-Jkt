@@ -339,30 +339,11 @@ function LandingContent() {
       )}
 
       {/*
-        Browser HP menolak autoplay bersuara sampai ada sentuhan. Kalau itu yang
-        terjadi, hook-nya menahan cue terakhir dan petunjuk ini muncul; sentuhan
-        di mana saja langsung memutarnya, di-seek sesuai keterlambatannya.
+        Tidak ada petunjuk "ketuk layar" di sini, dan itu disengaja. Kalau browser
+        menolak autoplay bersuara (muat "/" dari nol di HP), cue terakhir ditahan
+        di lib/useLandingVoice.ts dan dibunyikan sendiri pada sentuhan pertama —
+        sentuhan apa pun, untuk alasan apa pun — tanpa halaman ini pernah meminta.
       */}
-      {voice.blocked && !showLoader && !finished && (
-        <div className="fixed top-6 left-0 right-0 z-40 flex justify-center px-6 pointer-events-none">
-          <span className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-[11px] font-medium text-white/70">
-            <svg
-              className="w-4 h-4 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M11 5 6 9H3v6h3l5 4V5z" />
-              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-            </svg>
-            Ketuk layar untuk mendengar audio
-          </span>
-        </div>
-      )}
 
       {/*
         Lewati animasi. Muncul 3 detik setelah animasi mulai dan hilang begitu

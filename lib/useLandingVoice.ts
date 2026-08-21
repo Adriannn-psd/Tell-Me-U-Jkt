@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect } from "react";
 
 /**
  * Tiga potongan suara yang menempel di animasi landing page. Nama file dibuat
@@ -37,8 +37,6 @@ let elements: Partial<Record<VoiceName, HTMLAudioElement>> | null = null;
 let pending: Pending | null = null;
 let primed = false;
 let unlockAttached = false;
-let blocked = false;
-const blockedListeners = new Set<() => void>();
 
 /**
  * Safari 16.4+ (iOS 17) memperkenalkan `navigator.audioSession`. Menyetelnya ke
@@ -64,12 +62,6 @@ function forceAudible(el: HTMLAudioElement) {
   el.muted = false;
   el.defaultMuted = false;
   el.volume = 1;
-}
-
-function setBlocked(next: boolean) {
-  if (blocked === next) return;
-  blocked = next;
-  blockedListeners.forEach((listener) => listener());
 }
 
 function ensureElements() {
@@ -111,7 +103,6 @@ function attachUnlock() {
 
     const waiting = pending;
     pending = null;
-    setBlocked(false);
     if (!waiting || !elements) return;
 
     const el = elements[waiting.name];
@@ -186,20 +177,23 @@ function playVoice(name: VoiceName) {
   el.play().then(
     () => {
       pending = null;
-      setBlocked(false);
     },
     () => {
       // Cue terbaru yang menang: kalau user baru menyentuh layar di detik ke-13,
       // yang pantas dibunyikan adalah suara gedung, bukan sambutan pembuka.
+      //
+      // Tidak ada apa pun yang ditampilkan ke user di sini — tidak ada petunjuk
+      // "ketuk layar". Sentuhan pertama untuk alasan apa pun (menekan tombol
+      // lewati, menggeser, sekadar menyentuh) yang akan membunyikannya, di-seek
+      // sesuai keterlambatannya, dan kalau tidak ada sentuhan sama sekali
+      // animasinya tetap jalan tanpa suara.
       pending = { name, at: performance.now() };
-      setBlocked(true);
     }
   );
 }
 
 function stopAllVoices() {
   pending = null;
-  setBlocked(false);
   if (!elements) return;
   Object.values(elements).forEach((el) => {
     el.pause();
@@ -208,26 +202,14 @@ function stopAllVoices() {
 }
 
 /**
- * Langganan ke state `blocked` yang hidup di module scope. Dibaca lewat
- * useSyncExternalStore, bukan useState + setState di dalam effect: nilainya milik
- * dokumen, bisa sudah berubah sebelum komponennya dipasang, dan React perlu tahu
- * cara membacanya kapan pun — termasuk saat render di server (selalu false, karena
- * di sana belum ada elemen audio sama sekali).
- */
-function subscribeBlocked(onChange: () => void) {
-  blockedListeners.add(onChange);
-  return () => {
-    blockedListeners.delete(onChange);
-  };
-}
-
-const readBlocked = () => blocked;
-const readBlockedOnServer = () => false;
-
-/**
  * Pemutar cue suara untuk animasi landing. Elemennya tidak dibuat maupun dibuang
  * oleh hook ini — lihat catatan module scope di atas; hook ini cuma menyalakan
- * mesinnya dan ikut mendengar apakah ada cue yang tertahan.
+ * mesinnya lalu menyerahkan dua fungsi.
+ *
+ * Tidak ada state "audio terhalang" yang dikembalikan, karena tidak ada satu pun
+ * UI yang memintanya: halaman ini tidak pernah menyuruh user mengetuk layar.
+ * Kalau autoplay ditolak, cue-nya ditahan diam-diam dan dibunyikan pada sentuhan
+ * pertama yang kebetulan terjadi.
  *
  * Audio TIDAK dihentikan saat komponennya dilepas, karena setiap jalan keluar
  * dari halaman ini (tombol lewati, pindah otomatis ke /login) sudah memanggil
@@ -235,8 +217,6 @@ const readBlockedOnServer = () => false;
  * suara yang baru mulai pada remount ganda React di mode development.
  */
 export function useLandingVoice() {
-  const blockedState = useSyncExternalStore(subscribeBlocked, readBlocked, readBlockedOnServer);
-
   // Elemennya disiapkan (dan listener unlock dipasang) begitu halaman landing
   // dipasang, kalau tombol logout belum melakukannya lebih dulu.
   useEffect(() => {
@@ -246,5 +226,5 @@ export function useLandingVoice() {
   const play = useCallback((name: VoiceName) => playVoice(name), []);
   const stopAll = useCallback(() => stopAllVoices(), []);
 
-  return { play, stopAll, blocked: blockedState };
+  return { play, stopAll };
 }
