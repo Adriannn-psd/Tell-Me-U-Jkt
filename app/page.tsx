@@ -434,6 +434,7 @@ function LandingContent() {
                 src="/logo.png"
                 alt="Tell Me U Jakarta"
                 fill
+                sizes="64px"
                 priority
                 className="object-contain drop-shadow-2xl"
               />

@@ -11,6 +11,7 @@ import Avatar from "@/components/Avatar";
 import { useScrollState } from "./ScrollContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGuest } from "@/components/GuestProvider";
+import { primeLandingVoice } from "@/lib/useLandingVoice";
 import { isToday, isYesterday, format } from "date-fns";
 
 const notifFetcher = (url: string) => fetch(url).then(res => res.json());
@@ -750,14 +751,37 @@ export default function Header() {
                 Batal
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  // Klik ini adalah satu-satunya gesture yang tersedia sebelum
+                  // animasi pembuka mulai, jadi izin audionya ditukar DI SINI —
+                  // sinkron, sebelum await mana pun, karena iOS cuma menghitung
+                  // play() yang terjadi di dalam handler gesture-nya sendiri.
+                  primeLandingVoice();
+
                   // Mode tamu ikut dibersihkan: middleware memantulkan tamu dari
                   // "/" ke "/home", jadi tanpa ini animasi pembuka tidak akan
                   // pernah terlihat setelah seorang tamu keluar.
                   document.cookie = "guest_mode=; path=/; max-age=0";
+
                   // Mendarat di "/", bukan "/login", supaya animasi pembuka
                   // diputar lagi setiap kali orang keluar.
-                  signOut({ callbackUrl: "/" });
+                  //
+                  // `redirect: false` + router.push, BUKAN callbackUrl: izin
+                  // autoplay melekat pada dokumen. callbackUrl membuat browser
+                  // memuat dokumen baru, sehingga izin yang baru saja didapat
+                  // dari klik ini hangus dan user disuruh mengetuk layar lagi
+                  // supaya suara keluar. Soft navigation mempertahankan
+                  // dokumennya, jadi suara pembuka langsung berbunyi.
+                  try {
+                    await signOut({ redirect: false });
+                    router.push("/");
+                    router.refresh();
+                  } catch {
+                    // Kalau jalur soft navigation gagal, keluar tetap harus
+                    // terjadi — pakai cara lama (dokumen baru). Konsekuensinya
+                    // cuma satu ketukan sebelum audio berbunyi.
+                    signOut({ callbackUrl: "/" });
+                  }
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-[#E5271F] text-white font-semibold text-sm hover:bg-red-600 transition"
               >
@@ -813,11 +837,19 @@ export default function Header() {
                 <div className="flex flex-col gap-3 w-full">
                   <button 
                     onClick={async () => {
+                      // Sama seperti tombol logout: izin audio ditukar sinkron di
+                      // dalam klik, sebelum fetch di bawah, supaya animasi di "/"
+                      // tidak perlu ketukan tambahan.
+                      primeLandingVoice();
                       setIsResetting(true);
                       try {
                         const res = await fetch("/api/user/reset", { method: "DELETE" });
                         if (res.ok) {
-                          signOut({ callbackUrl: "/" });
+                          // Soft navigation, alasannya sama dengan tombol logout:
+                          // dokumen yang sama = izin autoplay ikut terbawa.
+                          await signOut({ redirect: false });
+                          router.push("/");
+                          router.refresh();
                         } else {
                           console.error("Gagal reset");
                           setIsResetting(false);
