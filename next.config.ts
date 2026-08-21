@@ -22,10 +22,21 @@ const nextConfig: NextConfig = {
   // Aturannya menyasar ekstensi, bukan nama folder: tiga folder telkom
   // mengandung spasi (jadi "/telkom%201/0001.webp" di URL), yang membuat pola
   // source berbasis path rapuh. Saat ini tidak ada .webp lain di public/.
+  //
+  // Sejak animasinya diputar setiap kali orang membuka "/" (bukan sekali lalu
+  // di-skip lewat cookie), header ini yang menentukan kunjungan kedua terasa
+  // instan atau mengulang ratusan permintaan. Suara di /voice ikut disertakan
+  // dengan alasan yang sama.
   async headers() {
     return [
       {
         source: "/:path*.webp",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/voice/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],

@@ -27,17 +27,39 @@ export interface AnimationLayer {
   hideAfterEnd?: boolean;
 }
 
+/**
+ * Penanda waktu di jam timeline (detik, 0 = frame pertama outro). Dipakai untuk
+ * memicu suara tepat saat sebuah segmen gambar mulai, bukan lewat setTimeout
+ * terpisah yang jamnya bisa melenceng dari jam animasi.
+ */
+export interface TimelineCue {
+  at: number;
+  name: string;
+}
+
 interface CanvasSequenceManagerProps {
-  /** Diputar lebih dulu, selagi sisa aset diunduh di belakang. */
+  /** Diputar lebih dulu. */
   introLayers: AnimationLayer[];
-  /** Diputar otomatis setelah SEMUA asetnya selesai diunduh. */
+  /** Diputar langsung menyambung setelah intro habis. */
   timelineLayers: AnimationLayer[];
-  /** 0..1 — unduhan opening, sebelum apa pun diputar. */
-  onBufferProgress?: (ratio: number) => void;
+  /**
+   * Cue di jam timeline. Masing-masing dipicu sekali, pada tick pertama yang
+   * waktunya sudah melewati `at`. Harus punya identitas stabil (definisikan di
+   * luar komponen) — ia masuk dependency effect timeline.
+   */
+  cues?: TimelineCue[];
+  /**
+   * 0..1 — SATU unduhan untuk semua sekuens, opening maupun timeline, sebelum
+   * ada satu frame pun yang diputar. Dulu unduhannya dua tahap dan masing-masing
+   * punya bar sendiri, jadi loading-nya terlihat dua kali.
+   */
+  onLoadProgress?: (ratio: number) => void;
+  /** Dipanggil sekali, tepat sebelum frame pertama opening digambar. */
+  onIntroStart?: () => void;
   /** Dipanggil sekali setelah frame terakhir opening digambar. */
   onIntroComplete?: () => void;
-  /** 0..1 — unduhan seluruh sekuens timeline. */
-  onPreloadProgress?: (ratio: number) => void;
+  /** Dipanggil saat sebuah cue timeline terlewati. */
+  onCue?: (name: string) => void;
   /** Dipanggil sekali saat semua segmen timeline sampai frame terakhirnya. */
   onTimelineComplete?: () => void;
 }
@@ -53,8 +75,18 @@ const MOBILE_BREAKPOINT = 768;
 const MOBILE_FOLDER_SUFFIX = "-960";
 /** Unduhan paralel. Cukup untuk memenuhi bandwidth tanpa membuka ratusan koneksi. */
 const DOWNLOAD_CONCURRENCY = 6;
-/** Frame yang di-decode di depan posisi sekarang (~0,4 detik runway di 30fps). */
-const DECODE_AHEAD = 12;
+/**
+ * Runway decode di depan posisi sekarang, diukur dalam DETIK — bukan jumlah
+ * frame. Kalau diukur dalam frame, menaikkan fps otomatis memperpendek waktu
+ * yang tersedia buat men-decode: 12 frame itu 0,4 detik di 30fps tapi cuma 0,27
+ * detik di 45fps, dan gedung yang dipercepat langsung mulai kehilangan frame.
+ */
+const DECODE_AHEAD_SECONDS = 0.45;
+/**
+ * Seberapa awal sebelum `startAt` sebuah layer boleh membuka jendela decode
+ * penuhnya. Sebelum ambang ini cuma dua frame yang disiapkan.
+ */
+const WARM_LEAD_SECONDS = 1.2;
 /** Frame di belakang yang masih ditahan sebelum dilepas. */
 const KEEP_BEHIND = 2;
 /**
@@ -66,34 +98,26 @@ const MOBILE_MAX_DPR = 2;
 export default function CanvasSequenceManager({
   introLayers,
   timelineLayers,
-  onBufferProgress,
+  cues,
+  onLoadProgress,
+  onIntroStart,
   onIntroComplete,
-  onPreloadProgress,
+  onCue,
   onTimelineComplete,
 }: CanvasSequenceManagerProps) {
   /**
-   * buffering → opening diunduh, belum ada yang diputar
-   * intro     → opening diputar, sisa aset diunduh di belakang
-   * hold      → opening habis; kalau unduhan belum penuh, frame terakhirnya ditahan
+   * Satu-satunya state fase yang tersisa. Sekali true tidak pernah kembali
+   * false, dan effect timeline bergantung padanya — kalau bergantung pada state
+   * yang bolak-balik, cleanup-nya akan membatalkan rAF yang baru saja dimulai
+   * dan animasinya tidak pernah jalan.
    *
-   * Fase timeline TIDAK ikut di sini: begitu `introDone` dan `assetsReady`
-   * dua-duanya true, timeline pasti sedang jalan — jadi bisa diturunkan, tidak
-   * perlu state sendiri.
+   * Dulu ada `phase` ("buffering" | "intro" | "hold") dan `assetsReady`
+   * terpisah, karena unduhan timeline berlomba dengan pemutaran opening dan
+   * frame terakhir opening kadang harus ditahan. Sekarang semua aset sudah
+   * lengkap sebelum frame pertama digambar, jadi tidak ada lagi yang perlu
+   * ditunggu di tengah jalan.
    */
-  const [phase, setPhase] = useState<"buffering" | "intro" | "hold">(
-    introLayers.length === 0 ? "hold" : "buffering"
-  );
-  const phaseRef = useRef(phase);
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-  /**
-   * Sekali true, tidak pernah kembali false. Effect timeline bergantung pada ini
-   * dan BUKAN pada `phase` — kalau bergantung pada `phase`, `setPhase("timeline")`
-   * di dalamnya akan memicu effect itu dijalankan ulang, cleanup-nya membatalkan
-   * rAF yang baru saja dimulai, dan animasinya tidak pernah jalan.
-   */
-  const [introDone, setIntroDone] = useState(introLayers.length === 0);
+  const [introDone, setIntroDone] = useState(false);
 
   const introStores = useRef<LayerStore[]>([]);
   const timelineStores = useRef<LayerStore[]>([]);
@@ -104,19 +128,21 @@ export default function CanvasSequenceManager({
   // ke dependency — kalau ikut, satu re-render parent akan memulai ulang animasi
   // dari frame nol.
   const cb = useRef({
-    onBufferProgress,
+    onLoadProgress,
+    onIntroStart,
     onIntroComplete,
-    onPreloadProgress,
+    onCue,
     onTimelineComplete,
   });
   useEffect(() => {
     cb.current = {
-      onBufferProgress,
+      onLoadProgress,
+      onIntroStart,
       onIntroComplete,
-      onPreloadProgress,
+      onCue,
       onTimelineComplete,
     };
-  }, [onBufferProgress, onIntroComplete, onPreloadProgress, onTimelineComplete]);
+  }, [onLoadProgress, onIntroStart, onIntroComplete, onCue, onTimelineComplete]);
 
   // Ditentukan sekali saat mount. Sengaja tidak ikut berubah saat window
   // di-resize: mengganti set frame di tengah animasi membuang yang sudah
@@ -131,8 +157,6 @@ export default function CanvasSequenceManager({
    * terbuang dan pemutaran justru menyentuh jaringan.
    */
   const frameSetProbed = useRef<Promise<void> | null>(null);
-  /** Unduhan timeline sudah 100%. */
-  const [assetsReady, setAssetsReady] = useState(timelineLayers.length === 0);
 
   const stepFor = useCallback((layer: AnimationLayer) => {
     return layer.noDecimate || !isMobile.current ? 1 : 2;
@@ -260,7 +284,13 @@ export default function CanvasSequenceManager({
     (store: LayerStore, layer: AnimationLayer, from: number) => {
       const step = stepFor(layer);
       const last = layer.frameCount - 1;
-      for (let n = 0; n <= DECODE_AHEAD; n++) {
+      // Jumlahnya diturunkan dari fps layer ini, jadi runway-nya tetap ~0,45
+      // detik baik di 30fps maupun 45fps. Di HP step-nya 2, jadi jumlah yang
+      // sama menutup rentang waktu dua kali lebih panjang — itu memang yang
+      // diinginkan, karena HP yang paling butuh kelonggaran decode.
+      const fps = layer.fps ?? INTRO_FPS;
+      const count = Math.max(4, Math.ceil((DECODE_AHEAD_SECONDS * fps) / step));
+      for (let n = 0; n <= count; n++) {
         const i = from + n * step;
         if (i > last) break;
         ensure(store, layer, i);
@@ -269,6 +299,35 @@ export default function CanvasSequenceManager({
       ensure(store, layer, last);
     },
     [ensure, stepFor]
+  );
+
+  /**
+   * Decode beberapa frame pertama sebuah layer, tanpa membuka jendela penuh.
+   * Dipakai untuk menyiapkan sambungan antar segmen: cukup supaya frame pertama
+   * tidak telat, tanpa menahan puluhan bitmap selama opening diputar.
+   */
+  const warmFirst = useCallback(
+    (store: LayerStore, layer: AnimationLayer, count: number) => {
+      const step = stepFor(layer);
+      for (let n = 0; n < count; n++) ensure(store, layer, n * step);
+    },
+    [ensure, stepFor]
+  );
+
+  /** Index frame pertama yang benar-benar dipakai layer ini — untuk menunggu. */
+  const firstIndices = useCallback(
+    (layer: AnimationLayer, count: number) => {
+      const step = stepFor(layer);
+      const last = layer.frameCount - 1;
+      const out: number[] = [];
+      for (let n = 0; n < count; n++) {
+        const i = n * step;
+        if (i > last) break;
+        out.push(i);
+      }
+      return out;
+    },
+    [stepFor]
   );
 
   // ---- Menggambar ----
@@ -317,6 +376,26 @@ export default function CanvasSequenceManager({
     []
   );
 
+  /**
+   * Gambar frame pertama tiap segmen timeline yang mulai di detik 0, dipanggil
+   * SEBELUM `introDone` di-set.
+   *
+   * Kenapa harus sebelum: begitu introDone true, satu commit React mengubah
+   * opacity canvas opening ke 0 dan canvas outro ke 1 sekaligus. Kalau outro
+   * baru digambar setelah commit itu (di effect, yang jalan setelah paint), ada
+   * satu frame di mana opening sudah hilang tapi outro masih kosong — kedipan
+   * hitam tepat di sambungan. Dengan digambar lebih dulu, pertukaran opacity-nya
+   * langsung menampilkan gambar yang benar.
+   */
+  const paintTimelineStart = useCallback(() => {
+    timelineLayers.forEach((layer, idx) => {
+      if ((layer.startAt ?? 0) > 0) return;
+      const canvas = timelineCanvases.current[idx];
+      const entry = timelineStores.current[idx]?.get(0);
+      if (canvas && entry?.ready && entry.src) doDraw(canvas, entry.src, layer);
+    });
+  }, [timelineLayers, doDraw]);
+
   // ---- Probe set frame HP + siapkan store ----
   // Jalan lebih dulu daripada kedua tahap unduhan (keduanya menunggu
   // frameSetProbed), dan dipasang sinkron di sini supaya promise-nya sudah ada
@@ -346,9 +425,9 @@ export default function CanvasSequenceManager({
     );
   }, [introLayers, timelineLayers]);
 
-  // ---- Tahap 1: unduh opening penuh, lalu putar ----
+  // ---- Tahap 1: unduh SEMUA frame sekali, lalu putar opening ----
   useEffect(() => {
-    if (introLayers.length === 0) return;
+    if (introLayers.length === 0 && timelineLayers.length === 0) return;
     let cancelled = false;
     let rafId = 0;
 
@@ -359,18 +438,20 @@ export default function CanvasSequenceManager({
       if (cancelled) return;
 
       const stores = introStores.current;
-      const jobs = introLayers.flatMap((layer) =>
+      // Satu antrean untuk opening DAN seluruh timeline. Urutannya opening dulu,
+      // jadi frame yang paling cepat dibutuhkan juga yang paling cepat mendarat
+      // di cache.
+      const jobs = [...introLayers, ...timelineLayers].flatMap((layer) =>
         indicesFor(layer).map((i) => ({ layer, i }))
       );
       let done = 0;
       let lastPercent = -1;
 
-      // Opening cuma ~2 MB, jadi dituntaskan seluruhnya sebelum diputar. Dengan
-      // begitu jam pemutarannya tidak pernah perlu menunggu unduhan.
-      //
-      // Hanya diunduh ke cache disk, TIDAK di-decode: men-decode 154 frame
-      // 1280x720 sekaligus berarti menahan ~570 MB bitmap, langsung menghabisi
-      // HP RAM kecil. Decode-nya diserahkan ke jendela geser saat diputar.
+      // Hanya diunduh ke cache disk, TIDAK di-decode dan TIDAK disimpan:
+      // men-decode 865 frame sekaligus berarti menahan miliaran piksel bitmap
+      // dan langsung menghabisi HP RAM kecil. Decode-nya diserahkan ke jendela
+      // geser saat frame-nya benar-benar mau digambar — dan saat itu sudah tidak
+      // menyentuh jaringan lagi.
       await pool(jobs, DOWNLOAD_CONCURRENCY, async ({ layer, i }) => {
         if (cancelled) return;
         try {
@@ -383,18 +464,40 @@ export default function CanvasSequenceManager({
         const percent = Math.round((done / jobs.length) * 100);
         if (percent !== lastPercent) {
           lastPercent = percent;
-          cb.current.onBufferProgress?.(percent / 100);
+          cb.current.onLoadProgress?.(percent / 100);
         }
       });
       if (cancelled) return;
+      cb.current.onLoadProgress?.(1);
 
-      // Tunggu frame-frame awal benar-benar ter-decode sebelum jam mulai.
-      introLayers.forEach((layer, idx) => ensureWindow(stores[idx], layer, 0));
-      await waitReady(stores, introLayers, 4);
+      // Decode frame-frame pertama sebelum jam mulai. Yang ikut disiapkan bukan
+      // cuma opening, tapi juga segmen timeline yang mulai di detik 0 (outro):
+      // frame 0001 outro persis sama dengan frame terakhir opening, jadi kalau
+      // ia belum ter-decode saat opening habis, sambungannya berkedip kosong.
+      const waitFor: { store: LayerStore; indices: number[] }[] = [];
+      introLayers.forEach((layer, idx) => {
+        ensureWindow(stores[idx], layer, 0);
+        waitFor.push({ store: stores[idx], indices: firstIndices(layer, 4) });
+      });
+      timelineLayers.forEach((layer, idx) => {
+        if ((layer.startAt ?? 0) > 0) return;
+        const store = timelineStores.current[idx];
+        warmFirst(store, layer, 4);
+        waitFor.push({ store, indices: firstIndices(layer, 4) });
+      });
+      await waitReady(waitFor);
       if (cancelled) return;
 
-      cb.current.onBufferProgress?.(1);
-      setPhase("intro");
+      // Suara pembuka dipicu di sini, bukan saat bar loading penuh: frame
+      // pertama baru benar-benar digambar setelah decode selesai, dan suara yang
+      // mulai sebelum gambarnya terasa mendahului.
+      cb.current.onIntroStart?.();
+
+      if (introLayers.length === 0) {
+        paintTimelineStart();
+        setIntroDone(true);
+        return;
+      }
 
       const totalFrames = Math.max(...introLayers.map((l) => l.frameCount));
       const t0 = performance.now();
@@ -405,8 +508,8 @@ export default function CanvasSequenceManager({
         const frame = Math.floor(((now - t0) / 1000) * INTRO_FPS);
 
         if (frame >= totalFrames) {
+          paintTimelineStart();
           cb.current.onIntroComplete?.();
-          setPhase("hold");
           setIntroDone(true);
           return;
         }
@@ -437,68 +540,31 @@ export default function CanvasSequenceManager({
       cancelled = true;
       cancelAnimationFrame(rafId);
     };
-  }, [introLayers, indicesFor, urlFor, ensureWindow, releaseBefore, doDraw]);
+  }, [
+    introLayers,
+    timelineLayers,
+    indicesFor,
+    urlFor,
+    ensureWindow,
+    warmFirst,
+    firstIndices,
+    releaseBefore,
+    doDraw,
+    paintTimelineStart,
+  ]);
 
-  // ---- Tahap 2: unduh SEMUA frame timeline, jalan selagi opening diputar ----
+  // ---- Tahap 2: putar timeline, menyambung langsung setelah opening ----
+  // Sengaja bergantung pada `introDone` (sekali true, selamanya true) supaya
+  // setState mana pun di dalamnya tidak memicu effect ini dijalankan ulang dan
+  // membatalkan rAF-nya sendiri.
   useEffect(() => {
     if (timelineLayers.length === 0) return;
-    let cancelled = false;
-
-    const run = async () => {
-      await frameSetProbed.current;
-      // Menunggu opening mulai diputar dulu supaya request-nya tidak berebut
-      // bandwidth dengan unduhan opening.
-      while (!cancelled && phaseRef.current === "buffering") {
-        await sleep(80);
-      }
-      if (cancelled) return;
-
-      const jobs = timelineLayers.flatMap((layer) =>
-        indicesFor(layer).map((i) => ({ layer, i }))
-      );
-      let done = 0;
-      let lastPercent = -1;
-
-      // Hanya diunduh ke cache disk, TIDAK di-decode dan TIDAK disimpan. Ini
-      // yang memenuhi "semua aset sudah terunduh di awal" tanpa menahan ratusan
-      // bitmap di memori: decode baru terjadi saat frame-nya mau digambar, dan
-      // waktu itu sudah tidak menyentuh jaringan lagi.
-      await pool(jobs, DOWNLOAD_CONCURRENCY, async ({ layer, i }) => {
-        if (cancelled) return;
-        try {
-          const res = await fetch(urlFor(layer, i), { cache: "force-cache" });
-          await res.arrayBuffer();
-        } catch {
-          // Satu frame gagal tidak boleh menggantung seluruh animasi.
-        }
-        done++;
-        const percent = Math.round((done / jobs.length) * 100);
-        if (percent !== lastPercent) {
-          lastPercent = percent;
-          cb.current.onPreloadProgress?.(percent / 100);
-        }
-      });
-      if (cancelled) return;
-      cb.current.onPreloadProgress?.(1);
-      setAssetsReady(true);
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [timelineLayers, indicesFor, urlFor]);
-
-  // ---- Tahap 3: putar timeline ----
-  // Sengaja bergantung pada `introDone`/`assetsReady` (sekali true, selamanya
-  // true) dan BUKAN pada `phase`, supaya setPhase di dalamnya tidak memicu
-  // effect ini dijalankan ulang dan membatalkan rAF-nya sendiri.
-  useEffect(() => {
-    if (timelineLayers.length === 0) return;
-    if (!introDone || !assetsReady) return;
+    if (!introDone) return;
 
     const stores = timelineStores.current;
     const lastDrawn = timelineLayers.map(() => -1);
+    const cueList = cues ?? [];
+    const cueFired = cueList.map(() => false);
     const t0 = performance.now();
     let rafId = 0;
     let cancelled = false;
@@ -507,6 +573,15 @@ export default function CanvasSequenceManager({
       if (cancelled) return;
       const t = (now - t0) / 1000;
       let allDone = true;
+
+      // Dipicu dari jam yang sama dengan gambarnya. Kalau dipasang sebagai
+      // setTimeout terpisah, suara dan gambar punya dua jam yang bisa saling
+      // melenceng — terutama di HP, saat tab sempat di-throttle.
+      cueList.forEach((cue, idx) => {
+        if (cueFired[idx] || t < cue.at) return;
+        cueFired[idx] = true;
+        cb.current.onCue?.(cue.name);
+      });
 
       timelineLayers.forEach((layer, idx) => {
         const canvas = timelineCanvases.current[idx];
@@ -519,8 +594,14 @@ export default function CanvasSequenceManager({
         if (local < 0) {
           allDone = false;
           if (layer.hideBeforeStart) canvas.style.opacity = "0";
-          // Disiapkan lebih dulu supaya frame pertamanya tidak telat.
-          ensureWindow(store, layer, 0);
+          // Jendela penuh baru dibuka sesaat sebelum layer-nya mulai. Kalau
+          // dibuka sejak detik nol, ketiga sekuens gedung menahan window-nya
+          // masing-masing selama outro diputar — ratusan MB bitmap untuk frame
+          // yang baru dipakai belasan detik kemudian, dan itu persis yang
+          // menghabisi HP RAM kecil. Sebelum ambang itu cukup dua frame supaya
+          // frame pertamanya tidak telat.
+          if (local > -WARM_LEAD_SECONDS) ensureWindow(store, layer, 0);
+          else warmFirst(store, layer, 2);
           return;
         }
         canvas.style.opacity = "1";
@@ -558,16 +639,22 @@ export default function CanvasSequenceManager({
       rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
+    // Tick pertama dijalankan langsung, tidak lewat rAF. Canvas opening baru
+    // saja disembunyikan pada commit yang memicu effect ini; kalau menunggu rAF
+    // berikutnya, ada satu frame di mana opening sudah hilang tapi outro belum
+    // digambar — kedipan kosong di sambungan. tick() sendiri yang menjadwalkan
+    // rAF berikutnya, jadi tidak perlu dijadwalkan dua kali di sini.
+    tick(performance.now());
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
     };
   }, [
     introDone,
-    assetsReady,
     timelineLayers,
+    cues,
     ensureWindow,
+    warmFirst,
     releaseBefore,
     snapToStep,
     doDraw,
@@ -635,9 +722,9 @@ export default function CanvasSequenceManager({
     };
   }, []);
 
-  // Canvas opening tetap terlihat sampai timeline benar-benar mulai — itulah yang
-  // menahan frame terakhir opening selama unduhan belum penuh.
-  const introVisible = !(introDone && assetsReady);
+  // Canvas opening disembunyikan tepat saat timeline mengambil alih. Frame 0001
+  // outro sama dengan frame terakhir opening, jadi peralihannya tidak terlihat.
+  const introVisible = !introDone;
 
   return (
     <div className="fixed inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
@@ -691,20 +778,17 @@ async function pool<T>(
   await Promise.all(runners);
 }
 
-/** Tunggu `count` frame pertama tiap layer benar-benar siap dipakai. */
-async function waitReady(
-  stores: LayerStore[],
-  layers: AnimationLayer[],
-  count: number
-) {
+/**
+ * Tunggu index-index tertentu benar-benar siap dipakai. Yang ditunggu adalah
+ * daftar index eksplisit, bukan "n frame pertama": di HP frame dilompati 2-2,
+ * jadi index ganjil memang tidak akan pernah siap dan menunggunya berarti
+ * menggantung sampai batas percobaan habis.
+ */
+async function waitReady(targets: { store: LayerStore; indices: number[] }[]) {
   for (let attempt = 0; attempt < 200; attempt++) {
-    const semua = layers.every((layer, idx) => {
-      const store = stores[idx];
-      const target = Math.min(count, layer.frameCount);
-      let ready = 0;
-      for (let i = 0; i < target; i++) if (store.get(i)?.ready) ready++;
-      return ready >= target;
-    });
+    const semua = targets.every((t) =>
+      t.indices.every((i) => t.store.get(i)?.ready)
+    );
     if (semua) return;
     await sleep(50);
   }

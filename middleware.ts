@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import { INTRO_COOKIE, INTRO_VERSION } from "@/lib/intro";
 import { NextRequest, NextResponse } from "next/server";
 
 // Routes that don't require authentication
@@ -15,11 +14,18 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     return NextResponse.next();
   }
 
-  // Allow static assets & Next.js internals
+  // Allow static assets & Next.js internals.
+  //
+  // Media (mp3/mp4/…) HARUS ada di daftar ini. Tanpa itu, "/voice/welcome.mp3"
+  // dianggap route terlindungi dan dijawab redirect ke /login — permintaannya
+  // tetap 200, tapi isinya HTML halaman login, jadi audio-nya gagal diputar
+  // tanpa satu pun error yang kelihatan. Sama halnya untuk file .mp4 di public/.
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
-    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf)$/)
+    pathname.match(
+      /\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|mp3|m4a|ogg|opus|wav|mp4|webm)$/
+    )
   ) {
     return NextResponse.next();
   }
@@ -50,17 +56,15 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     if (isGuest && pathname === "/") {
       return NextResponse.redirect(new URL("/home", req.nextUrl));
     }
-    // The landing page is a one-time 38 MB scroll animation. Once someone has
-    // watched it, skip straight to the login form — reading the flag here rather
-    // than client-side means no flash of the landing page before the redirect.
-    // The cookie name carries a version, so bumping it replays the animation for
-    // everyone without having to clear anything in their browser.
-    if (
-      pathname === "/" &&
-      req.cookies.get(INTRO_COOKIE)?.value === INTRO_VERSION
-    ) {
-      return NextResponse.redirect(new URL("/login", req.nextUrl));
-    }
+    // The landing animation used to be gated behind a "tmuj_intro_seen" cookie
+    // so nobody watched it twice. That gate is gone on purpose: it is now meant
+    // to play on every visit to "/" — including right after signing out, which
+    // is why the logout button in components/Header.tsx lands here instead of
+    // on /login. Repeat plays cost almost nothing: every frame is served with a
+    // one-year immutable Cache-Control (see next.config.ts), so the second visit
+    // reads them from disk without touching the network, and a "Lewati animasi"
+    // button appears three seconds in for anyone who does not want to sit
+    // through it.
     return NextResponse.next();
   }
 
