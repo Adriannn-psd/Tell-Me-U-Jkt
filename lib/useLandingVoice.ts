@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 /**
  * Tiga potongan suara yang menempel di animasi landing page. Nama file dibuat
@@ -20,6 +20,25 @@ export type VoiceName = keyof typeof VOICE_SRC;
 const VOICE_NAMES = Object.keys(VOICE_SRC) as VoiceName[];
 
 type Pending = { name: VoiceName; at: number };
+
+/*
+ * State-nya milik DOKUMEN, bukan komponen — ini bagian terpenting dari file ini.
+ *
+ * Izin autoplay bersuara itu melekat pada dokumen (Chrome: "sudah pernah ada
+ * interaksi di halaman ini") dan, di iOS, pada ELEMEN yang pernah diputar dari
+ * dalam handler gesture. Kalau elemennya dibuat ulang setiap kali komponen
+ * landing dipasang, izin yang sudah didapat dari klik tombol logout ikut hangus,
+ * dan user disuruh mengetuk layar lagi padahal baru saja mengklik sesuatu.
+ *
+ * Karena itu elemennya hidup di module scope, dibuat sekali, dan dipakai ulang
+ * lintas navigasi selama dokumennya sama.
+ */
+let elements: Partial<Record<VoiceName, HTMLAudioElement>> | null = null;
+let pending: Pending | null = null;
+let primed = false;
+let unlockAttached = false;
+let blocked = false;
+const blockedListeners = new Set<() => void>();
 
 /**
  * Safari 16.4+ (iOS 17) memperkenalkan `navigator.audioSession`. Menyetelnya ke
@@ -47,155 +66,185 @@ function forceAudible(el: HTMLAudioElement) {
   el.volume = 1;
 }
 
-/**
- * Pemutar cue suara untuk animasi landing.
- *
- * Kenapa tidak sekadar `new Audio(src).play()`:
- *
- * 1. **Autoplay diblokir.** Halaman ini mulai memutar tanpa ada satu klik pun,
- *    jadi `play()` pertama hampir pasti ditolak di HP. Cue yang gagal disimpan
- *    sebagai `pending`, lalu sentuhan pertama di mana saja memutarnya —
- *    di-seek sejauh keterlambatannya, supaya suara tetap sinkron dengan gambar
- *    alih-alih mulai dari nol saat animasinya sudah jauh di depan.
- *
- * 2. **iOS meng-unlock per elemen, bukan per halaman.** Satu elemen yang sudah
- *    pernah diputar lewat gesture tidak membuat elemen lain ikut boleh
- *    berbunyi. Maka pada gesture pertama SEMUA elemen di-`play()` lalu langsung
- *    di-`pause()` — cuma untuk menandainya sebagai sudah diizinkan — supaya cue
- *    kedua dan ketiga nanti bisa dimulai sendiri tanpa sentuhan lagi.
- *
- * 3. **Tidak ada jalur bisu sama sekali.** `muted`, `defaultMuted`, dan `volume`
- *    ditegaskan setiap kali sebuah cue dimulai, dan sesi audio iOS diminta
- *    bertipe "playback" supaya tombol silent fisik iPhone tidak membungkamnya.
- *    Priming pun dilakukan bersuara, bukan muted — lihat alasannya di bawah.
- */
-export function useLandingVoice() {
-  const elements = useRef<Partial<Record<VoiceName, HTMLAudioElement>>>({});
-  const pending = useRef<Pending | null>(null);
-  const primed = useRef(false);
+function setBlocked(next: boolean) {
+  if (blocked === next) return;
+  blocked = next;
+  blockedListeners.forEach((listener) => listener());
+}
 
-  /** True selama ada cue yang tertahan karena browser menolak autoplay. */
-  const [blocked, setBlocked] = useState(false);
+function ensureElements() {
+  if (elements) return elements;
 
-  useEffect(() => {
-    preferPlaybackSession();
+  preferPlaybackSession();
 
-    const created: Partial<Record<VoiceName, HTMLAudioElement>> = {};
-    VOICE_NAMES.forEach((name) => {
-      const el = new Audio(VOICE_SRC[name]);
-      el.preload = "auto";
-      // Tidak pakai loop dan tidak pakai autoplay: tiap cue diputar sekali,
-      // tepat saat segmen animasinya mulai.
-      forceAudible(el);
-      el.load();
-      created[name] = el;
-    });
-    elements.current = created;
-
-    return () => {
-      Object.values(created).forEach((el) => {
-        el.pause();
-        // Melepas sumbernya menghentikan unduhan yang mungkin masih jalan saat
-        // user menekan "Lewati" di tengah animasi.
-        el.src = "";
-      });
-      elements.current = {};
-      pending.current = null;
-    };
-  }, []);
-
-  const play = useCallback((name: VoiceName) => {
-    const el = elements.current[name];
-    if (!el) return;
-    // Ditegaskan ulang tiap kali, bukan cuma saat dibuat: ekstensi browser,
-    // kontrol media OS, dan tab-mute bawaan browser bisa mengubah nilai ini di
-    // belakang kode, dan gejalanya sama seperti audio yang gagal dimuat.
+  const created: Partial<Record<VoiceName, HTMLAudioElement>> = {};
+  VOICE_NAMES.forEach((name) => {
+    const el = new Audio(VOICE_SRC[name]);
+    // preload "auto" walaupun elemennya mungkin dibuat dari tombol logout: file
+    // yang diminta di sini persis file yang dibutuhkan satu detik kemudian.
+    el.preload = "auto";
     forceAudible(el);
-    el.currentTime = 0;
+    el.load();
+    created[name] = el;
+  });
+
+  elements = created;
+  attachUnlock();
+  return elements;
+}
+
+/**
+ * Sentuhan/klik/tombol apa pun di dokumen ini dianggap izin: cue yang tertahan
+ * dibunyikan, dan semua elemen ditandai boleh berbunyi.
+ *
+ * Listener-nya sengaja tidak pernah dilepas — umurnya seumur dokumen, sama
+ * seperti izin audionya sendiri, dan melepasnya saat komponen landing dilepas
+ * justru membuang izin yang masih berguna kalau user kembali ke "/" tanpa
+ * memuat ulang halaman.
+ */
+function attachUnlock() {
+  if (unlockAttached || typeof window === "undefined") return;
+  unlockAttached = true;
+
+  const unlock = () => {
+    primeLandingVoice();
+
+    const waiting = pending;
+    pending = null;
+    setBlocked(false);
+    if (!waiting || !elements) return;
+
+    const el = elements[waiting.name];
+    if (!el) return;
+    const late = (performance.now() - waiting.at) / 1000;
+    // Sudah lewat durasinya — memutarnya sekarang cuma jadi suara nyasar di
+    // atas segmen animasi yang salah.
+    if (Number.isFinite(el.duration) && late >= el.duration) return;
+    forceAudible(el);
+    el.currentTime = Math.max(0, late);
+    el.play().catch(() => {});
+  };
+
+  // touchstart ikut didengarkan selain pointerdown: di sebagian WebView Android
+  // lama pointer event tidak dihitung sebagai gesture yang mengizinkan audio.
+  window.addEventListener("pointerdown", unlock);
+  window.addEventListener("touchstart", unlock, { passive: true });
+  window.addEventListener("keydown", unlock);
+}
+
+/**
+ * Menukar satu gesture yang SUDAH terjadi menjadi izin audio, tanpa mengeluarkan
+ * suara apa pun.
+ *
+ * Dipanggil dari dalam handler klik — misalnya tombol logout di
+ * components/Header.tsx — sebelum halaman berpindah ke "/". Karena perpindahannya
+ * soft navigation (dokumennya tidak diganti), izin yang didapat di sini masih
+ * berlaku saat animasi mulai, sehingga suara pembuka bisa langsung berbunyi
+ * tanpa user perlu mengetuk apa pun lagi.
+ *
+ * Harus dipanggil SINKRON di dalam handler: iOS cuma menghitung `play()` yang
+ * terjadi di dalam gesture, bukan yang menyusul setelah `await`.
+ */
+export function primeLandingVoice() {
+  const els = ensureElements();
+  preferPlaybackSession();
+  if (primed) return;
+  primed = true;
+
+  VOICE_NAMES.forEach((name) => {
+    const el = els[name];
+    if (!el) return;
+    // Yang sedang berbunyi jangan disentuh.
+    if (!el.paused) return;
+    // Priming HARUS bersuara. Memutarnya dalam keadaan muted memang lolos tanpa
+    // terdengar, tapi di iOS izin yang didapat pun cuma untuk pemutaran muted —
+    // cue berikutnya akan ditolak lagi.
+    forceAudible(el);
     el.play().then(
       () => {
-        pending.current = null;
-        setBlocked(false);
+        el.pause();
+        el.currentTime = 0;
       },
       () => {
-        // Cue terbaru yang menang: kalau user baru menyentuh layar di detik ke-13,
-        // yang pantas dibunyikan adalah suara gedung, bukan sambutan pembuka.
-        pending.current = { name, at: performance.now() };
-        setBlocked(true);
+        // Gagal berarti belum ada izin sama sekali; biarkan gesture berikutnya
+        // mencoba lagi, jangan dianggap sudah beres.
+        primed = false;
       }
     );
-  }, []);
+  });
+}
 
-  useEffect(() => {
-    const unlock = () => {
-      // Sesi audio disetel lagi di dalam gesture: di iOS penyetelan sebelum ada
-      // interaksi kadang tidak digubris.
-      preferPlaybackSession();
-
-      const waiting = pending.current;
-      pending.current = null;
+function playVoice(name: VoiceName) {
+  const els = ensureElements();
+  const el = els[name];
+  if (!el) return;
+  // Ditegaskan ulang tiap kali, bukan cuma saat dibuat: ekstensi browser,
+  // kontrol media OS, dan tab-mute bawaan browser bisa mengubah nilai ini di
+  // belakang kode, dan gejalanya sama seperti audio yang gagal dimuat.
+  forceAudible(el);
+  el.currentTime = 0;
+  el.play().then(
+    () => {
+      pending = null;
       setBlocked(false);
+    },
+    () => {
+      // Cue terbaru yang menang: kalau user baru menyentuh layar di detik ke-13,
+      // yang pantas dibunyikan adalah suara gedung, bukan sambutan pembuka.
+      pending = { name, at: performance.now() };
+      setBlocked(true);
+    }
+  );
+}
 
-      if (!primed.current) {
-        primed.current = true;
-        VOICE_NAMES.forEach((name) => {
-          const el = elements.current[name];
-          if (!el) return;
-          // Yang sedang berbunyi atau yang justru mau dibunyikan jangan disentuh.
-          if (!el.paused) return;
-          if (waiting && name === waiting.name) return;
-          // Priming HARUS bersuara. Memutarnya dalam keadaan muted memang lolos
-          // tanpa terdengar, tapi di iOS izin yang didapat pun cuma untuk
-          // pemutaran muted — cue berikutnya akan ditolak lagi.
-          forceAudible(el);
-          el.play().then(
-            () => {
-              el.pause();
-              el.currentTime = 0;
-            },
-            () => {}
-          );
-        });
-      }
+function stopAllVoices() {
+  pending = null;
+  setBlocked(false);
+  if (!elements) return;
+  Object.values(elements).forEach((el) => {
+    el.pause();
+    el.currentTime = 0;
+  });
+}
 
-      if (!waiting) return;
-      const el = elements.current[waiting.name];
-      if (!el) return;
-      const late = (performance.now() - waiting.at) / 1000;
-      // Sudah lewat durasinya — memutarnya sekarang cuma jadi suara nyasar di
-      // atas segmen animasi yang salah.
-      if (Number.isFinite(el.duration) && late >= el.duration) return;
-      forceAudible(el);
-      el.currentTime = Math.max(0, late);
-      el.play().catch(() => {});
-    };
+/**
+ * Langganan ke state `blocked` yang hidup di module scope. Dibaca lewat
+ * useSyncExternalStore, bukan useState + setState di dalam effect: nilainya milik
+ * dokumen, bisa sudah berubah sebelum komponennya dipasang, dan React perlu tahu
+ * cara membacanya kapan pun — termasuk saat render di server (selalu false, karena
+ * di sana belum ada elemen audio sama sekali).
+ */
+function subscribeBlocked(onChange: () => void) {
+  blockedListeners.add(onChange);
+  return () => {
+    blockedListeners.delete(onChange);
+  };
+}
 
-    // Listener dibiarkan terpasang, tidak `once`: percobaan unlock pertama bisa
-    // saja tetap ditolak, dan cue berikutnya masih butuh sentuhan.
-    //
-    // `touchstart` ikut didengarkan walau `pointerdown` seharusnya menutupinya:
-    // di beberapa WebView Android lama pointer event tidak dianggap gesture yang
-    // sah untuk mengizinkan audio, sementara touch event iya. Pemanggilan
-    // gandanya tidak berbahaya, dijaga oleh flag `primed`.
-    window.addEventListener("pointerdown", unlock);
-    window.addEventListener("touchstart", unlock, { passive: true });
-    window.addEventListener("keydown", unlock);
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("touchstart", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
+const readBlocked = () => blocked;
+const readBlockedOnServer = () => false;
+
+/**
+ * Pemutar cue suara untuk animasi landing. Elemennya tidak dibuat maupun dibuang
+ * oleh hook ini — lihat catatan module scope di atas; hook ini cuma menyalakan
+ * mesinnya dan ikut mendengar apakah ada cue yang tertahan.
+ *
+ * Audio TIDAK dihentikan saat komponennya dilepas, karena setiap jalan keluar
+ * dari halaman ini (tombol lewati, pindah otomatis ke /login) sudah memanggil
+ * `stopAll` sendiri, sementara menghentikannya di cleanup akan ikut membunuh
+ * suara yang baru mulai pada remount ganda React di mode development.
+ */
+export function useLandingVoice() {
+  const blockedState = useSyncExternalStore(subscribeBlocked, readBlocked, readBlockedOnServer);
+
+  // Elemennya disiapkan (dan listener unlock dipasang) begitu halaman landing
+  // dipasang, kalau tombol logout belum melakukannya lebih dulu.
+  useEffect(() => {
+    ensureElements();
   }, []);
 
-  /** Hentikan semuanya — dipakai saat animasi dilewati. */
-  const stopAll = useCallback(() => {
-    pending.current = null;
-    setBlocked(false);
-    Object.values(elements.current).forEach((el) => {
-      el.pause();
-      el.currentTime = 0;
-    });
-  }, []);
+  const play = useCallback((name: VoiceName) => playVoice(name), []);
+  const stopAll = useCallback(() => stopAllVoices(), []);
 
-  return { play, stopAll, blocked };
+  return { play, stopAll, blocked: blockedState };
 }
