@@ -22,6 +22,32 @@ const VOICE_NAMES = Object.keys(VOICE_SRC) as VoiceName[];
 type Pending = { name: VoiceName; at: number };
 
 /**
+ * Safari 16.4+ (iOS 17) memperkenalkan `navigator.audioSession`. Menyetelnya ke
+ * "playback" membuat audio halaman ini MENGABAIKAN tombol silent fisik di iPhone
+ * — tanpa itu, HP yang ring switch-nya digeser ke silent tetap membisukan
+ * elemen <audio> walaupun kodenya sudah benar dan volumenya penuh. Di browser
+ * yang belum punya API-nya, blok ini tidak melakukan apa-apa.
+ */
+type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
+
+function preferPlaybackSession() {
+  try {
+    const nav = navigator as AudioSessionNavigator;
+    if (nav.audioSession) nav.audioSession.type = "playback";
+  } catch {
+    // Beberapa browser mengekspos propertinya tapi menolak nilainya. Bukan
+    // masalah: ini cuma pengerasan, bukan syarat suara bisa keluar.
+  }
+}
+
+/** Tidak ada jalur "bisu" di halaman ini: tiap elemen dipaksa penuh volume. */
+function forceAudible(el: HTMLAudioElement) {
+  el.muted = false;
+  el.defaultMuted = false;
+  el.volume = 1;
+}
+
+/**
  * Pemutar cue suara untuk animasi landing.
  *
  * Kenapa tidak sekadar `new Audio(src).play()`:
@@ -37,6 +63,11 @@ type Pending = { name: VoiceName; at: number };
  *    berbunyi. Maka pada gesture pertama SEMUA elemen di-`play()` lalu langsung
  *    di-`pause()` — cuma untuk menandainya sebagai sudah diizinkan — supaya cue
  *    kedua dan ketiga nanti bisa dimulai sendiri tanpa sentuhan lagi.
+ *
+ * 3. **Tidak ada jalur bisu sama sekali.** `muted`, `defaultMuted`, dan `volume`
+ *    ditegaskan setiap kali sebuah cue dimulai, dan sesi audio iOS diminta
+ *    bertipe "playback" supaya tombol silent fisik iPhone tidak membungkamnya.
+ *    Priming pun dilakukan bersuara, bukan muted — lihat alasannya di bawah.
  */
 export function useLandingVoice() {
   const elements = useRef<Partial<Record<VoiceName, HTMLAudioElement>>>({});
@@ -47,12 +78,15 @@ export function useLandingVoice() {
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
+    preferPlaybackSession();
+
     const created: Partial<Record<VoiceName, HTMLAudioElement>> = {};
     VOICE_NAMES.forEach((name) => {
       const el = new Audio(VOICE_SRC[name]);
       el.preload = "auto";
       // Tidak pakai loop dan tidak pakai autoplay: tiap cue diputar sekali,
       // tepat saat segmen animasinya mulai.
+      forceAudible(el);
       el.load();
       created[name] = el;
     });
@@ -73,6 +107,10 @@ export function useLandingVoice() {
   const play = useCallback((name: VoiceName) => {
     const el = elements.current[name];
     if (!el) return;
+    // Ditegaskan ulang tiap kali, bukan cuma saat dibuat: ekstensi browser,
+    // kontrol media OS, dan tab-mute bawaan browser bisa mengubah nilai ini di
+    // belakang kode, dan gejalanya sama seperti audio yang gagal dimuat.
+    forceAudible(el);
     el.currentTime = 0;
     el.play().then(
       () => {
@@ -90,6 +128,10 @@ export function useLandingVoice() {
 
   useEffect(() => {
     const unlock = () => {
+      // Sesi audio disetel lagi di dalam gesture: di iOS penyetelan sebelum ada
+      // interaksi kadang tidak digubris.
+      preferPlaybackSession();
+
       const waiting = pending.current;
       pending.current = null;
       setBlocked(false);
@@ -102,6 +144,10 @@ export function useLandingVoice() {
           // Yang sedang berbunyi atau yang justru mau dibunyikan jangan disentuh.
           if (!el.paused) return;
           if (waiting && name === waiting.name) return;
+          // Priming HARUS bersuara. Memutarnya dalam keadaan muted memang lolos
+          // tanpa terdengar, tapi di iOS izin yang didapat pun cuma untuk
+          // pemutaran muted — cue berikutnya akan ditolak lagi.
+          forceAudible(el);
           el.play().then(
             () => {
               el.pause();
@@ -119,16 +165,24 @@ export function useLandingVoice() {
       // Sudah lewat durasinya — memutarnya sekarang cuma jadi suara nyasar di
       // atas segmen animasi yang salah.
       if (Number.isFinite(el.duration) && late >= el.duration) return;
+      forceAudible(el);
       el.currentTime = Math.max(0, late);
       el.play().catch(() => {});
     };
 
     // Listener dibiarkan terpasang, tidak `once`: percobaan unlock pertama bisa
     // saja tetap ditolak, dan cue berikutnya masih butuh sentuhan.
+    //
+    // `touchstart` ikut didengarkan walau `pointerdown` seharusnya menutupinya:
+    // di beberapa WebView Android lama pointer event tidak dianggap gesture yang
+    // sah untuk mengizinkan audio, sementara touch event iya. Pemanggilan
+    // gandanya tidak berbahaya, dijaga oleh flag `primed`.
     window.addEventListener("pointerdown", unlock);
+    window.addEventListener("touchstart", unlock, { passive: true });
     window.addEventListener("keydown", unlock);
     return () => {
       window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
       window.removeEventListener("keydown", unlock);
     };
   }, []);
