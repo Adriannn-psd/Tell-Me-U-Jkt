@@ -8,10 +8,17 @@ import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequen
 import { markIntroSeen } from "@/lib/intro";
 
 /**
- * Semua sekuens diputar 30fps, termasuk telkom yang aslinya dirender 24fps —
- * memotong ~3 detik dari total tanpa terasa dipercepat.
+ * Opening dan outro diputar 30fps, sesuai rendernya.
  */
 const FPS = 30;
+
+/**
+ * Gedung diputar lebih cepat lagi. Sumbernya dirender 24fps; di 45fps ia jalan
+ * 1,875x — cukup untuk memotong bagian gedung dari 14,0 detik jadi 9,3 detik,
+ * tapi masih terbaca sebagai gedung yang tumbuh, bukan yang meloncat. Satu
+ * angka ini yang mengatur ketiganya; naikkan kalau masih terasa lambat.
+ */
+const TELKOM_FPS = 45;
 
 const OUTRO_FRAMES = 115;
 const T1_FRAMES = 179;
@@ -24,15 +31,18 @@ const T3_FRAMES = 240;
  * opening selesai.
  *
  *   outro     0 s      -> 3,83 s
- *   telkom 2  3,83 s   -> 9,73 s  lalu FREEZE menunggu telkom 3
- *   telkom 3  3,83 s   -> 11,83 s
- *   telkom 1  11,83 s  -> 17,80 s   (baru muncul setelah 2 & 3 sampai akhir)
+ *   telkom 2  3,83 s   -> 7,77 s   lalu FREEZE menunggu telkom 3
+ *   telkom 3  3,83 s   -> 9,17 s
+ *   telkom 1  9,17 s   -> 13,14 s  (baru muncul setelah 2 & 3 sampai akhir)
  *
- * Ditambah opening 5,13 s, totalnya ~23 detik sampai pop up.
+ * Ditambah opening 5,13 s dan jeda 3 detik sebelum pop up, totalnya ~21 detik.
  */
 const OUTRO_AT = 0;
 const SIDES_AT = OUTRO_FRAMES / FPS;
-const CENTER_AT = SIDES_AT + Math.max(T2_FRAMES, T3_FRAMES) / FPS;
+const CENTER_AT = SIDES_AT + Math.max(T2_FRAMES, T3_FRAMES) / TELKOM_FPS;
+
+/** Jeda setelah ketiga gedung beku, sebelum pop up menutupinya. */
+const POPUP_DELAY_MS = 3000;
 
 /** Folder outro & telkom 1-indexed: index internal 0 → file 0001.webp. */
 const oneIndexed = (index: number) => `${(index + 1).toString().padStart(4, "0")}.webp`;
@@ -106,7 +116,7 @@ const TIMELINE_LAYERS: AnimationLayer[] = [
     zIndex: 22,
     fit: "contain",
     startAt: SIDES_AT,
-    fps: FPS,
+    fps: TELKOM_FPS,
     hideBeforeStart: true,
     className:
       "!w-[117.3vw] !h-[66vw] !left-[-35vw] !top-[17.8vh] md:!w-[48vw] md:!h-[27vw] md:!left-[0vw] md:!top-auto md:!bottom-[calc(38vw_-_18.5vh_-_45px)]",
@@ -121,7 +131,7 @@ const TIMELINE_LAYERS: AnimationLayer[] = [
     fit: "contain",
     flipX: true,
     startAt: SIDES_AT,
-    fps: FPS,
+    fps: TELKOM_FPS,
     hideBeforeStart: true,
     className:
       "!w-[103.6vw] !h-[58.3vw] !right-[-43.5vw] !top-[21.8vh] md:!w-[46vw] md:!h-[25.9vw] md:!right-[-7vw] md:!top-auto md:!bottom-[calc(37.43vw_-_18.5vh_-_45px)]",
@@ -134,7 +144,7 @@ const TIMELINE_LAYERS: AnimationLayer[] = [
     zIndex: 30,
     fit: "contain",
     startAt: CENTER_AT,
-    fps: FPS,
+    fps: TELKOM_FPS,
     hideBeforeStart: true,
     className:
       "!w-[264vw] !h-[148.5vw] !left-[-82vw] !bottom-[-1vh] md:!w-[101vw] md:!h-[56.8vw] md:!left-[-0.5vw] md:!bottom-[-18.5vh]",
@@ -142,9 +152,7 @@ const TIMELINE_LAYERS: AnimationLayer[] = [
 ];
 
 function LandingContent() {
-  const [buffer, setBuffer] = useState(0);
-  const [introDone, setIntroDone] = useState(false);
-  const [preload, setPreload] = useState(0);
+  const [load, setLoad] = useState(0);
   const [finished, setFinished] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
@@ -163,16 +171,15 @@ function LandingContent() {
     };
   }, []);
 
-  // Pop up menyusul sedetik setelah animasi beku, supaya komposisi ketiga gedung
-  // sempat terbaca dulu sebelum ditutupi.
+  // Pop up menyusul beberapa detik setelah animasi beku, supaya komposisi
+  // ketiga gedung sempat dilihat utuh dulu sebelum ditutupi.
   useEffect(() => {
     if (!finished) return;
-    const timer = window.setTimeout(() => setShowPopup(true), 900);
+    const timer = window.setTimeout(() => setShowPopup(true), POPUP_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [finished]);
 
-  const showLoader = !introDone && buffer < 1;
-  const showPreload = introDone && preload < 1;
+  const showLoader = load < 1;
 
   return (
     <main className="page relative w-full h-[100dvh] overflow-hidden" suppressHydrationWarning>
@@ -201,10 +208,8 @@ function LandingContent() {
         <CanvasSequenceManager
           introLayers={INTRO_LAYERS}
           timelineLayers={TIMELINE_LAYERS}
-          onBufferProgress={setBuffer}
-          onPreloadProgress={setPreload}
+          onLoadProgress={setLoad}
           onIntroComplete={() => {
-            setIntroDone(true);
             // Ditandai di sini, bukan di akhir pop up: begitu bagian branding
             // sudah ditonton, reload berikutnya mendarat langsung di /login
             // alih-alih memutar 154 frame lagi.
@@ -214,37 +219,23 @@ function LandingContent() {
         />
       </div>
 
-      {/* Bar loading tipis selama frame opening diunduh */}
+      {/*
+        Satu bar loading untuk SEMUA sekuens. Dulu ada dua — opening diunduh
+        dan diputar dulu sementara sisanya menyusul di belakang — jadi loading
+        terlihat dua kali, dan kalau unduhan kedua kalah cepat frame terakhir
+        opening tertahan diam. Sekarang sekali tunggu di depan; setelah bar ini
+        penuh tidak ada lagi jeda sampai pop up.
+      */}
       {showLoader && (
         <div className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2">
           <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
             <div
               className="h-full bg-[var(--color-brand-red)] transition-[width] duration-300"
-              style={{ width: `${Math.round(buffer * 100)}%` }}
+              style={{ width: `${Math.round(load * 100)}%` }}
             />
           </div>
           <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
-            Memuat {Math.round(buffer * 100)}%
-          </span>
-        </div>
-      )}
-
-      {/*
-        Bar kedua: mengunduh SELURUH frame outro + gedung selagi opening diputar.
-        Kalau opening habis sebelum unduhannya penuh, frame terakhir opening
-        ditahan sampai 100% — lebih baik menunggu sebentar daripada animasinya
-        jalan setengah terunduh lalu jadi slow-mo.
-      */}
-      {showPreload && (
-        <div className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2">
-          <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[var(--color-brand-red)] transition-[width] duration-300"
-              style={{ width: `${Math.round(preload * 100)}%` }}
-            />
-          </div>
-          <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
-            Menyiapkan animasi {Math.round(preload * 100)}%
+            Menyiapkan animasi {Math.round(load * 100)}%
           </span>
         </div>
       )}
