@@ -35,7 +35,7 @@ export default function ProfileLockOverlay({ onClose, missingInfo }: ProfileLock
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in pointer-events-auto"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto"
       onClick={onClose}
     >
       <div 

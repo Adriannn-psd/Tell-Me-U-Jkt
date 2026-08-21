@@ -58,7 +58,7 @@ export default function TaskDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
       <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
       
