@@ -2,27 +2,37 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense, useEffect, useLayoutEffect, useState } from "react";
-import { motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
+import { Suspense, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
 import { markIntroSeen } from "@/lib/intro";
 
 /**
- * Panjang area scroll yang mendorong seluruh sekuens. Di viewport 1080px ini
- * jadi ~7-9 px scroll per frame — terasa perlahan, bukan melesat.
+ * Semua sekuens diputar 30fps, termasuk telkom yang aslinya dirender 24fps —
+ * memotong ~3 detik dari total tanpa terasa dipercepat.
  */
-const SCROLL_HEIGHT = "560vh";
+const FPS = 30;
 
-/** Titik-titik di garis waktu scroll (0..1 dari seluruh area di atas). */
-const OUTRO_END = 0.17;
-const SIDE_START = 0.19; // telkom 2 & 3 mulai merakit
-const SIDE_END = 0.55; // keduanya selesai serentak lalu freeze
-const CENTER_START = 0.57; // telkom 1 baru muncul setelah itu
-const CENTER_END = 0.9;
-const BLUR_START = 0.9;
-const BLUR_END = 0.96;
-const POPUP_AT = 0.94;
-const HINT_HIDE_AT = 0.02;
+const OUTRO_FRAMES = 115;
+const T1_FRAMES = 179;
+const T2_FRAMES = 177;
+const T3_FRAMES = 240;
+
+/**
+ * Titik mulai tiap segmen, dihitung dari jumlah frame supaya tidak pernah
+ * melenceng kalau salah satu sekuens diganti. Jam timeline mulai dari 0 saat
+ * opening selesai.
+ *
+ *   outro     0 s      -> 3,83 s
+ *   telkom 2  3,83 s   -> 9,73 s  lalu FREEZE menunggu telkom 3
+ *   telkom 3  3,83 s   -> 11,83 s
+ *   telkom 1  11,83 s  -> 17,80 s   (baru muncul setelah 2 & 3 sampai akhir)
+ *
+ * Ditambah opening 5,13 s, totalnya ~23 detik sampai pop up.
+ */
+const OUTRO_AT = 0;
+const SIDES_AT = OUTRO_FRAMES / FPS;
+const CENTER_AT = SIDES_AT + Math.max(T2_FRAMES, T3_FRAMES) / FPS;
 
 /** Folder outro & telkom 1-indexed: index internal 0 → file 0001.webp. */
 const oneIndexed = (index: number) => `${(index + 1).toString().padStart(4, "0")}.webp`;
@@ -39,6 +49,7 @@ const INTRO_LAYERS: AnimationLayer[] = [
     fit: "cover",
     mobileFit: "contain", // jangan crop logonya di layar tegak
     noDecimate: true, // cuma 2 MB, dan playback 30fps harus mulus
+    fps: FPS,
   },
 ];
 
@@ -73,32 +84,29 @@ const INTRO_LAYERS: AnimationLayer[] = [
 // di 97.8% tinggi frame, bukan 100% seperti telkom 2 — angkanya ikut tingginya,
 // jadi kalau ukuran desktop telkom 3 diubah, suku itu perlu dihitung ulang:
 // 38vw - 2.2% x (tinggi barunya dalam vw).
-const SCROLL_LAYERS: AnimationLayer[] = [
+const TIMELINE_LAYERS: AnimationLayer[] = [
   {
     // Menghilangkan logo Tell Me U JKT. Frame 0001-nya persis sama dengan frame
     // terakhir opening, jadi peralihannya tidak kelihatan.
     folderPath: "/outro",
-    frameCount: 115, // 0001.webp .. 0115.webp
+    frameCount: OUTRO_FRAMES, // 0001.webp .. 0115.webp
     filenameFormat: oneIndexed,
     zIndex: 20,
     fit: "cover",
     mobileFit: "contain",
-    startProgress: 0,
-    endProgress: OUTRO_END,
+    startAt: OUTRO_AT,
+    fps: FPS,
     hideAfterEnd: true,
-    // Dipanaskan seluruhnya: ini yang dipakai persis saat scroll pertama, dan
-    // frame-nya paling ringan (~18 KB) jadi murah dituntaskan lebih dulu.
-    warmupFrames: 115,
   },
   {
     // Menara putih, kiri atas.
     folderPath: "/telkom 2",
-    frameCount: 177,
+    frameCount: T2_FRAMES,
     filenameFormat: oneIndexed,
     zIndex: 22,
     fit: "contain",
-    startProgress: SIDE_START,
-    endProgress: SIDE_END,
+    startAt: SIDES_AT,
+    fps: FPS,
     hideBeforeStart: true,
     className:
       "!w-[117.3vw] !h-[66vw] !left-[-35vw] !top-[17.8vh] md:!w-[48vw] md:!h-[27vw] md:!left-[0vw] md:!top-auto md:!bottom-[calc(38vw_-_18.5vh_-_45px)]",
@@ -107,13 +115,13 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     // Gedung kaca, kanan atas. Sumbernya menghadap ke kanan, jadi dicermin
     // supaya kanopinya mengarah ke dalam sesuai layout.
     folderPath: "/telkom 3",
-    frameCount: 240,
+    frameCount: T3_FRAMES,
     filenameFormat: oneIndexed,
     zIndex: 21,
     fit: "contain",
     flipX: true,
-    startProgress: SIDE_START,
-    endProgress: SIDE_END,
+    startAt: SIDES_AT,
+    fps: FPS,
     hideBeforeStart: true,
     className:
       "!w-[103.6vw] !h-[58.3vw] !right-[-43.5vw] !top-[21.8vh] md:!w-[46vw] md:!h-[25.9vw] md:!right-[-7vw] md:!top-auto md:!bottom-[calc(37.43vw_-_18.5vh_-_45px)]",
@@ -121,12 +129,12 @@ const SCROLL_LAYERS: AnimationLayer[] = [
   {
     // Gedung merah lebar di tengah, muncul paling akhir dan paling depan.
     folderPath: "/telkom 1",
-    frameCount: 179,
+    frameCount: T1_FRAMES,
     filenameFormat: oneIndexed,
     zIndex: 30,
     fit: "contain",
-    startProgress: CENTER_START,
-    endProgress: CENTER_END,
+    startAt: CENTER_AT,
+    fps: FPS,
     hideBeforeStart: true,
     className:
       "!w-[264vw] !h-[148.5vw] !left-[-82vw] !bottom-[-1vh] md:!w-[101vw] md:!h-[56.8vw] md:!left-[-0.5vw] md:!bottom-[-18.5vh]",
@@ -136,47 +144,14 @@ const SCROLL_LAYERS: AnimationLayer[] = [
 function LandingContent() {
   const [buffer, setBuffer] = useState(0);
   const [introDone, setIntroDone] = useState(false);
-  const [warmup, setWarmup] = useState(0);
-  const [warmupDone, setWarmupDone] = useState(false);
-  const [hintHidden, setHintHidden] = useState(false);
+  const [preload, setPreload] = useState(0);
+  const [finished, setFinished] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
-  const { scrollYProgress } = useScroll();
-
-  // Blur digerakkan langsung oleh motion value, bukan state: kalau lewat state,
-  // setiap event scroll memicu re-render halaman.
-  //
-  // `blurGate` menahannya di 0 selama opening. Gerbangnya harus berupa motion
-  // value juga, bukan percabangan di JSX: mengganti style.filter dari string
-  // statis ke motion value setelah render pertama tidak pernah ter-bind, jadi
-  // blur-nya diam di blur(0px) selamanya.
-  const blurGate = useMotionValue(0);
-  const blurPx = useTransform(scrollYProgress, [BLUR_START, BLUR_END], [0, 10], {
-    clamp: true,
-  });
-  const blurFilter = useTransform(
-    [blurPx, blurGate],
-    ([px, gate]: number[]) => `blur(${px * gate}px)`
-  );
-
-  // Animasi ini dipetakan ke posisi scroll, jadi mendarat di tengah halaman
-  // sama dengan mendarat di tengah animasi. Selalu mulai dari atas.
-  //
-  // useLayoutEffect, bukan useEffect: browser memulihkan posisi scroll sebelum
-  // effect mana pun jalan, dan ini mengembalikannya sebelum frame pertama
-  // dilukis supaya tidak terlihat melompat.
-  useLayoutEffect(() => {
-    window.history.scrollRestoration = "manual";
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
-
-  // Scroll dikunci sampai frame sekuens gedung punya cukup runway — bukan cuma
-  // sampai opening selesai. Kalau dibuka lebih awal, user menyusul unduhan dan
-  // animasi gedungnya tersendat. Dipasang di html sekaligus body: overflow
-  // hidden di body saja masih menyisakan html sebagai elemen yang bisa
-  // di-scroll di sebagian browser.
+  // Halaman ini tidak punya apa pun untuk di-scroll. Dulu tingginya 560vh untuk
+  // mendorong animasi; sekarang animasinya jalan sendiri, jadi scrollbar-nya
+  // dimatikan supaya tidak ada area kosong yang bisa digeser.
   useEffect(() => {
-    if (warmupDone) return;
     const root = document.documentElement;
     const prevRoot = root.style.overflow;
     const prevBody = document.body.style.overflow;
@@ -186,27 +161,21 @@ function LandingContent() {
       root.style.overflow = prevRoot;
       document.body.style.overflow = prevBody;
     };
-  }, [warmupDone]);
+  }, []);
 
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    // Selama opening, apa pun yang dibaca dari posisi scroll diabaikan. Browser
-    // sempat memulihkan posisi scroll kunjungan sebelumnya sebelum kode ini
-    // mengembalikannya ke atas, dan framer sudah mengukur posisi itu — tanpa
-    // gerbang ini, satu nilai palsu di awal cukup untuk mematikan ikon scroll
-    // (dan sempat memunculkan pop up) padahal user belum menggeser apa pun.
-    if (!introDone) return;
-    // React membatalkan re-render kalau nilainya sama, jadi kedua setState ini
-    // hanya benar-benar bekerja saat ambangnya dilewati.
-    setHintHidden((hidden) => hidden || latest > HINT_HIDE_AT);
-    setShowPopup(latest >= POPUP_AT);
-  });
+  // Pop up menyusul sedetik setelah animasi beku, supaya komposisi ketiga gedung
+  // sempat terbaca dulu sebelum ditutupi.
+  useEffect(() => {
+    if (!finished) return;
+    const timer = window.setTimeout(() => setShowPopup(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [finished]);
 
   const showLoader = !introDone && buffer < 1;
-  const showWarmup = introDone && !warmupDone;
-  const showHint = introDone && warmupDone && !hintHidden;
+  const showPreload = introDone && preload < 1;
 
   return (
-    <main className="page relative" suppressHydrationWarning>
+    <main className="page relative w-full h-[100dvh] overflow-hidden" suppressHydrationWarning>
       {/* Latar sama dengan halaman /login */}
       <div
         className="fixed inset-0 -z-10"
@@ -219,37 +188,38 @@ function LandingContent() {
         }}
       />
 
-      {/* Semua canvas dibungkus satu wrapper supaya bisa diblur sekaligus di akhir */}
-      <motion.div className="fixed inset-0 z-0" style={{ filter: blurFilter }}>
+      {/*
+        Semua canvas dibungkus satu wrapper supaya bisa diblur sekaligus di akhir.
+        Blur-nya SENGAJA tidak dianimasikan: mem-blur elemen selebar layar itu
+        operasi termahal yang ada di halaman ini, dan menganimasikannya berarti
+        menghitungnya ulang tiap frame. Sekali pasang cuma sekali bayar.
+      */}
+      <div
+        className="fixed inset-0 z-0"
+        style={{ filter: finished ? "blur(10px)" : undefined }}
+      >
         <CanvasSequenceManager
           introLayers={INTRO_LAYERS}
-          scrollLayers={SCROLL_LAYERS}
+          timelineLayers={TIMELINE_LAYERS}
           onBufferProgress={setBuffer}
-          onWarmupProgress={setWarmup}
-          onWarmupComplete={() => setWarmupDone(true)}
+          onPreloadProgress={setPreload}
           onIntroComplete={() => {
-            // Dikembalikan ke atas sekali lagi, dan sengaja SEBELUM introDone
-            // dibuka. history.scrollRestoration hanya bisa disetel setelah
-            // hidrasi, jadi pada muat pertama browser sudah lebih dulu
-            // memulihkan posisi scroll dokumen sebelumnya; kalau tidak
-            // dinolkan di sini, bagian scroll mulai dari tengah animasi.
-            window.scrollTo({ top: 0, behavior: "instant" });
             setIntroDone(true);
-            blurGate.set(1);
             // Ditandai di sini, bukan di akhir pop up: begitu bagian branding
             // sudah ditonton, reload berikutnya mendarat langsung di /login
             // alih-alih memutar 154 frame lagi.
             markIntroSeen();
           }}
+          onTimelineComplete={() => setFinished(true)}
         />
-      </motion.div>
+      </div>
 
-      {/* Bar loading tipis selama buffer frame awal terisi */}
+      {/* Bar loading tipis selama frame opening diunduh */}
       {showLoader && (
         <div className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2">
           <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[var(--color-brand-red)] transition-all duration-300"
+              className="h-full bg-[var(--color-brand-red)] transition-[width] duration-300"
               style={{ width: `${Math.round(buffer * 100)}%` }}
             />
           </div>
@@ -259,48 +229,24 @@ function LandingContent() {
         </div>
       )}
 
-      {/* Bar kedua: menyiapkan frame gedung. Muncul setelah opening selesai dan
-          scroll masih dikunci, supaya user tidak menyusul unduhan. */}
-      {showWarmup && (
+      {/*
+        Bar kedua: mengunduh SELURUH frame outro + gedung selagi opening diputar.
+        Kalau opening habis sebelum unduhannya penuh, frame terakhir opening
+        ditahan sampai 100% — lebih baik menunggu sebentar daripada animasinya
+        jalan setengah terunduh lalu jadi slow-mo.
+      */}
+      {showPreload && (
         <div className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2">
           <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[var(--color-brand-red)] transition-all duration-300"
-              style={{ width: `${Math.round(warmup * 100)}%` }}
+              className="h-full bg-[var(--color-brand-red)] transition-[width] duration-300"
+              style={{ width: `${Math.round(preload * 100)}%` }}
             />
           </div>
           <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
-            Menyiapkan animasi {Math.round(warmup * 100)}%
+            Menyiapkan animasi {Math.round(preload * 100)}%
           </span>
         </div>
-      )}
-
-      {/* Ajakan scroll setelah opening selesai — pelan, sesuai permintaan */}
-      {showHint && (
-        <motion.div
-          className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2 pointer-events-none"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.9, ease: "easeOut" }}
-        >
-          <span className="text-white/50 text-[11px] font-medium tracking-[0.2em] uppercase">
-            Scroll ke bawah
-          </span>
-          <motion.svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-6 h-6 text-white/70"
-            animate={{ y: [0, 10, 0], opacity: [0.45, 1, 0.45] }}
-            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <path d="M12 5v14" />
-            <path d="m19 12-7 7-7-7" />
-          </motion.svg>
-        </motion.div>
       )}
 
       {/* Pop up sambutan di akhir sekuens */}
@@ -320,8 +266,11 @@ function LandingContent() {
               boxShadow:
                 "0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.08)",
               border: "1px solid rgba(255, 255, 255, 0.1)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
+              // Dibaca dari properti kustom supaya device lemah bisa mematikannya
+              // lewat satu aturan di globals.css — style inline tidak bisa
+              // ditimpa selector biasa, tapi properti kustomnya bisa.
+              backdropFilter: "var(--panel-blur, blur(24px))",
+              WebkitBackdropFilter: "var(--panel-blur, blur(24px))",
             }}
           >
             <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
@@ -371,9 +320,6 @@ function LandingContent() {
           </div>
         </motion.div>
       )}
-
-      {/* Pendorong scroll — tinggi inilah yang menentukan kecepatan animasinya */}
-      <div aria-hidden style={{ height: SCROLL_HEIGHT }} />
     </main>
   );
 }

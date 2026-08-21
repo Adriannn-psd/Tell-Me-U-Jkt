@@ -226,8 +226,8 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-5 pointer-events-auto">
-      <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
       

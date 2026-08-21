@@ -29,7 +29,13 @@ export default function QuickActions() {
         <button onClick={() => setShowAllModal(true)} className="text-[var(--color-brand-red)] text-[12.5px] md:text-[13px] font-bold cursor-pointer hover:underline">Lihat Semua</button>
       </div>
       
-      <motion.div layout className="grid grid-cols-4 md:grid-cols-2 gap-2 md:gap-3 text-center">
+      {/*
+        Dulu <motion.div layout>. Layout animation memaksa framer mengukur ulang
+        posisi tiap anak pada setiap render lalu menganimasikannya — padahal grid
+        ini isinya tetap dan tidak pernah berpindah. Biaya ukur-ulangnya nyata di
+        CPU lemah, manfaatnya nol.
+      */}
+      <div className="grid grid-cols-4 md:grid-cols-2 gap-2 md:gap-3 text-center">
         {/* Portal Kampus (Always shown) */}
         <div id="portal-btn" onClick={() => setShowPortal(true)} className="flex flex-col items-center gap-1.5 cursor-pointer group">
           <div className="w-[50px] h-[50px] md:w-full md:h-[130px] rounded-[14px] md:rounded-[20px] bg-[var(--color-surface)] border border-[var(--color-border-color)] flex md:flex-col items-center justify-center gap-2 md:gap-3 group-hover:bg-[#2a2a30] transition shadow-sm hover:shadow-md">
@@ -93,7 +99,7 @@ export default function QuickActions() {
             <span className="text-[13px] text-[var(--color-text-2)] font-medium group-hover:text-white transition">Upload Karya</span>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {isUploading && <UploadMediaModal onClose={() => setIsUploading(false)} />}
       {showPortal && <PortalKampusModal onClose={() => setShowPortal(false)} />}
@@ -102,10 +108,13 @@ export default function QuickActions() {
       <AnimatePresence>
         {showAllModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 md:px-0">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            {/*
+              Scrim ber-blur TIDAK dianimasikan opacity-nya. Menganimasikan
+              opacity elemen ber-backdrop-filter memaksa browser mem-blur ulang
+              seluruh halaman di belakangnya tiap frame fade — inilah yang
+              membuat "buka fitur" tersendat di HP. Panelnya tetap beranimasi.
+            */}
+            <div
               onClick={() => setShowAllModal(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
@@ -219,10 +228,7 @@ export default function QuickActions() {
       <AnimatePresence>
         {showKalenderModal && (
           <div className="fixed inset-0 z-50 flex flex-col justify-end md:hidden">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={() => setShowKalenderModal(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />

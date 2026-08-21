@@ -208,8 +208,8 @@ export default function PostDetailModal({
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end md:items-center md:justify-center p-0 md:p-10">
       {/* Backdrop (Tap to close) */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onPointerDown={onClose}
         onClick={onClose}
       />
