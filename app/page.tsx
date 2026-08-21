@@ -53,6 +53,26 @@ const INTRO_LAYERS: AnimationLayer[] = [
 // Android 412x915), BUKAN untuk rasio referensi 1080x1920 (0.5625) — tidak ada
 // HP modern yang seselebar itu, jadi memakai angka referensi apa adanya membuat
 // gedungnya duduk terlalu rendah dengan celah kosong di atas.
+//
+// `top` gedung samping di desktop diukur terhadap ATAP telkom 1 di posisi x-nya,
+// bukan terhadap batas atas isinya. Atap itu melengkung: di pita tepi (x 0-8% dan
+// x 92-100%) tingginya 33% frame, sementara 22.5% yang terbaca sebagai batas atas
+// isi cuma papan nama di tengah. Mengacu ke 22.5% membuat gedung samping berhenti
+// ~25-43 px di atas atap dan menyisakan celah gelap di kiri & kanan.
+//
+// Di desktop keduanya dijangkarkan lewat `bottom` ber-calc, bukan `top` tetap,
+// supaya jaraknya ke atap tidak bergantung rasio layar. Tinggi telkom 1 dalam vw
+// tapi `bottom`-nya dalam vh, jadi garis atapnya bergerak terhadap tinggi
+// viewport: nilai `top` tetap yang pas di 16:9 menyisakan celah ~48 px di laptop
+// 16:10. calc-nya menurunkan garis atap itu sendiri —
+//   atap   = 118.5vh - 66.9% x 56.8vw     (frame telkom 1 dihitung dari bawah)
+//   bottom = 38vw - 18.5vh - 45px         (45px = seberapa dalam ia tertanam)
+// sehingga tumpangannya tetap 45 px di rasio desktop mana pun.
+//
+// Suku pertama calc telkom 3 sedikit lebih kecil (37.43vw) karena isinya berhenti
+// di 97.8% tinggi frame, bukan 100% seperti telkom 2 — angkanya ikut tingginya,
+// jadi kalau ukuran desktop telkom 3 diubah, suku itu perlu dihitung ulang:
+// 38vw - 2.2% x (tinggi barunya dalam vw).
 const SCROLL_LAYERS: AnimationLayer[] = [
   {
     // Menghilangkan logo Tell Me U JKT. Frame 0001-nya persis sama dengan frame
@@ -81,7 +101,7 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     endProgress: SIDE_END,
     hideBeforeStart: true,
     className:
-      "!w-[117.3vw] !h-[66vw] !left-[-35vw] !top-[17.8vh] md:!w-[42vw] md:!h-[23.6vw] md:!left-[0vw] md:!top-[4vh]",
+      "!w-[117.3vw] !h-[66vw] !left-[-35vw] !top-[17.8vh] md:!w-[48vw] md:!h-[27vw] md:!left-[0vw] md:!top-auto md:!bottom-[calc(38vw_-_18.5vh_-_45px)]",
   },
   {
     // Gedung kaca, kanan atas. Sumbernya menghadap ke kanan, jadi dicermin
@@ -96,7 +116,7 @@ const SCROLL_LAYERS: AnimationLayer[] = [
     endProgress: SIDE_END,
     hideBeforeStart: true,
     className:
-      "!w-[103.6vw] !h-[58.3vw] !right-[-43.5vw] !top-[21.8vh] md:!w-[40vw] md:!h-[22.5vw] md:!right-[-7vw] md:!top-[5vh]",
+      "!w-[103.6vw] !h-[58.3vw] !right-[-43.5vw] !top-[21.8vh] md:!w-[46vw] md:!h-[25.9vw] md:!right-[-7vw] md:!top-auto md:!bottom-[calc(37.43vw_-_18.5vh_-_45px)]",
   },
   {
     // Gedung merah lebar di tengah, muncul paling akhir dan paling depan.
