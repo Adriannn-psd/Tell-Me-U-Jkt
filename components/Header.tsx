@@ -749,8 +749,16 @@ export default function Header() {
               >
                 Batal
               </button>
-              <button 
-                onClick={() => signOut({ callbackUrl: "/login" })}
+              <button
+                onClick={() => {
+                  // Mode tamu ikut dibersihkan: middleware memantulkan tamu dari
+                  // "/" ke "/home", jadi tanpa ini animasi pembuka tidak akan
+                  // pernah terlihat setelah seorang tamu keluar.
+                  document.cookie = "guest_mode=; path=/; max-age=0";
+                  // Mendarat di "/", bukan "/login", supaya animasi pembuka
+                  // diputar lagi setiap kali orang keluar.
+                  signOut({ callbackUrl: "/" });
+                }}
                 className="flex-1 py-2.5 rounded-xl bg-[#E5271F] text-white font-semibold text-sm hover:bg-red-600 transition"
               >
                 Logout

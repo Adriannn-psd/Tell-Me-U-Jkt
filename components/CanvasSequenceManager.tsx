@@ -27,19 +27,39 @@ export interface AnimationLayer {
   hideAfterEnd?: boolean;
 }
 
+/**
+ * Penanda waktu di jam timeline (detik, 0 = frame pertama outro). Dipakai untuk
+ * memicu suara tepat saat sebuah segmen gambar mulai, bukan lewat setTimeout
+ * terpisah yang jamnya bisa melenceng dari jam animasi.
+ */
+export interface TimelineCue {
+  at: number;
+  name: string;
+}
+
 interface CanvasSequenceManagerProps {
   /** Diputar lebih dulu. */
   introLayers: AnimationLayer[];
   /** Diputar langsung menyambung setelah intro habis. */
   timelineLayers: AnimationLayer[];
   /**
+   * Cue di jam timeline. Masing-masing dipicu sekali, pada tick pertama yang
+   * waktunya sudah melewati `at`. Harus punya identitas stabil (definisikan di
+   * luar komponen) — ia masuk dependency effect timeline.
+   */
+  cues?: TimelineCue[];
+  /**
    * 0..1 — SATU unduhan untuk semua sekuens, opening maupun timeline, sebelum
    * ada satu frame pun yang diputar. Dulu unduhannya dua tahap dan masing-masing
    * punya bar sendiri, jadi loading-nya terlihat dua kali.
    */
   onLoadProgress?: (ratio: number) => void;
+  /** Dipanggil sekali, tepat sebelum frame pertama opening digambar. */
+  onIntroStart?: () => void;
   /** Dipanggil sekali setelah frame terakhir opening digambar. */
   onIntroComplete?: () => void;
+  /** Dipanggil saat sebuah cue timeline terlewati. */
+  onCue?: (name: string) => void;
   /** Dipanggil sekali saat semua segmen timeline sampai frame terakhirnya. */
   onTimelineComplete?: () => void;
 }
@@ -78,8 +98,11 @@ const MOBILE_MAX_DPR = 2;
 export default function CanvasSequenceManager({
   introLayers,
   timelineLayers,
+  cues,
   onLoadProgress,
+  onIntroStart,
   onIntroComplete,
+  onCue,
   onTimelineComplete,
 }: CanvasSequenceManagerProps) {
   /**
@@ -104,10 +127,22 @@ export default function CanvasSequenceManager({
   // Prop callback disimpan di ref supaya effect animasi tidak perlu memasukkannya
   // ke dependency — kalau ikut, satu re-render parent akan memulai ulang animasi
   // dari frame nol.
-  const cb = useRef({ onLoadProgress, onIntroComplete, onTimelineComplete });
+  const cb = useRef({
+    onLoadProgress,
+    onIntroStart,
+    onIntroComplete,
+    onCue,
+    onTimelineComplete,
+  });
   useEffect(() => {
-    cb.current = { onLoadProgress, onIntroComplete, onTimelineComplete };
-  }, [onLoadProgress, onIntroComplete, onTimelineComplete]);
+    cb.current = {
+      onLoadProgress,
+      onIntroStart,
+      onIntroComplete,
+      onCue,
+      onTimelineComplete,
+    };
+  }, [onLoadProgress, onIntroStart, onIntroComplete, onCue, onTimelineComplete]);
 
   // Ditentukan sekali saat mount. Sengaja tidak ikut berubah saat window
   // di-resize: mengganti set frame di tengah animasi membuang yang sudah
@@ -453,6 +488,11 @@ export default function CanvasSequenceManager({
       await waitReady(waitFor);
       if (cancelled) return;
 
+      // Suara pembuka dipicu di sini, bukan saat bar loading penuh: frame
+      // pertama baru benar-benar digambar setelah decode selesai, dan suara yang
+      // mulai sebelum gambarnya terasa mendahului.
+      cb.current.onIntroStart?.();
+
       if (introLayers.length === 0) {
         paintTimelineStart();
         setIntroDone(true);
@@ -523,6 +563,8 @@ export default function CanvasSequenceManager({
 
     const stores = timelineStores.current;
     const lastDrawn = timelineLayers.map(() => -1);
+    const cueList = cues ?? [];
+    const cueFired = cueList.map(() => false);
     const t0 = performance.now();
     let rafId = 0;
     let cancelled = false;
@@ -531,6 +573,15 @@ export default function CanvasSequenceManager({
       if (cancelled) return;
       const t = (now - t0) / 1000;
       let allDone = true;
+
+      // Dipicu dari jam yang sama dengan gambarnya. Kalau dipasang sebagai
+      // setTimeout terpisah, suara dan gambar punya dua jam yang bisa saling
+      // melenceng — terutama di HP, saat tab sempat di-throttle.
+      cueList.forEach((cue, idx) => {
+        if (cueFired[idx] || t < cue.at) return;
+        cueFired[idx] = true;
+        cb.current.onCue?.(cue.name);
+      });
 
       timelineLayers.forEach((layer, idx) => {
         const canvas = timelineCanvases.current[idx];
@@ -601,6 +652,7 @@ export default function CanvasSequenceManager({
   }, [
     introDone,
     timelineLayers,
+    cues,
     ensureWindow,
     warmFirst,
     releaseBefore,

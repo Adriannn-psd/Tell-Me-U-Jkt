@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
-import { markIntroSeen } from "@/lib/intro";
+import { useLandingVoice, VoiceName } from "@/lib/useLandingVoice";
 
 /**
  * Opening dan outro diputar 30fps, sesuai rendernya.
@@ -13,12 +13,17 @@ import { markIntroSeen } from "@/lib/intro";
 const FPS = 30;
 
 /**
- * Gedung diputar lebih cepat lagi. Sumbernya dirender 24fps; di 45fps ia jalan
- * 1,875x — cukup untuk memotong bagian gedung dari 14,0 detik jadi 9,3 detik,
- * tapi masih terbaca sebagai gedung yang tumbuh, bukan yang meloncat. Satu
- * angka ini yang mengatur ketiganya; naikkan kalau masih terasa lambat.
+ * Gedung diputar 60fps. Angkanya bukan cuma soal cepat: di HP frame dilompati
+ * 2-2, jadi jumlah frame BERBEDA yang benar-benar terlihat per detik itu
+ * setengah dari fps ini. Di 45fps hasilnya 22,5 gambar/detik — persis yang
+ * terbaca sebagai "frame by frame". Di 60fps jadi 30 gambar/detik, dan
+ * gerakannya sekaligus jadi lebih cepat: bagian gedung turun dari 9,3 detik
+ * jadi 7,0 detik.
+ *
+ * Menaikkannya lagi ke atas 60 tidak menambah kemulusan (layar HP mentok di
+ * 60Hz) dan malah menambah beban decode, jadi berhenti di sini.
  */
-const TELKOM_FPS = 45;
+const TELKOM_FPS = 60;
 
 const OUTRO_FRAMES = 115;
 const T1_FRAMES = 179;
@@ -31,11 +36,11 @@ const T3_FRAMES = 240;
  * opening selesai.
  *
  *   outro     0 s      -> 3,83 s
- *   telkom 2  3,83 s   -> 7,77 s   lalu FREEZE menunggu telkom 3
- *   telkom 3  3,83 s   -> 9,17 s
- *   telkom 1  9,17 s   -> 13,14 s  (baru muncul setelah 2 & 3 sampai akhir)
+ *   telkom 2  3,83 s   -> 6,78 s   lalu FREEZE menunggu telkom 3
+ *   telkom 3  3,83 s   -> 7,83 s
+ *   telkom 1  7,83 s   -> 10,82 s  (baru muncul setelah 2 & 3 sampai akhir)
  *
- * Ditambah opening 5,13 s dan jeda 3 detik sebelum pop up, totalnya ~21 detik.
+ * Ditambah opening 5,13 s dan jeda 3 detik sebelum pop up, totalnya ~19 detik.
  */
 const OUTRO_AT = 0;
 const SIDES_AT = OUTRO_FRAMES / FPS;
@@ -43,6 +48,21 @@ const CENTER_AT = SIDES_AT + Math.max(T2_FRAMES, T3_FRAMES) / TELKOM_FPS;
 
 /** Jeda setelah ketiga gedung beku, sebelum pop up menutupinya. */
 const POPUP_DELAY_MS = 3000;
+
+/** Tombol "Lewati" muncul setelah animasi berjalan sekian lama. */
+const SKIP_AFTER_MS = 3000;
+
+/**
+ * Suara menempel pada jam animasi, bukan pada timer sendiri.
+ *
+ *   welcome  -> saat frame pertama opening digambar (lewat onIntroStart)
+ *   telyu    -> detik 0 timeline, yaitu saat outro mulai
+ *   telkom   -> saat gedung tengah mulai, setelah gedung kiri & kanan selesai
+ */
+const TIMELINE_CUES: { at: number; name: VoiceName }[] = [
+  { at: OUTRO_AT, name: "telyu" },
+  { at: CENTER_AT, name: "telkom" },
+];
 
 /** Folder outro & telkom 1-indexed: index internal 0 → file 0001.webp. */
 const oneIndexed = (index: number) => `${(index + 1).toString().padStart(4, "0")}.webp`;
@@ -153,8 +173,11 @@ const TIMELINE_LAYERS: AnimationLayer[] = [
 
 function LandingContent() {
   const [load, setLoad] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [canSkip, setCanSkip] = useState(false);
+  const voice = useLandingVoice();
 
   // Halaman ini tidak punya apa pun untuk di-scroll. Dulu tingginya 560vh untuk
   // mendorong animasi; sekarang animasinya jalan sendiri, jadi scrollbar-nya
@@ -170,6 +193,15 @@ function LandingContent() {
       document.body.style.overflow = prevBody;
     };
   }, []);
+
+  // Tombol lewati dihitung dari saat animasi MULAI, bukan dari saat halaman
+  // dibuka: kalau dihitung dari awal, di koneksi lambat tombolnya sudah muncul
+  // sementara yang terlihat masih bar loading.
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setTimeout(() => setCanSkip(true), SKIP_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, [playing]);
 
   // Pop up menyusul beberapa detik setelah animasi beku, supaya komposisi
   // ketiga gedung sempat dilihat utuh dulu sebelum ditutupi.
@@ -208,13 +240,13 @@ function LandingContent() {
         <CanvasSequenceManager
           introLayers={INTRO_LAYERS}
           timelineLayers={TIMELINE_LAYERS}
+          cues={TIMELINE_CUES}
           onLoadProgress={setLoad}
-          onIntroComplete={() => {
-            // Ditandai di sini, bukan di akhir pop up: begitu bagian branding
-            // sudah ditonton, reload berikutnya mendarat langsung di /login
-            // alih-alih memutar 154 frame lagi.
-            markIntroSeen();
+          onIntroStart={() => {
+            setPlaying(true);
+            voice.play("welcome");
           }}
+          onCue={(name) => voice.play(name as VoiceName)}
           onTimelineComplete={() => setFinished(true)}
         />
       </div>
@@ -225,19 +257,103 @@ function LandingContent() {
         terlihat dua kali, dan kalau unduhan kedua kalah cepat frame terakhir
         opening tertahan diam. Sekarang sekali tunggu di depan; setelah bar ini
         penuh tidak ada lagi jeda sampai pop up.
+
+        pointer-events-none supaya sentuhan tetap sampai ke window listener yang
+        meng-unlock audio — di HP, sentuhan pertama itulah izin autoplay-nya.
       */}
       {showLoader && (
-        <div className="fixed bottom-10 left-0 right-0 z-40 flex flex-col items-center gap-2">
-          <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[var(--color-brand-red)] transition-[width] duration-300"
-              style={{ width: `${Math.round(load * 100)}%` }}
-            />
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-5 px-10 text-center pointer-events-none">
+          <svg
+            className="w-9 h-9 text-[var(--color-brand-red)]"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M11 5 6 9H3v6h3l5 4V5z" />
+            <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+            <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+          </svg>
+
+          <p className="text-white/70 text-sm font-medium max-w-[240px] leading-relaxed">
+            Besarkan volume untuk mendengar audio
+          </p>
+
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-40 h-1 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[var(--color-brand-red)] transition-[width] duration-300"
+                style={{ width: `${Math.round(load * 100)}%` }}
+              />
+            </div>
+            <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
+              Menyiapkan animasi {Math.round(load * 100)}%
+            </span>
           </div>
-          <span className="text-white/40 text-[10px] font-medium tracking-widest uppercase">
-            Menyiapkan animasi {Math.round(load * 100)}%
+        </div>
+      )}
+
+      {/*
+        Browser HP menolak autoplay bersuara sampai ada sentuhan. Kalau itu yang
+        terjadi, hook-nya menahan cue terakhir dan petunjuk ini muncul; sentuhan
+        di mana saja langsung memutarnya, di-seek sesuai keterlambatannya.
+      */}
+      {voice.blocked && !showLoader && !showPopup && (
+        <div className="fixed top-6 left-0 right-0 z-40 flex justify-center px-6 pointer-events-none">
+          <span className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-[11px] font-medium text-white/70">
+            <svg
+              className="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M11 5 6 9H3v6h3l5 4V5z" />
+              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+            </svg>
+            Ketuk layar untuk mendengar audio
           </span>
         </div>
+      )}
+
+      {/*
+        Lewati animasi. Muncul 3 detik setelah animasi mulai dan hilang begitu
+        pop up sambutan mengambil alih — di titik itu tombol "Lanjutkan ke Login"
+        sudah melakukan hal yang sama.
+      */}
+      {canSkip && !showPopup && (
+        <motion.div
+          className="fixed bottom-8 left-0 right-0 z-40 flex justify-center px-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          <Link
+            href="/login"
+            onClick={voice.stopAll}
+            className="flex items-center gap-2 rounded-full border border-white/15 bg-black/50 px-5 py-2.5 text-xs font-semibold tracking-wide text-white/80 transition-colors hover:bg-black/70 hover:text-white"
+          >
+            Lewati animasi
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h13m0 0-5-5m5 5-5 5" />
+            </svg>
+          </Link>
+        </motion.div>
       )}
 
       {/* Pop up sambutan di akhir sekuens */}
@@ -287,7 +403,7 @@ function LandingContent() {
 
             <Link
               href="/login"
-              onClick={markIntroSeen}
+              onClick={voice.stopAll}
               className="group relative mt-4 w-full flex items-center justify-center overflow-hidden rounded-xl bg-[#c81e2c] px-8 py-4 font-bold text-white transition-all duration-300 hover:scale-[1.03] hover:bg-[#e62837] shadow-[0_8px_20px_rgba(200,30,44,0.4)]"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-in-out" />
