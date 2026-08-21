@@ -144,6 +144,17 @@ const TIMELINE_LAYERS: AnimationLayer[] = [
     startAt: OUTRO_AT,
     fps: FPS,
     hideAfterEnd: true,
+    // Tanpa ini, di HP frame dilompati 2-2 sehingga yang terlihat cuma 15 gambar
+    // berbeda per detik — separuh dari gedung (60fps dilompati 2-2 = 30 gambar),
+    // dan itulah yang terbaca sebagai "frame by frame" persis di bagian ini.
+    // Semua 115 frame dipakai supaya angkanya sama dengan gedung: 30 gambar/detik.
+    //
+    // Biayanya kecil dan aman, tidak seperti kalau dilakukan pada sekuens gedung:
+    // set 960px-nya cuma 1,6 MB untuk 115 frame (opening 1,5 MB untuk 154 frame
+    // sudah lama begitu tanpa masalah), dan segmen ini diputar SENDIRI — gedung
+    // baru mulai tepat saat outro habis, jadi tidak ada dua sekuens yang
+    // di-decode 30x per detik pada waktu yang sama.
+    noDecimate: true,
   },
   {
     // Menara putih, kiri atas.
