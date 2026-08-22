@@ -107,8 +107,12 @@ export default function RadarDetailModal({ post, onClose, clickEvent }: RadarDet
       >
         
         {/* Left/Top Area: Media Gallery */}
-        <div 
-          className="relative w-full md:w-[55%] h-[40%] md:h-full bg-black flex items-center justify-center overflow-hidden perspective-[1200px]"
+        {/* `tmuj-dark-tile`: panel ini `bg-black` dan tetap hitam di mode terang
+            (foto paling enak dilihat di atas hitam), jadi titik carousel dan
+            kontrol di atasnya harus tetap putih. Lihat bagian 12
+            app/theme-light.css. */}
+        <div
+          className="tmuj-dark-tile relative w-full md:w-[55%] h-[40%] md:h-full bg-black flex items-center justify-center overflow-hidden perspective-[1200px]"
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}

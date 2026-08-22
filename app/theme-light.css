@@ -254,6 +254,18 @@ html[data-theme="light"] *:where([class~="bg-white/5"], [class~="bg-white/10"], 
   background-color: rgb(0 0 0 / 0.05) !important;
 }
 
+/* `bg-white/40` dipisah karena cuma dipakai satu peran: titik carousel yang
+   TIDAK aktif (modal Portal Kampus dan lightbox radar). Hitam 5% seperti aturan
+   di atas terlalu samar untuk kontrol — jadi nilainya sekuat garis hover,
+   supaya titiknya masih kelihatan tapi tetap kalah dari titik aktif yang merah.
+
+   Yang di lightbox radar tidak ikut dibalik: panel medianya `bg-black` yang
+   tetap hitam, jadi panel itu ditandai `tmuj-dark-tile` dan bagian 12 menahan
+   titiknya tetap putih. */
+html[data-theme="light"] *:where([class~="bg-white/40"]) {
+  background-color: rgb(0 0 0 / 0.22) !important;
+}
+
 html[data-theme="light"] *:where([class*="hover:bg-white/"]):hover {
   background-color: rgb(0 0 0 / 0.08) !important;
 }
@@ -616,7 +628,7 @@ html[data-theme="light"] *:where([class*="bg-black"][class*="inset-0"]) *:where(
 }
 
 /* ---------------------------------------------------------------------------
-   12. Kotak yang tetap gelap karena lapisannya bersaudara (`tmuj-dark-tile`)
+   12. Kotak yang isinya tetap gelap (`tmuj-dark-tile`)
    ---------------------------------------------------------------------------
    Pengecualian B di bagian 4 menahan teks putih tetap putih kalau latar
    gelapnya ada di salah satu LELUHUR-nya. Empat tempat di app ini tidak
@@ -630,6 +642,13 @@ html[data-theme="light"] *:where([class*="bg-black"][class*="inset-0"]) *:where(
      - kartu Unggulan di /karya (components/fase3/FeaturedEventCard.tsx)
      - hero + 15 kotak layanan /portal (app/portal/page.tsx)
      - kartu bertumpuk modal Portal Kampus (components/fase3/PortalKampusModal.tsx)
+
+   Satu tempat lagi ikut kelas ini dengan alasan yang beda: panel medianya
+   memang `bg-black` dan sengaja TETAP hitam di mode terang, karena foto paling
+   enak dilihat di atas hitam. Jadi bukan soal saudara yang tidak terlihat,
+   tapi soal kotak yang isinya harus tetap "mode gelap":
+
+     - panel media lightbox radar (components/radar/RadarDetailModal.tsx)
 
    Kotaknya diberi kelas pegangan, bukan ditambal per-warna, karena yang
    menentukan bukan warna teksnya melainkan apa yang ada di belakangnya:
@@ -674,6 +693,13 @@ html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="
   background-color: rgb(255 255 255 / 0.1) !important;
 }
 
+/* Titik carousel yang tidak aktif: dipatok di nilai aslinya, bukan diratakan
+   jadi 10% seperti aturan di atas — 10% putih di atas hitam sudah bukan kontrol
+   lagi. Ditaruh SETELAH aturan itu karena bobotnya sama (0,2,1). */
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class~="bg-white/40"]) {
+  background-color: rgb(255 255 255 / 0.4) !important;
+}
+
 html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="border-white/"], [class~="border-white"]) {
   border-color: rgb(255 255 255 / 0.15) !important;
 }
@@ -683,6 +709,20 @@ html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="
 html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="hover:border-white"]):hover,
 html[data-theme="light"] .group:hover :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="group-hover:border-white"]) {
   border-color: rgb(255 255 255 / 0.3) !important;
+}
+
+/* Bingkai foto di lightbox radar. Fotonya `object-contain`, jadi kotak ini yang
+   kelihatan di sisa ruangnya. Bagian 1 dan 2 membuatnya putih bergaris terang —
+   di dalam panel yang tetap hitam hasilnya bilah putih mengelilingi foto. Di
+   sini dikembalikan ke warna aslinya. Karena selectornya dibatasi keturunan
+   `tmuj-dark-tile`, sidebar yang memakai `bg-[#0a0a0b]` yang sama tetap ikut
+   jadi putih seperti seharusnya. */
+html[data-theme="light"] .tmuj-dark-tile *:where([class~="bg-[#0a0a0b]"]) {
+  background-color: #0a0a0b !important;
+}
+
+html[data-theme="light"] .tmuj-dark-tile *:where([class~="border-[#1c1c1e]"]) {
+  border-color: #1c1c1e !important;
 }
 
 /* Yang SENGAJA tidak diubah:
