@@ -2,12 +2,16 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import RadarCard, { RadarPost } from "@/components/radar/RadarCard";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
-// Initialize Supabase Client on the SERVER using Service Role Key
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey || "dummy");
+/*
+  Pakai client bersama dari lib/supabase.ts. Dulu halaman ini bikin sendiri dengan
+  `NEXT_PUBLIC_SUPABASE_URL || ""`, dan URL kosong bikin `createClient` melempar
+  "supabaseUrl is required" di module scope — mematikan `next build` di Docker
+  (env baru masuk saat runtime lewat env_file). Kuncinya tetap dicek terpisah
+  supaya query tidak dijalankan pakai placeholder.
+*/
+const hasServiceKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 import { cookies } from "next/headers";
 import { unstable_cache } from "next/cache";
@@ -16,7 +20,7 @@ import GuestOverlay from "@/components/GuestOverlay";
 
 const getCachedRadarPosts = unstable_cache(
   async () => {
-    if (!supabaseServiceKey) {
+    if (!hasServiceKey) {
       console.warn("SUPABASE_SERVICE_ROLE_KEY is missing, cannot fetch posts.");
       return [];
     }

@@ -29,6 +29,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all project files (except those in .dockerignore)
 COPY . .
 
+# Variabel NEXT_PUBLIC_* ditanam permanen ke dalam hasil build, bukan dibaca saat
+# runtime — jadi `env_file` di docker-compose TIDAK berpengaruh untuk yang ini.
+# Kalau kosong, metadataBase di app/layout.tsx jatuh ke domain Vercel.
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 # Build Next.js application
 RUN npm run build
 
