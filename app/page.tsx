@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import CanvasSequenceManager, { AnimationLayer } from "@/components/CanvasSequenceManager";
-import { useLandingVoice, VoiceName } from "@/lib/useLandingVoice";
+import {
+  landingVoiceUnlocked,
+  primeLandingVoice,
+  useLandingVoice,
+  VoiceName,
+} from "@/lib/useLandingVoice";
 
 /**
  * Opening dan outro diputar 30fps, sesuai rendernya.
@@ -204,6 +209,24 @@ function LandingContent() {
   const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
   const [canSkip, setCanSkip] = useState(false);
+  /*
+   * Satu ketukan yang memulai animasi SEKALIGUS membuka izin audio.
+   *
+   * Android Chrome tidak punya jalan lain: tab yang baru dibuka dari nol tidak
+   * pernah boleh memutar suara sendiri. Pengecualiannya (pernah berinteraksi di
+   * domain ini, MEI, atau situsnya terpasang sebagai aplikasi) semuanya butuh
+   * sesuatu yang tidak dimiliki pengunjung pertama. Jadi dari pada animasinya
+   * jalan bisu lalu suaranya menyusul di tengah pada sentuhan acak, gambar dan
+   * suara ditahan bersama sampai satu tombol ditekan — supaya keduanya selalu
+   * mulai bersamaan dan tidak pernah ada bagian yang senyap.
+   *
+   * Nilai awalnya dibaca langsung, bukan lewat effect, supaya tombolnya tidak
+   * berkelebat sekejap pada jalur yang izinnya sudah ada. Aman untuk hydration:
+   * `landingVoiceUnlocked()` hanya bisa jadi true setelah `primeLandingVoice()`
+   * berjalan di browser, jadi di server ia selalu false — sama dengan render
+   * pertama di klien saat "/" dibuka dari nol.
+   */
+  const [started, setStarted] = useState(() => landingVoiceUnlocked());
   const voice = useLandingVoice();
   const stopVoice = voice.stopAll;
   const router = useRouter();
@@ -255,7 +278,24 @@ function LandingContent() {
     return () => window.clearTimeout(timer);
   }, [finished, router, stopVoice]);
 
-  const showLoader = load < 1;
+  // Bar loading hanya untuk yang SUDAH menekan Mulai. Sebelum itu progresnya
+  // ditampilkan di layar pembuka, jadi menampilkan keduanya cuma menumpuk dua
+  // angka persen yang sama di atas satu sama lain.
+  const showLoader = started && load < 1;
+
+  /*
+   * `primeLandingVoice()` dipanggil SINKRON di sini, sebelum setState apa pun.
+   *
+   * iOS memberi izin per ELEMEN <audio>, dan hanya menghitung `play()` yang
+   * terjadi di dalam gesture-nya sendiri. Menundanya sampai render berikutnya —
+   * atau sampai `onIntroStart` beberapa ratus milidetik kemudian — berarti
+   * gesture-nya sudah lewat dan suara pembuka ditolak lagi seperti sebelum ada
+   * tombol ini.
+   */
+  const handleStart = () => {
+    primeLandingVoice();
+    setStarted(true);
+  };
 
   return (
     <main className="page relative w-full h-[100dvh] overflow-hidden" suppressHydrationWarning>
@@ -284,6 +324,7 @@ function LandingContent() {
           timelineLayers={TIMELINE_LAYERS}
           cues={TIMELINE_CUES}
           onLoadProgress={setLoad}
+          startRequested={started}
           onIntroStart={() => {
             setPlaying(true);
             voice.play("welcome");
@@ -294,14 +335,63 @@ function LandingContent() {
       </div>
 
       {/*
-        Satu bar loading untuk SEMUA sekuens. Dulu ada dua — opening diunduh
-        dan diputar dulu sementara sisanya menyusul di belakang — jadi loading
-        terlihat dua kali, dan kalau unduhan kedua kalah cepat frame terakhir
-        opening tertahan diam. Sekarang sekali tunggu di depan; setelah bar ini
-        penuh tidak ada lagi jeda sampai pop up.
+        Layar pembuka: satu tombol, bukan petunjuk "ketuk layar".
+
+        Unduhan frame sudah jalan di belakang layar sejak halaman dibuka, jadi
+        tombolnya boleh ditekan kapan saja — aktivasi user itu melekat pada
+        dokumen dan tidak kedaluwarsa, jadi ketukan di detik pertama tetap
+        mengizinkan suara yang baru dibunyikan setelah unduhannya selesai.
+        Persennya ditampilkan supaya jeda setelah menekan tombol pada koneksi
+        lambat tidak terasa seperti tombol yang tidak bereaksi.
+      */}
+      {!started && (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-7 px-10 text-center">
+          <div className="relative w-24 h-24">
+            <Image
+              src="/logo.png"
+              alt="Tell Me U Jakarta"
+              fill
+              sizes="96px"
+              priority
+              className="object-contain drop-shadow-2xl"
+            />
+          </div>
+
+          <p className="text-white/60 text-sm font-medium max-w-[250px] leading-relaxed">
+            Animasi pembukanya pakai suara — besarkan volume dulu.
+          </p>
+
+          <button
+            type="button"
+            onClick={handleStart}
+            className="rounded-full bg-[var(--color-brand-red)] px-10 py-3 text-sm font-semibold tracking-wide text-white shadow-lg shadow-black/40 transition-transform active:scale-95"
+          >
+            Mulai
+          </button>
+
+          {/* Tingginya dipatok supaya tombolnya tidak bergeser saat teks hilang. */}
+          <span className="h-4 text-[10px] font-medium uppercase tracking-widest text-white/35">
+            {load < 1 ? `Menyiapkan animasi ${Math.round(load * 100)}%` : ""}
+          </span>
+        </div>
+      )}
+
+      {/*
+        Satu bar loading untuk SEMUA sekuens, ditampilkan setelah "Mulai"
+        ditekan. Dulu ada dua — opening diunduh dan diputar dulu sementara
+        sisanya menyusul di belakang — jadi loading terlihat dua kali, dan kalau
+        unduhan kedua kalah cepat frame terakhir opening tertahan diam. Sekarang
+        sekali tunggu di depan; setelah bar ini penuh tidak ada lagi jeda sampai
+        pop up.
+
+        Biasanya tidak pernah terlihat: unduhannya sudah mulai sejak halaman
+        dibuka, jadi yang menekan tombolnya setelah beberapa detik langsung
+        melewati layar ini. Yang menekan cepat, atau koneksinya lambat, tetap
+        butuh sesuatu selain layar hitam.
 
         pointer-events-none supaya sentuhan tetap sampai ke window listener yang
-        meng-unlock audio — di HP, sentuhan pertama itulah izin autoplay-nya.
+        meng-unlock audio — sentuhan apa pun ikut jadi izin cadangan kalau
+        priming dari tombol Mulai ditolak.
       */}
       {showLoader && (
         <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-5 px-10 text-center pointer-events-none">
