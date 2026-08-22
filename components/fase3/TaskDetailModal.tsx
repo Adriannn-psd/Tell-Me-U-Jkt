@@ -73,24 +73,28 @@ export default function TaskDetailModal({
       
       <div className="relative w-full max-w-md bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-[24px] p-6 animate-in zoom-in-95 duration-300 shadow-2xl flex flex-col max-h-[80vh]">
         
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          {/* `min-w-0` + `shrink-0`: judul tugas yang panjang tadinya menggencet
+              tombol tutup sampai lebarnya cuma 16px di HP 320px. */}
+          <div className="min-w-0">
             <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase mb-2 ${task.isUrgent ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-[var(--color-surface-2)] text-[var(--color-text-2)] border border-[var(--color-border-color)]'}`}>
               {task.course}
             </span>
             <h2 className="text-xl font-bold text-white leading-tight">{task.title}</h2>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
+            className="w-8 h-8 shrink-0 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <div className="flex items-center gap-4 text-sm font-medium mb-6">
+        {/* Dua keterangan ini kalau dipaksa satu baris ujungnya sampai 350px di
+            layar 320px — Status-nya hilang di kanan. Boleh turun baris. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm font-medium mb-6">
           <div className="flex items-center gap-1.5 text-[var(--color-text-3)]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Tenggat: <span className={task.isUrgent ? "text-red-500 font-bold" : "text-white"}>{task.deadline}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[var(--color-text-3)]">

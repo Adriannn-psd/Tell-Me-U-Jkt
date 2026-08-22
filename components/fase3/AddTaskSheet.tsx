@@ -54,15 +54,20 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
       />
       
       {/* Bottom Sheet */}
-      <div className="relative bg-[var(--color-bg)] w-full max-w-2xl mx-auto rounded-t-3xl border-t border-[var(--color-border-color)] px-6 py-6 pb-12 animate-in slide-in-from-bottom-full duration-300">
-        
-        <div className="w-12 h-1.5 bg-[#333] rounded-full mx-auto mb-6" />
-        
-        <div className="flex justify-between items-center mb-6">
+      {/*
+        `max-h-[92vh]` + form yang bisa digulir: di HP 320x568 lembar ini tingginya
+        619px, jadi bagian atasnya (pegangan, judul, kolom Mata Kuliah) terpotong
+        di luar layar dan tidak bisa digulir ke mana pun.
+      */}
+      <div className="relative bg-[var(--color-bg)] w-full max-w-2xl mx-auto rounded-t-3xl border-t border-[var(--color-border-color)] px-6 py-6 pb-12 animate-in slide-in-from-bottom-full duration-300 flex max-h-[92vh] flex-col">
+
+        <div className="w-12 h-1.5 bg-[#333] rounded-full mx-auto mb-6 shrink-0" />
+
+        <div className="flex justify-between items-center mb-6 shrink-0">
           <h2 className="text-xl font-bold text-white">Tambah Tugas Baru</h2>
         </div>
-        
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+
+        <form className="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto" onSubmit={handleSubmit}>
           
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-[var(--color-text-2)] uppercase tracking-wide">Mata Kuliah</label>
@@ -88,7 +93,9 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
             />
           </div>
           
-          <div className="flex gap-4">
+          {/* Di bawah 360px, dua kolom ini tinggal ~128px — kolom tanggal lebih
+              sempit dari tulisan "dd/mm/yyyy" bawaannya. Ditumpuk saja di situ. */}
+          <div className="flex flex-col min-[360px]:flex-row gap-4">
             <div className="flex flex-col gap-2 flex-1">
               <label className="text-xs font-bold text-[var(--color-text-2)] uppercase tracking-wide">Tenggat Waktu</label>
               <input 
