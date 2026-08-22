@@ -1,11 +1,21 @@
 @import "tailwindcss";
 
+/*
+ * Mode terang. Semua isinya berada di dalam `html[data-theme="light"]`, jadi
+ * tampilan gelap di bawah ini tidak tersentuh. Atributnya dipasang skrip inline
+ * di app/layout.tsx sebelum halaman digambar, dan diganti lib/theme.ts.
+ */
+@import "./theme-light.css";
+
 @theme {
   --color-bg: #0a0a0b;
   --color-surface: #17171a;
   --color-surface-2: #1e1e22;
   --color-border-color: #28282c;
   --color-brand-red: #e5271f;
+  /* Teks utama. Di seluruh app masih ditulis `text-white`; tokennya ada supaya
+     mode terang punya satu tempat untuk menggantinya jadi tinta gelap. */
+  --color-text-1: #ffffff;
   --color-text-2: #9c9ca3;
   --color-text-3: #6c6c72;
   --color-brand-green: #3ddc72;
@@ -15,7 +25,7 @@
   body {
     background: var(--color-bg);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: white;
+    color: var(--color-text-1);
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE/Edge */
   }

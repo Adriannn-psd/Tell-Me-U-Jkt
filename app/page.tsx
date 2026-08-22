@@ -557,7 +557,10 @@ function LandingContent() {
 
 export default function LandingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#060607]" />}>
+    /* Kelas `page` ikut dipasang di penggantinya juga: itu pegangan yang dipakai
+       app/theme-light.css untuk menjaga layar ini tetap gelap di mode terang —
+       tanpa itu latar `#060607` di bawah ini berkedip putih sekejap. */
+    <Suspense fallback={<div className="page min-h-screen bg-[#060607]" />}>
       <LandingContent />
     </Suspense>
   );
