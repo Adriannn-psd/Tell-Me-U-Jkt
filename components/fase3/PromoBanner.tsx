@@ -1,8 +1,16 @@
 export default function PromoBanner() {
   return (
-    <div className="bg-[#1c1c1e] border border-[#2a2a30] rounded-2xl overflow-hidden shadow-lg relative min-h-[160px] flex flex-col justify-end p-5">
+    /*
+      Dua kelas `tmuj-panel-flat` di bawah bukan salah tulis. Kartu ini menaruh
+      "gambarnya" di lapisan gradien selebar kartu, BUKAN di latar kartunya —
+      jadi di mode terang kartunya jadi putih sementara lapisannya tetap hitam,
+      dan tulisan yang sudah jadi tinta hilang di atasnya. Kelas itu (lihat
+      bagian 9 app/theme-light.css) meratakan keduanya jadi putih sekaligus
+      membalik tulisannya. Di mode gelap kelasnya tidak punya gaya apa pun.
+    */
+    <div className="tmuj-panel-flat bg-[#1c1c1e] border border-[#2a2a30] rounded-2xl overflow-hidden shadow-lg relative min-h-[160px] flex flex-col justify-end p-5">
       {/* Background Graphic (Mockup using gradients since we don't have the exact image) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-[#1c1c1e]/80 to-[#1c1c1e] z-0"></div>
+      <div className="tmuj-panel-flat absolute inset-0 bg-gradient-to-t from-black via-[#1c1c1e]/80 to-[#1c1c1e] z-0"></div>
       
       {/* Abstract Red Lines/Glow (Simulating the design in screenshot) */}
       <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[var(--color-brand-red)] rounded-full blur-[60px] opacity-30 z-0"></div>

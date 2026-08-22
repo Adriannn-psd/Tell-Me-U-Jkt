@@ -64,7 +64,8 @@ html[data-theme="light"] {
    --------------------------------------------------------------------------- */
 html[data-theme="light"] *:where(
   [class~="bg-[#1c1c1e]"], [class*="bg-[#1c1c1e]/"],
-  [class~="bg-[#1a1a1c]"], [class~="bg-[#151517]"], [class~="bg-[#141417]"],
+  [class~="bg-[#1a1a1c]"], [class*="bg-[#1a1a1c]/"],
+  [class~="bg-[#151517]"], [class~="bg-[#141417]"],
   [class~="bg-[#111114]"], [class~="bg-[#111112]"], [class*="bg-[#111112]/"],
   [class~="bg-[#111111]"], [class~="bg-[#111]"], [class~="bg-[#1a1a1a]"],
   [class~="bg-[#0e0e10]"], [class~="bg-[#0a0a0c]"], [class*="bg-[#0a0a0c]/"],
@@ -147,6 +148,17 @@ html[data-theme="light"] *:where([class~="text-[#30d158]"], [class~="text-[#0f9d
 
 html[data-theme="light"] *:where([class~="text-[#ff9f0a]"]) {
   color: #a06400 !important;
+}
+
+/* Kebalikannya: dua warna yang justru TERANG dan dipakai sebagai teks. Di mode
+   gelap keduanya berperan seperti `text-white` (judul tugas di widget, warna
+   hover item dock yang tidak aktif), jadi di mode terang ikut jadi tinta. */
+html[data-theme="light"] *:where([class~="text-[#f5f5f7]"], [class~="text-[#d1d1d6]"]) {
+  color: var(--color-text-1) !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:text-[#d1d1d6]"]):hover {
+  color: var(--color-text-1) !important;
 }
 
 html[data-theme="light"] *:where([class~="text-[#ff3b30]"], [class~="text-[#E5271F]"]) {
@@ -263,8 +275,12 @@ html[data-theme="light"] .group:hover *:where([class*="group-hover:border-white"
    panel gelap. Di mode terang putih-di-atas-putih hilang, jadi dibalik jadi
    tinta. Syarat `text-black` sengaja ikut dicocokkan — itu yang membedakannya
    dari `bg-white` yang benar-benar harus putih: kertas QR, bar grafik hiasan,
-   tombol shutter kamera, kotak avatar. */
-html[data-theme="light"] *:where([class*="bg-white"][class*="text-black"]) {
+   tombol shutter kamera, kotak avatar.
+
+   Dua-duanya WAJIB `~=` (token utuh). Dengan `*=` tombol GitHub di app/about
+   yang cuma punya `hover:bg-white hover:text-black` ikut kena saat kursor TIDAK
+   di atasnya, dan hasilnya kotak hitam di tengah kartu putih. */
+html[data-theme="light"] *:where([class~="bg-white"][class~="text-black"]) {
   background-color: var(--color-text-1) !important;
   color: #ffffff !important;
 }
@@ -418,9 +434,10 @@ html[data-theme="light"] .tmuj-dock {
 
 /* Label halaman yang sedang dibuka memakai `text-white`; Pengecualian B
    membiarkannya putih karena induknya bergradien, jadi di sini dibalik lagi.
-   Kotak avatar di ujung dock dikecualikan: dia bulatan gradien gelap yang
-   membawa latarnya sendiri, jadi inisialnya memang harus tetap putih. */
-html[data-theme="light"] .tmuj-dock *:where([class~="text-white"]):not([class*="bg-gradient"]) {
+   Satu-satunya elemen bergradien di dalam dock adalah bulatan avatar, dan
+   bulatan itu ikut jadi abu muda di bagian 11 — jadi inisialnya memang harus
+   ikut jadi tinta, tanpa pengecualian. */
+html[data-theme="light"] .tmuj-dock *:where([class~="text-white"]) {
   color: var(--color-text-1) !important;
 }
 
@@ -518,15 +535,99 @@ html[data-theme="light"] :is(.page, .page *):where([class*="hover:text-white"]):
   color: #ffffff !important;
 }
 
+/* ---------------------------------------------------------------------------
+   11. Sisa yang masih hitam
+   ---------------------------------------------------------------------------
+   Bagian ini lahir dari penyisiran kedua: sebuah pemeriksa yang berjalan di
+   dalam halaman, menyusuri semua elemen, menghitung luminansi latar yang
+   BENAR-BENAR terpasang (termasuk merata-ratakan titik gradien), lalu
+   melaporkan apa saja yang masih gelap di mode terang. Isi di bawah adalah
+   temuannya, bukan tebakan.
+
+   Pelajaran terbesarnya: penyisiran pertama cuma dilihat di layar 375px, jadi
+   seluruh varian `md:` lolos — di layar ≥768px kartu Aksi Cepat masih hitam
+   dengan tulisan tinta di atasnya.
+   --------------------------------------------------------------------------- */
+
+/* components/QuickActions.tsx menaruh latar kartunya di `md:bg-[#1c1c1e]`, jadi
+   pemetaan bagian 1 (`~=`, token utuh) tidak kena. Dipasang di dalam media
+   query yang sama supaya di layar kecil kartunya tetap tanpa latar seperti di
+   mode gelap — kalau tidak, di HP muncul balok putih yang tidak ada padanannya. */
+@media (min-width: 768px) {
+  html[data-theme="light"] *:where([class*="md:bg-[#1c1c1e]"]) {
+    background-color: var(--color-surface) !important;
+  }
+}
+
+/* Bulatan avatar cadangan (dipakai kalau user belum punya foto): dock, header,
+   sidebar, kartu QR, dan kartu profil app/about. Semuanya bulatan gradien gelap
+   berisi satu huruf putih. Di mode terang bulatan hitam di tengah kartu putih
+   itu yang paling kelihatan salah, jadi bulatannya ikut jadi abu muda dan
+   hurufnya jadi tinta.
+
+   Aturan ini harus SESUDAH pengecualian A dan B di bagian 4: bobotnya sama
+   (0,1,1) dan yang menang yang terakhir. */
+html[data-theme="light"] *:where(
+  [class*="from-[#3a3a3d]"][class*="to-[#1c1c1e]"],
+  [class*="from-[var(--color-brand-red)]/20"][class*="to-[#1c1c1e]"]
+) {
+  background-image: none !important;
+  background-color: var(--color-surface-2) !important;
+}
+
+html[data-theme="light"] *:where(
+  [class*="from-[#3a3a3d]"][class*="to-[#1c1c1e]"],
+  [class*="from-[var(--color-brand-red)]/20"][class*="to-[#1c1c1e]"]
+):where([class~="text-white"], [class*="text-white/"]) {
+  color: var(--color-text-1) !important;
+}
+
+/* Kotak gambar cadangan di kartu radar (components/radar/RadarCard.tsx): bukan
+   hiasan di atas foto, tapi PENGGANTI foto — separuh atas kartu, bergaris tepi.
+   Perannya permukaan, jadi ikut terang. */
+html[data-theme="light"] *:where([class*="from-[#151517]"][class*="to-[#1c1c1e]"]) {
+  background-image: none !important;
+  background-color: var(--color-surface-2) !important;
+}
+
+/* Ikon kubus samar di tengah kotak itu tadinya `text-white/10` — di atas kotak
+   gelap dia cap air tipis, di atas kotak terang dia hilang sama sekali dan
+   kotaknya jadi abu kosong. Dibalik jadi tinta setipis itu juga. */
+html[data-theme="light"]
+  *:where([class*="from-[#151517]"][class*="to-[#1c1c1e]"])
+  *:where([class*="text-white/10"]) {
+  color: rgb(16 16 20 / 0.12) !important;
+}
+
+/* Kabut di bawah modal Portal Kampus (components/fase3/PortalKampusModal.tsx).
+   Gradien yang berakhir `to-transparent` biasanya kabut di atas foto dan
+   dibiarkan gelap — yang ini pengecualiannya: dia mengabutkan isi modal yang
+   sudah jadi putih, jadi arah warnanya ikut dibalik. `from-[#0a0a0a]` cuma
+   dipakai di tempat itu. */
+html[data-theme="light"] *:where([class*="from-[#0a0a0a]"][class*="to-transparent"]) {
+  background-image: linear-gradient(to top, var(--color-bg), transparent) !important;
+}
+
+/* Spinner di atas penutup hitam yang menutupi satu kartu saat statusnya sedang
+   disimpan (components/fase3/TrackerCalendar.tsx). Penutupnya memang tetap
+   hitam, jadi lingkaran `border-white`-nya jangan ikut dibalik oleh bagian 5. */
+html[data-theme="light"] *:where([class*="bg-black"][class*="inset-0"]) *:where([class~="border-white"]) {
+  border-color: #ffffff !important;
+}
+
 /* Yang SENGAJA tidak diubah:
    - `bg-black/40`…`bg-black/95`: itu scrim di belakang modal. Gelap adalah
      tugasnya, di mode apa pun.
    - gradien (`bg-gradient-to-*` beserta from/via/to-nya): gradien di app ini
      hampir semuanya dekoratif atau menutupi foto — mulai dari gradien
      Instagram, banner merah, sampai kabut hitam di atas foto kartu. Panel
-     gradien abu-gelap pun dibiarkan gelap (kartu fitur & kartu profil di
-     app/about, hero app/portal), dan teks putih di atasnya tetap putih (lihat
-     pengecualian B). Satu-satunya yang diratakan adalah dock bawah di bagian 8.
+     gradien abu-gelap pun dibiarkan gelap (hero app/portal, dan 15 kotak
+     layanan di app/portal + modal Portal Kampus yang dua di antaranya memang
+     abu-gelap karena itu warna mereknya), dan teks putih di atasnya tetap putih
+     (lihat pengecualian B). Yang diratakan cuma yang perannya permukaan:
+     dock bawah (bagian 8), dua panel app/about (bagian 9), serta avatar
+     cadangan, kotak gambar kartu radar, dan kabut modal Portal Kampus
+     (bagian 11).
    - foto, video, avatar, dan logo.
    - layar /login penuh (`.login-container`, lihat bagian 6) dan layar pembuka
      app/page.tsx (`.page`, lihat bagian 10). */
