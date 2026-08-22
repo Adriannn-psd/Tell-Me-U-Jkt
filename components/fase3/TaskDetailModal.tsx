@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Task } from "./TrackerCalendar";
+import { toast } from "@/lib/toast";
 
 export default function TaskDetailModal({ 
   task, 
@@ -24,11 +25,11 @@ export default function TaskDetailModal({
       if (data.success) {
         onClose(); // Parent will refresh
       } else {
-        alert("Gagal memperbarui status");
+        toast.error("Gagal memperbarui status");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan");
+      toast.error("Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
@@ -45,11 +46,11 @@ export default function TaskDetailModal({
       if (data.success) {
         onClose(); // Parent will refresh
       } else {
-        alert("Gagal menghapus tugas");
+        toast.error("Gagal menghapus tugas");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan");
+      toast.error("Terjadi kesalahan");
     } finally {
       setLoading(false);
     }

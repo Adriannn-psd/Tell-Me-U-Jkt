@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { toast } from "@/lib/toast";
 
 export default function OspekDashboard({ 
   boards, 
@@ -55,11 +56,11 @@ export default function OspekDashboard({
       if (res.ok && data.success && data.spreadsheetUrl) {
         window.open(data.spreadsheetUrl, "_blank");
       } else {
-        alert(data.error || "Gagal meng-export data. Pastikan Google API sudah dikonfigurasi.");
+        toast.error(data.error || "Gagal meng-export data. Pastikan Google API sudah dikonfigurasi.");
       }
     } catch (err) {
       console.error("Export error", err);
-      alert("Terjadi kesalahan saat menghubungi server.");
+      toast.error("Terjadi kesalahan saat menghubungi server.");
     } finally {
       setIsExporting(null);
     }

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 import Avatar from "@/components/Avatar";
 import DiscardConfirm from "@/components/DiscardConfirm";
+import { toast } from "@/lib/toast";
 
 export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
@@ -62,7 +63,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
     
     // Strict validation for web images and videos
     if (!selectedFile.type.match(/image\/(jpeg|jpg|png|webp)/i) && !selectedFile.type.match(/video\/(mp4|webm|ogg)/i)) {
-      alert("Format tidak didukung! Harap gunakan JPG, PNG, WEBP, atau MP4/WEBM.");
+      toast.error("Format tidak didukung! Harap gunakan JPG, PNG, WEBP, atau MP4/WEBM.");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -83,7 +84,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
         })
         .catch((error) => {
           console.error("Compression error:", error);
-          alert("Gagal memproses gambar.");
+          toast.error("Gagal memproses gambar.");
           if (fileInputRef.current) fileInputRef.current.value = "";
           setIsProcessing(false);
         });
@@ -156,7 +157,10 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleUpload = async () => {
-    if (!title || !file) return alert("Judul dan Foto wajib diisi!");
+    if (!title || !file) {
+      toast.error("Judul dan foto wajib diisi!");
+      return;
+    }
     setLoading(true);
     setUploadProgress(0);
 
@@ -246,12 +250,15 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
       }
 
       setUploadProgress(100);
-      alert("Karya berhasil diunggah!");
+      // Dititipkan, bukan ditampilkan sekarang: baris di bawah memuat ulang
+      // halaman supaya karya baru ikut muncul, dan toast biasa akan hilang
+      // bersama halamannya sebelum terbaca.
+      toast.successAfterReload("Karya berhasil diunggah!");
       onClose();
       window.location.reload(); // Temporary reload until Optimistic UI is complete
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Gagal mengupload karya.");
+      toast.error(error.message || "Gagal mengupload karya.");
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -314,7 +321,7 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
                   alt="Preview" 
                   className="w-full h-full object-cover" 
                   onError={() => {
-                    alert("Gagal memuat preview.");
+                    toast.error("Gagal memuat preview.");
                     setPreview(null);
                     setFile(null);
                   }}

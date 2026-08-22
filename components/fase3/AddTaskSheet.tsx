@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
+import { toast } from "@/lib/toast";
 
 export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => void, onSuccess?: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -33,11 +34,11 @@ export default function AddTaskSheet({ onClose, onSuccess }: { onClose: () => vo
         if (onSuccess) onSuccess();
         else onClose();
       } else {
-        alert("Gagal menyimpan tugas");
+        toast.error("Gagal menyimpan tugas");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan.");
     } finally {
       setLoading(false);
     }

@@ -13,6 +13,7 @@ import { id as localeId } from "date-fns/locale";
 import { useGuest } from "@/components/GuestProvider";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 import Avatar from "@/components/Avatar";
+import { toast } from "@/lib/toast";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -67,13 +68,13 @@ export default function NotificationsPage() {
         mutate();
       } else {
         const err = await res.json();
-        alert("Gagal memproses: " + (err.error || res.statusText));
+        toast.error("Gagal memproses: " + (err.error || res.statusText));
         btn.innerText = originalText;
         btn.disabled = false;
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan.");
       btn.innerText = originalText;
       btn.disabled = false;
     }
@@ -90,13 +91,13 @@ export default function NotificationsPage() {
         mutate();
       } else {
         const err = await res.json();
-        alert("Gagal memproses: " + (err.error || res.statusText));
+        toast.error("Gagal memproses: " + (err.error || res.statusText));
         btn.innerText = originalText;
         btn.disabled = false;
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan.");
       btn.innerText = originalText;
       btn.disabled = false;
     }
@@ -113,13 +114,13 @@ export default function NotificationsPage() {
         mutate();
       } else {
         const err = await res.json();
-        alert("Gagal memproses: " + (err.error || res.statusText));
+        toast.error("Gagal memproses: " + (err.error || res.statusText));
         btn.innerText = originalText;
         btn.disabled = false;
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan.");
       btn.innerText = originalText;
       btn.disabled = false;
     }

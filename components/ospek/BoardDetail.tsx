@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import PhotoDetailModal from "./PhotoDetailModal";
+import { toast } from "@/lib/toast";
 
 export default function BoardDetail({ 
   board, 
@@ -59,10 +60,10 @@ export default function BoardDetail({
         setSheetUrl(finalUrl);
         window.open(finalUrl, "_blank");
       } else {
-        alert(data.error || "Gagal membuat spreadsheet");
+        toast.error(data.error || "Gagal membuat spreadsheet");
       }
     } catch {
-      alert("Terjadi kesalahan jaringan");
+      toast.error("Terjadi kesalahan jaringan");
     } finally {
       setCreatingSheet(false);
     }
