@@ -30,7 +30,10 @@ function BentoCard({ emoji, title, desc, gradient, span = false }: { emoji: stri
     <motion.div
       whileHover={{ y: -4, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className={`group relative rounded-3xl border border-white/[0.06] overflow-hidden cursor-default ${span ? "md:col-span-2" : ""}`}
+      className={`tmuj-panel-flat group relative rounded-3xl border border-white/[0.06] overflow-hidden cursor-default ${span ? "md:col-span-2" : ""}`}
+      // Gradiennya di atribut style, jadi tidak bisa dipetakan selector nama
+      // kelas; kelas `tmuj-panel-flat` di atas yang membuat app/theme-light.css
+      // bisa menerangkan kartu ini di mode terang.
       style={{ background: "linear-gradient(135deg, rgba(28,28,30,0.9), rgba(10,10,11,0.95))" }}
     >
       {/* Gradient blob */}
@@ -194,7 +197,7 @@ export default function AboutPage() {
                 <div className="relative rounded-[24px] md:rounded-[28px] overflow-hidden mx-2 sm:mx-0">
                   <div className="absolute inset-0 rounded-[24px] md:rounded-[28px] bg-gradient-to-br from-[var(--color-brand-red)]/30 via-transparent to-white/[0.06] p-[1px]" />
 
-                  <div className="relative bg-gradient-to-br from-[#141417] via-[#111114] to-[#0d0d0f] rounded-[24px] md:rounded-[28px] p-5 sm:p-8 md:p-10 overflow-hidden">
+                  <div className="tmuj-panel-flat relative bg-gradient-to-br from-[#141417] via-[#111114] to-[#0d0d0f] rounded-[24px] md:rounded-[28px] p-5 sm:p-8 md:p-10 overflow-hidden">
                     <div className="relative z-10 flex flex-col md:flex-row gap-6 sm:gap-8 items-center md:items-start">
                       
                       {/* Avatar */}

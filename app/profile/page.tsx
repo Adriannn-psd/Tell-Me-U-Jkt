@@ -18,6 +18,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { useGuest } from "@/components/GuestProvider";
 import LoginPanel from "@/components/LoginPanel";
 import ClassWheelPicker from "@/components/fase3/ClassWheelPicker";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   KELAS_DEFAULT_NUMBER,
   KELAS_DEFAULT_YEAR,
@@ -831,11 +832,7 @@ function ProfileContent() {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                   Edit Profil
                 </button>
-                <button className="bg-[var(--color-surface)] border border-[#3a3a3d] hover:bg-[#2a2a30] transition p-2.5 rounded-xl flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-white">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5c-1.1 0-2 .9-2 2v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
-                  </svg>
-                </button>
+                <ThemeToggle />
               </div>
             </div>
 

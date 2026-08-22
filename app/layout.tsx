@@ -32,7 +32,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className="bg-[var(--color-bg)] min-h-screen overflow-x-hidden text-white" suppressHydrationWarning>
+      <body className="bg-[var(--color-bg)] min-h-screen overflow-x-hidden text-[var(--color-text-1)]" suppressHydrationWarning>
+        {/*
+          Tema dipasang di sini, sebagai skrip biasa yang jalan saat HTML masih
+          dibaca — bukan di useEffect. Effect berjalan SETELAH gambar pertama,
+          jadi user mode terang akan melihat kedipan gelap dulu tiap kali buka
+          halaman. Kunci localStorage-nya harus sama dengan THEME_STORAGE_KEY di
+          lib/theme.ts.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('tmuj_tema');if(t!=='light'&&t!=='dark'){t='dark'}var r=document.documentElement;r.dataset.theme=t;r.style.colorScheme=t;if(t==='light'){var m=document.querySelector('meta[name="theme-color"]');if(m){m.setAttribute('content','#f1f1f5')}}}catch(e){}`,
+          }}
+        />
         <GlobalScrollRestorer />
         <LowFxFlag />
         <AuthProvider>

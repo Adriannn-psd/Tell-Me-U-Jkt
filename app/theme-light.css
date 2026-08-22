@@ -1,0 +1,536 @@
+/* ===========================================================================
+   MODE TERANG
+   ===========================================================================
+
+   Aplikasi ini ditulis gelap dari awal. Ada dua jenis warna di dalamnya:
+
+   1. ~1000 pemakaian token, `var(--color-…)`. Yang ini gratis: cukup tulis
+      ulang nilai tokennya di bawah dan semuanya ikut berubah.
+   2. ~1200 pemakaian warna yang ditulis langsung di kelas Tailwind
+      (`text-white`, `bg-[#1c1c1e]`, `border-[#3a3a3d]`, …) di 59 file.
+
+   Untuk yang kedua ada dua pilihan: mengedit 59 file, atau memetakan warnanya
+   di satu tempat. Yang dipilih yang kedua, dengan alasan yang menentukan:
+   SELURUH isi file ini berada di dalam `html[data-theme="light"]`, jadi mode
+   gelap — tampilan yang dipakai semua orang sekarang — secara konstruksi tidak
+   mungkin berubah. Mengedit 59 file untuk fitur yang belum tentu dipakai
+   punya risiko yang jauh lebih besar dan tidak bisa diverifikasi satu-satu.
+
+   Polanya (cocokkan nama kelas + `!important`) sama dengan blok `data-lowfx`
+   di app/globals.css, dan alasannya juga sama: satu aturan langsung menutup
+   semua tempat, termasuk tempat baru yang ditambahkan nanti.
+
+   Konsekuensi yang harus diketahui: pemetaan ini kasar. Warna yang dipakai
+   di tempat tak terduga — misalnya teks putih di atas kartu berwarna yang
+   tidak masuk daftar pengecualian di bawah — bisa salah baca. Kalau ada
+   halaman yang kelihatan aneh di mode terang, tambahkan aturannya di sini.
+
+   Pemetaannya bukan tebak-tebakan warna baru, melainkan pembalikan: di mode
+   gelap, semakin TERANG sebuah abu berarti semakin penting; di mode terang
+   yang penting jadi semakin GELAP. Jadi #8e8e93 (abu cerah, teks utama kedua)
+   turun jadi abu tua, sementara #6c6c72 (abu redup, teks paling tidak penting)
+   justru naik jadi abu muda.
+   =========================================================================== */
+
+html[data-theme="light"] {
+  /* Jarak `bg` ke `surface` dibuat setara dengan yang di mode gelap. #0a0a0b ke
+     #17171a itu 1,10:1; kalau latar halaman dibuat #f5f5f7 jaraknya cuma 1,02:1
+     dan kartu putih tanpa garis tepi praktis hilang ke dalam halaman. #f1f1f5
+     mengembalikannya ke 1,14:1. */
+  --color-bg: #f1f1f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #ececf0;
+  --color-border-color: #dcdce2;
+  --color-text-1: #101014;
+  --color-text-2: #56565f;
+  --color-text-3: #72727b;
+
+  /* Merah brand dibiarkan sama supaya tombol dan aksen tetap warna yang sama
+     di kedua mode. Hijau harus digelapkan: #3ddc72 di atas putih praktis tidak
+     terbaca (rasio ~1,9:1), dan warna ini dipakai untuk status "Selesai". */
+  --color-brand-green: #0f8a52;
+}
+
+/* ---------------------------------------------------------------------------
+   1. Permukaan
+   ---------------------------------------------------------------------------
+   Semua hitam-kehitaman di app ini adalah panel: kartu, sheet, header sticky,
+   input. Nilainya beda-beda tipis (#1c1c1e, #121212, #111112, …) karena
+   ditulis di waktu berbeda, tapi perannya sama, jadi semuanya jadi putih.
+
+   `~=` cocok dengan satu token utuh, jadi `bg-[#1c1c1e]` kena tapi
+   `hover:bg-[#1c1c1e]` tidak — varian hover ditangani terpisah di bawah
+   supaya warna hover tidak ikut terpasang saat kursor tidak di atasnya.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] *:where(
+  [class~="bg-[#1c1c1e]"], [class*="bg-[#1c1c1e]/"],
+  [class~="bg-[#1a1a1c]"], [class~="bg-[#151517]"], [class~="bg-[#141417]"],
+  [class~="bg-[#111114]"], [class~="bg-[#111112]"], [class*="bg-[#111112]/"],
+  [class~="bg-[#111111]"], [class~="bg-[#111]"], [class~="bg-[#1a1a1a]"],
+  [class~="bg-[#0e0e10]"], [class~="bg-[#0a0a0c]"], [class*="bg-[#0a0a0c]/"],
+  [class~="bg-[#060607]"], [class*="bg-[#060607]/"], [class~="bg-[#050505]"],
+  [class~="bg-[#0a0a0b]"], [class~="bg-[#121212]"], [class~="bg-[#1f1f23]"],
+  [class~="bg-[#202022]"], [class~="bg-[#252529]"]
+) {
+  background-color: var(--color-surface) !important;
+}
+
+/* Abu tengah: latar tombol sekunder dan permukaan di atas permukaan. */
+html[data-theme="light"] *:where(
+  [class~="bg-[#2a2a30]"], [class*="bg-[#2a2a30]/"],
+  [class~="bg-[#2c2c2e]"], [class~="bg-[#2b2b2b]"],
+  [class~="bg-[#333338]"], [class~="bg-[#333]"], [class~="bg-[#333333]"],
+  [class~="bg-[#3a3a3d]"], [class~="bg-[#404040]"]
+) {
+  background-color: var(--color-surface-2) !important;
+}
+
+/* Varian hover/group-hover, dipasang hanya saat benar-benar di-hover. */
+html[data-theme="light"] *:where([class*="hover:bg-[#1c1c1e]"], [class*="hover:bg-[#111]"], [class*="hover:bg-[#1f1f23]"], [class*="hover:bg-[#202022]"]):hover {
+  background-color: var(--color-surface-2) !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:bg-[#2a2a30]"], [class*="hover:bg-[#2c2c2e]"], [class*="hover:bg-[#3a3a3d]"], [class*="hover:bg-[#4a4a4d]"], [class*="hover:bg-[#333]"]):hover {
+  background-color: #e2e2e9 !important;
+}
+
+html[data-theme="light"] .group:hover *:where([class*="group-hover:bg-[#2a2a30]"], [class*="group-hover:bg-[#3a3a3d]"]) {
+  background-color: #e2e2e9 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Garis
+   ---------------------------------------------------------------------------
+   Di mode gelap garis dibuat lebih TERANG dari latarnya; di mode terang harus
+   lebih GELAP. Jadi bukan cuma tokennya yang ditukar, arah kontrasnya balik.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] *:where(
+  [class~="border-[#2a2a30]"], [class*="border-[#2a2a30]/"], [class*="md:border-[#2a2a30]"],
+  [class~="border-[#3a3a3d]"], [class*="border-[#3a3a3d]/"],
+  [class~="border-[#333338]"], [class~="border-[#333]"],
+  [class~="border-[#2c2c2e]"], [class~="border-[#1c1c1e]"]
+) {
+  border-color: var(--color-border-color) !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:border-[#4a4a4f]"], [class*="hover:border-[#3a3a3d]"]):hover {
+  border-color: #c8c8d2 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   3. Teks abu
+   ---------------------------------------------------------------------------
+   Lihat catatan pembalikan di kepala file: #8e8e93 dan #a1a1aa adalah abu
+   cerah (teks pendukung yang masih penting) → jadi abu tua. #6c6c72 dan
+   #5a5a5f adalah abu redup (label, timestamp) → jadi abu muda.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] *:where(
+  [class~="text-[#8e8e93]"], [class~="text-[#a1a1aa]"], [class~="text-[#a0a0ab]"],
+  [class~="text-[#9c9ca3]"], [class*="text-[#ebebf5]/8"]
+) {
+  color: var(--color-text-2) !important;
+}
+
+html[data-theme="light"] *:where(
+  [class~="text-[#6c6c72]"], [class~="text-[#5a5a5f]"], [class~="text-[#3a3a3d]"],
+  [class*="text-[#ebebf5]/7"]
+) {
+  color: var(--color-text-3) !important;
+}
+
+/* Warna status: cerah di atas gelap, tidak terbaca di atas putih. Latarnya
+   (yang selalu versi transparan seperti /10) sengaja dibiarkan — di atas putih
+   hasilnya jadi tint pucat yang justru cocok. */
+html[data-theme="light"] *:where([class~="text-[#30d158]"], [class~="text-[#0f9d58]"], [class~="text-[#10b981]"]) {
+  color: #0f8a52 !important;
+}
+
+html[data-theme="light"] *:where([class~="text-[#ff9f0a]"]) {
+  color: #a06400 !important;
+}
+
+html[data-theme="light"] *:where([class~="text-[#ff3b30]"], [class~="text-[#E5271F]"]) {
+  color: #c81c15 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   4. Teks putih — bagian paling rawan
+   ---------------------------------------------------------------------------
+   `text-white` dipakai 421 kali. Sebagian besar teks biasa di atas panel gelap
+   (harus jadi hitam di mode terang), sebagian lagi teks di atas tombol merah,
+   badge berwarna, atau foto (harus TETAP putih di kedua mode).
+
+   CSS tidak bisa melihat "apa warna di belakangku", jadi dipakai dua daftar
+   pengecualian: latar berwarna di elemen yang sama, dan latar berwarna di
+   salah satu leluhurnya (kartu brand, overlay gradien di atas foto). Urutan
+   penting: aturan pembalik di paling atas, pengecualian sesudahnya, karena
+   di antara aturan `!important` dengan bobot sama yang menang yang terakhir.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] *:where([class~="text-white"]) {
+  color: var(--color-text-1) !important;
+}
+
+html[data-theme="light"] *:where([class*="text-white/9"], [class*="text-white/8"], [class*="text-white/7"], [class*="text-white/6"]) {
+  color: var(--color-text-2) !important;
+}
+
+html[data-theme="light"] *:where([class*="text-white/4"], [class*="text-white/3"], [class*="text-white/1"]) {
+  color: var(--color-text-3) !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:text-white"]):hover,
+html[data-theme="light"] .group:hover *:where([class*="group-hover:text-white"]) {
+  color: var(--color-text-1) !important;
+}
+
+/* Pengecualian A: latar berwarna menempel di elemen teksnya sendiri.
+   Pola brand-nya harus `bg-`/`from-`/`via-`/`to-`, BUKAN sekadar mengandung
+   "brand-red": ada ~160 pemakaian `text-[var(--color-brand-red)]` dan
+   `hover:border-[var(--color-brand-red)]` yang tidak membuat latarnya merah,
+   dan mencocokkannya membuat teks putih tetap putih di atas panel yang sudah
+   jadi putih. `[class~=]` (token utuh) memisahkan latar merah penuh dari tint
+   seperti `bg-[var(--color-brand-red)]/10` yang di mode terang jadi pink muda. */
+html[data-theme="light"] *:where([class~="text-white"], [class*="text-white/"]):where(
+  [class~="bg-[var(--color-brand-red)]"], [class~="bg-[var(--color-brand-green)]"],
+  [class*="from-[var(--color-brand-red)]"], [class*="via-[var(--color-brand-red)]"], [class*="to-[var(--color-brand-red)]"],
+  [class*="bg-gradient"], [class*="bg-black"],
+  [class*="bg-red-"], [class*="bg-rose-"], [class*="bg-orange-"], [class*="bg-amber-"],
+  [class*="bg-yellow-"], [class*="bg-green-"], [class*="bg-emerald-"], [class*="bg-teal-"],
+  [class*="bg-blue-"], [class*="bg-sky-"], [class*="bg-indigo-"], [class*="bg-violet-"],
+  [class*="bg-purple-"], [class*="bg-fuchsia-"], [class*="bg-pink-"],
+  [class*="bg-[#E5271F]"], [class*="bg-[#ff3b30]"], [class*="bg-[#10b981]"],
+  [class*="bg-[#0f9d58]"], [class*="bg-[#5865F2]"], [class*="bg-[#1DA1F2]"], [class*="bg-[#8a1414]"]
+) {
+  color: #ffffff !important;
+}
+
+/* Pengecualian B: teksnya di DALAM kartu berwarna, tombol, atau overlay
+   gradien di atas foto — semuanya tetap gelap walau modenya terang.
+
+   `bg-black` di sini WAJIB mengecualikan elemen selebar penutup (`inset-0`):
+   43 modal di app ini menaruh panelnya DI DALAM scrim `bg-black/40`, jadi tanpa
+   pengecualian ini seluruh teks modal tetap putih di atas panel yang sudah jadi
+   putih. Pil hitam kecil di atas foto (`bg-black/60 rounded-full`, 16 tempat)
+   tidak punya `inset-0`, jadi teks putihnya tetap aman.
+
+   `p-[1px]` dikecualikan dengan alasan sejenis: gradien berpadding 1px bukan
+   latar, itu cara menggambar GARIS. Kartu Hall of Fame di app/about membungkus
+   kartu `bg-[#111114]` dengan cincin seperti itu, dan tanpa pengecualian ini
+   namanya tetap putih di atas kartu yang sudah jadi putih. */
+html[data-theme="light"] *:where(
+  [class~="bg-[var(--color-brand-red)]"], [class~="bg-[var(--color-brand-green)]"],
+  [class*="from-[var(--color-brand-red)]"], [class*="via-[var(--color-brand-red)]"], [class*="to-[var(--color-brand-red)]"],
+  [class*="bg-gradient"]:not([class*="p-[1px]"]), [class*="bg-black"]:not([class*="inset-0"]),
+  [class*="from-black"], [class*="via-black"],
+  [class*="bg-red-5"], [class*="bg-red-6"], [class*="bg-red-7"], [class*="bg-rose-5"],
+  [class*="bg-orange-5"], [class*="bg-amber-5"], [class*="bg-green-5"], [class*="bg-green-6"],
+  [class*="bg-emerald-5"], [class*="bg-emerald-6"], [class*="bg-blue-5"], [class*="bg-blue-6"],
+  [class*="bg-indigo-5"], [class*="bg-violet-5"], [class*="bg-purple-5"], [class*="bg-pink-5"],
+  [class*="bg-[#E5271F]"], [class*="bg-[#ff3b30]"], [class*="bg-[#10b981]"],
+  [class*="bg-[#0f9d58]"], [class*="bg-[#5865F2]"], [class*="bg-[#1DA1F2]"], [class*="bg-[#8a1414]"]
+) *:where([class~="text-white"], [class*="text-white/"]) {
+  color: #ffffff !important;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Lapisan putih tipis
+   ---------------------------------------------------------------------------
+   `bg-white/10` dan `border-white/10` adalah cara menerangkan sesuatu di atas
+   latar gelap. Di atas putih efeknya nol, jadi dibalik jadi hitam tipis.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] *:where([class~="bg-white/5"], [class~="bg-white/10"], [class~="bg-white/20"], [class*="bg-white/["]) {
+  background-color: rgb(0 0 0 / 0.05) !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:bg-white/"]):hover {
+  background-color: rgb(0 0 0 / 0.08) !important;
+}
+
+html[data-theme="light"] .group:hover *:where([class*="group-hover:bg-white/"]) {
+  background-color: rgb(0 0 0 / 0.06) !important;
+}
+
+html[data-theme="light"] *:where([class*="border-white/"], [class~="border-white"]) {
+  border-color: rgb(0 0 0 / 0.12) !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:border-white"]):hover,
+html[data-theme="light"] .group:hover *:where([class*="group-hover:border-white"]) {
+  border-color: rgb(0 0 0 / 0.22) !important;
+}
+
+/* Tombol "terbalik" (`bg-white text-black`): pil aktif, tombol utama di atas
+   panel gelap. Di mode terang putih-di-atas-putih hilang, jadi dibalik jadi
+   tinta. Syarat `text-black` sengaja ikut dicocokkan — itu yang membedakannya
+   dari `bg-white` yang benar-benar harus putih: kertas QR, bar grafik hiasan,
+   tombol shutter kamera, kotak avatar. */
+html[data-theme="light"] *:where([class*="bg-white"][class*="text-black"]) {
+  background-color: var(--color-text-1) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="light"] *:where([class*="hover:bg-white"][class*="hover:text-black"]):hover {
+  background-color: var(--color-text-1) !important;
+  color: #ffffff !important;
+}
+
+/* Ikon yang warnanya ditulis di atribut SVG, bukan di kelas. Sama seperti
+   `text-white`: yang di dalam wadah berwarna dibiarkan putih. */
+html[data-theme="light"] svg:where([stroke="white"], [stroke="#fff"]) {
+  stroke: var(--color-text-1) !important;
+}
+
+html[data-theme="light"] *:where(
+  [class~="bg-[var(--color-brand-red)]"], [class~="bg-[var(--color-brand-green)]"],
+  [class*="from-[var(--color-brand-red)]"], [class*="to-[var(--color-brand-red)]"],
+  [class*="bg-gradient"], [class*="bg-black"]:not([class*="inset-0"]),
+  [class*="bg-red-5"], [class*="bg-red-6"], [class*="bg-green-5"], [class*="bg-emerald-5"],
+  [class*="bg-blue-5"], [class*="bg-[#E5271F]"], [class*="bg-[#ff3b30]"]
+) svg:where([stroke="white"], [stroke="#fff"]) {
+  stroke: #ffffff !important;
+}
+
+/* Knop sakelar tetap putih di kedua mode; di mode terang dia butuh garis tipis
+   supaya tidak lenyap ke dalam rel sakelar yang ikut jadi terang. */
+html[data-theme="light"] *:where([class*="after:bg-white"])::after {
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.18) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   6. Kartu login
+   ---------------------------------------------------------------------------
+   components/LoginPanel.tsx tidak memakai kelas Tailwind sama sekali; warnanya
+   dari app/login.css, jadi seluruh pemetaan di atas melewatinya. Kartu ini
+   muncul di 4 halaman biasa (profile, karya, kalender, radar) untuk user yang
+   belum masuk, dan di sana latarnya latar halaman — di mode terang kartunya
+   (putih 3,5%) praktis lenyap dan teks abunya cuma 2,6:1.
+
+   Layar /login penuh (`.login-container`) DIBIARKAN gelap di kedua mode: itu
+   satu layar bermerek yang mengatur latar dan warna teksnya sendiri, lengkap
+   dengan dekorasi merah dan bola gradien. Nilai gelapnya dipasang ulang di blok
+   terakhir bagian ini — selectornya lebih spesifik DAN lebih akhir, jadi dia
+   yang menang.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] :where(.login-card) {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border-color) !important;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.08) !important;
+}
+
+html[data-theme="light"] :where(.card-subtitle, .divider, .footer-text, .footer-text p) {
+  color: var(--color-text-2) !important;
+}
+
+html[data-theme="light"] :where(.feature-body) p {
+  color: var(--color-text-3) !important;
+}
+
+html[data-theme="light"] :where(.divider)::before,
+html[data-theme="light"] :where(.divider)::after {
+  background: rgb(0 0 0 / 0.12) !important;
+}
+
+html[data-theme="light"] :where(.feature-icon) {
+  background: var(--color-surface-2) !important;
+  border-color: rgb(0 0 0 / 0.06) !important;
+}
+
+/* Tombol "Lanjutkan sebagai Tamu" menulis garisnya di atribut style (putih 10%,
+   tak terlihat di atas putih). `!important` di stylesheet mengalahkan inline
+   style yang tidak penting. Tombol Discord utama `border: none`, jadi aturan ini
+   tidak berpengaruh padanya. */
+html[data-theme="light"] :where(.discord-btn) {
+  border-color: rgb(0 0 0 / 0.14) !important;
+}
+
+/* Pemasangan ulang untuk layar /login penuh. */
+html[data-theme="light"] .login-container :where(.login-card) {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5) !important;
+}
+
+html[data-theme="light"] .login-container :where(.card-subtitle, .divider, .footer-text, .footer-text p) {
+  color: var(--text-gray) !important;
+}
+
+html[data-theme="light"] .login-container :where(.feature-body) p {
+  color: var(--text-gray-dim) !important;
+}
+
+html[data-theme="light"] .login-container :where(.divider)::before,
+html[data-theme="light"] .login-container :where(.divider)::after {
+  background: rgb(255 255 255 / 0.12) !important;
+}
+
+html[data-theme="light"] .login-container :where(.feature-icon) {
+  background: var(--icon-bg) !important;
+  border-color: rgb(255 255 255 / 0.06) !important;
+}
+
+html[data-theme="light"] .login-container :where(.discord-btn) {
+  border-color: rgb(255 255 255 / 0.1) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   7. Teks bergradien (`bg-clip-text`)
+   ---------------------------------------------------------------------------
+   Lima judul di app ini bukan teks berwarna, melainkan gradien yang dipotong
+   bentuk hurufnya (`text-transparent bg-clip-text`). Yang gradiennya putih →
+   abu hilang total di atas latar terang, jadi hurufnya diratakan ke tinta.
+
+   Dua yang diratakan dikenali dari titik akhir gradiennya (`to-[#5a5a5f]` di
+   judul hero app/about, `to-[#8e8e93]` di kartu QRIS) — bukan dari "mengandung
+   from-white", karena judul hero app/portal juga putih tapi duduk di atas
+   overlay gradien gelap yang memang dibiarkan gelap, dan di sana tinta gelap
+   justru yang tidak terbaca. */
+html[data-theme="light"] *:where([class*="bg-clip-text"]):where([class*="to-[#5a5a5f]"], [class*="to-[#8e8e93]"]) {
+  background-image: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: var(--color-text-1) !important;
+}
+
+/* Judul kartu di app/about yang berubah jadi gradien putih→merah saat kartunya
+   di-hover: di mode terang paruh putihnya lenyap, jadi hover-nya dibiarkan
+   memakai tinta biasa. */
+html[data-theme="light"] .group:hover *:where([class*="group-hover:bg-clip-text"]) {
+  background-image: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: var(--color-text-1) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   8. Dock bawah (components/BottomNav.tsx)
+   ---------------------------------------------------------------------------
+   Satu-satunya gradien yang diratakan, karena satu-satunya yang bukan hiasan:
+   batang navigasi ini ada di setiap halaman dan label non-aktifnya memakai
+   `text-[#8e8e93]` yang di mode terang jadi abu tua — di atas batang gelap
+   hasilnya tak terbaca. Kelas pegangannya dipasang di komponennya sendiri,
+   bukan dicocokkan dari nama warna, supaya jelas yang dimaksud batang mana.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] .tmuj-dock {
+  background-image: none !important;
+  background-color: var(--color-surface) !important;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.1) !important;
+}
+
+/* Label halaman yang sedang dibuka memakai `text-white`; Pengecualian B
+   membiarkannya putih karena induknya bergradien, jadi di sini dibalik lagi.
+   Kotak avatar di ujung dock dikecualikan: dia bulatan gradien gelap yang
+   membawa latarnya sendiri, jadi inisialnya memang harus tetap putih. */
+html[data-theme="light"] .tmuj-dock *:where([class~="text-white"]):not([class*="bg-gradient"]) {
+  color: var(--color-text-1) !important;
+}
+
+/* Kabut gelap di atas dock: gunanya membuat batang gelap terbaca di atas isi
+   halaman. Batangnya sudah terang, kabutnya jadi tinggal noda. */
+html[data-theme="light"] .tmuj-dock-scrim {
+  background-image: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   9. Panel gradien netral yang ikut terang (`tmuj-panel-flat`)
+   ---------------------------------------------------------------------------
+   Gradien dibiarkan gelap (lihat catatan penutup), tapi dua panel di app/about
+   isinya paragraf panjang: kartu fitur dan kartu profil. Teks pendukungnya
+   `text-[#8e8e93]` ikut jadi abu tua di mode terang, dan abu tua di atas panel
+   gelap cuma 2,1:1 — jadi panelnya yang harus ikut terang.
+
+   Salah satunya menulis gradiennya di atribut `style` (tak bisa dicocokkan
+   selector nama kelas), jadi keduanya diberi kelas pegangan di komponennya.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] .tmuj-panel-flat {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border-color) !important;
+}
+
+html[data-theme="light"] :is(.tmuj-panel-flat, .tmuj-panel-flat *):where([class~="text-white"]) {
+  color: var(--color-text-1) !important;
+}
+
+/* Teks putih tembus-pandang di dalam panel ini (`text-white/80` untuk penekanan
+   di dalam bio, `text-white/30` untuk inisial avatar) diseragamkan ke abu tua:
+   dua-duanya "putih yang diredam", dan di atas putih redamannya harus dibalik
+   jadi lebih terang dari tinta utama. */
+html[data-theme="light"] :is(.tmuj-panel-flat, .tmuj-panel-flat *):where([class*="text-white/"]) {
+  color: var(--color-text-2) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   10. Layar pembuka (`main.page`) tetap gelap
+   ---------------------------------------------------------------------------
+   app/page.tsx adalah satu layar penuh berisi animasi frame di atas latar
+   `#060607` yang ditulis di atribut `style` — jadi latarnya TIDAK bisa
+   diterangkan lewat selector nama kelas, dan tidak boleh: animasinya gelap,
+   dan menerangkan tulisan di atasnya berarti abu tua di atas gambar hitam.
+
+   Semua tulisannya `text-white/35`…`/80` di atas animasi itu, ditambah bar
+   loading `bg-white/10` dan pil "lewati" `border-white/15`. Pemetaan bagian 4
+   dan 5 membalik semuanya, jadi di sini dibalik kembali.
+
+   Kelas `page` sudah ada di app/page.tsx dan app/login/page.tsx sejak sebelum
+   mode terang, dan tidak punya gaya apa pun sendiri; di sini dia dipakai
+   sebagai pegangan. /login memang juga harus tetap gelap (lihat bagian 6).
+
+   Selectornya `.page …` (0,1,0 lebih berat dari `*:where(…)` di atas), jadi
+   menang tanpa bergantung pada urutan berkas.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] :is(.page, .page *):where([class~="bg-[#060607]"]) {
+  background-color: #060607 !important;
+}
+
+html[data-theme="light"] :is(.page, .page *):where([class*="bg-[#060607]/9"]) {
+  background-color: rgb(6 6 7 / 0.9) !important;
+}
+
+/* Nilai putihnya tidak bisa dibaca dari nama kelas, jadi dipatok satu nilai
+   yang persis sama dengan yang dipakai halaman ini (`/10` dan `/15`); kalau
+   nanti ada lapisan putih baru di layar ini, dia ikut tetap putih — bukan
+   berbalik jadi hitam tipis yang lenyap di atas animasi gelap. */
+html[data-theme="light"] :is(.page, .page *):where([class*="bg-white/"]) {
+  background-color: rgb(255 255 255 / 0.1) !important;
+}
+
+html[data-theme="light"] :is(.page, .page *):where([class*="border-white/"]) {
+  border-color: rgb(255 255 255 / 0.15) !important;
+}
+
+html[data-theme="light"] :is(.page, .page *):where([class~="text-white"]) {
+  color: #ffffff !important;
+}
+
+/* Dua tingkat redaman, sama seperti bagian 4 — cuma arahnya terbalik. */
+html[data-theme="light"] :is(.page, .page *):where([class*="text-white/9"], [class*="text-white/8"], [class*="text-white/7"], [class*="text-white/6"]) {
+  color: rgb(255 255 255 / 0.7) !important;
+}
+
+html[data-theme="light"] :is(.page, .page *):where([class*="text-white/4"], [class*="text-white/3"], [class*="text-white/1"]) {
+  color: rgb(255 255 255 / 0.4) !important;
+}
+
+html[data-theme="light"] :is(.page, .page *):where([class*="hover:bg-black/"]):hover {
+  background-color: rgb(0 0 0 / 0.7) !important;
+}
+
+html[data-theme="light"] :is(.page, .page *):where([class*="hover:text-white"]):hover {
+  color: #ffffff !important;
+}
+
+/* Yang SENGAJA tidak diubah:
+   - `bg-black/40`…`bg-black/95`: itu scrim di belakang modal. Gelap adalah
+     tugasnya, di mode apa pun.
+   - gradien (`bg-gradient-to-*` beserta from/via/to-nya): gradien di app ini
+     hampir semuanya dekoratif atau menutupi foto — mulai dari gradien
+     Instagram, banner merah, sampai kabut hitam di atas foto kartu. Panel
+     gradien abu-gelap pun dibiarkan gelap (kartu fitur & kartu profil di
+     app/about, hero app/portal), dan teks putih di atasnya tetap putih (lihat
+     pengecualian B). Satu-satunya yang diratakan adalah dock bawah di bagian 8.
+   - foto, video, avatar, dan logo.
+   - layar /login penuh (`.login-container`, lihat bagian 6) dan layar pembuka
+     app/page.tsx (`.page`, lihat bagian 10). */
+
+
+
+
