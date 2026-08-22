@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey || "dummy");
+/*
+  Dulu route ini bikin client-nya sendiri: `createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || "", ...)`.
+  URL kosong bikin `createClient` melempar "supabaseUrl is required" di module
+  scope, dan `next build` mengevaluasi module scope waktu "Collecting page data"
+  — jadi build di Docker (yang env-nya baru masuk saat runtime lewat env_file)
+  selalu mati di sini. `lib/supabase.ts` sudah punya placeholder buat kasus itu,
+  jadi pakai client yang sama saja.
+*/
+const hasServiceKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 export async function GET() {
   try {
-    if (!supabaseServiceKey) {
+    if (!hasServiceKey) {
       return NextResponse.json({ success: false, error: "Missing Supabase Key" }, { status: 500 });
     }
 

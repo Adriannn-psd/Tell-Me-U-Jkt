@@ -2,7 +2,12 @@ version: '3.8'
 
 services:
   tellmeu-app:
-    build: .
+    build:
+      context: .
+      # Diteruskan dari .env di folder ini (bukan env_file): NEXT_PUBLIC_* harus
+      # sudah ada saat `npm run build`, karena nilainya ditanam ke hasil build.
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
     container_name: tellmeu-web
     restart: always
     expose:
@@ -13,7 +18,10 @@ services:
       - webnet
 
   radar-scraper:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
     container_name: radar-scraper-daemon
     restart: always
     command: ["python3", "radar_daemon.py"]
