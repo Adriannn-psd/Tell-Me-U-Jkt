@@ -23,37 +23,40 @@ project app, sehingga app tidak bisa dimatikan tanpa mematikan TLS semua domain.
 Lihat [proxy/Caddyfile](proxy/Caddyfile):
 
 - `tellmeujkt.web.id` → `tellmeu-web:3000`
-- `adptr.web.id` → `9router:20128`
+- `adptr.my.id` → `9router:20128`
 
 Menambah domain baru = tambah blok di `Caddyfile`, pastikan container tujuan ada
 di network `edge`, lalu reload (lihat bawah). Tidak perlu restart apa pun.
 
 ## Perintah operasional
 
-Semua dijalankan dari root repo (`/opt/tellmeu`).
+Perintah proxy memakai path absolut ke compose file-nya, jadi bisa dijalankan
+dari direktori mana pun. Compose menentukan project directory dari lokasi file
+`-f` (bukan cwd), dan nama project sudah dipatok `proxy` di dalam file itu.
 
-Update aplikasi (proxy tidak tersentuh):
+Update aplikasi — harus dari root repo karena build context-nya relatif
+(proxy tidak tersentuh):
 
 ```bash
-docker compose up -d --build
+cd /opt/tellmeu && docker compose up -d --build
 ```
 
 Reload konfigurasi Caddy setelah mengubah `Caddyfile` (tanpa downtime):
 
 ```bash
-docker compose -f deploy/proxy/docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+docker compose -f /opt/tellmeu/deploy/proxy/docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 Restart proxy (hanya kalau compose file proxy-nya berubah):
 
 ```bash
-docker compose -f deploy/proxy/docker-compose.yml up -d
+docker compose -f /opt/tellmeu/deploy/proxy/docker-compose.yml up -d
 ```
 
 Log proxy, termasuk error penerbitan sertifikat:
 
 ```bash
-docker compose -f deploy/proxy/docker-compose.yml logs --tail=80 caddy
+docker compose -f /opt/tellmeu/deploy/proxy/docker-compose.yml logs --tail=80 caddy
 ```
 
 ## Migrasi dari susunan lama (sekali saja)
@@ -98,7 +101,7 @@ masih di network `bridge` default.
 6. Verifikasi kedua domain:
 
    ```bash
-   curl -I https://tellmeujkt.web.id && curl -I https://adptr.web.id
+   curl -I https://tellmeujkt.web.id && curl -I https://adptr.my.id
    ```
 
 Sertifikat lama tersimpan di volume `tellmeu_caddy_data` dan **tidak** dipakai
@@ -118,7 +121,7 @@ di-recreate** (mis. update image). Selama belum punya compose file sendiri,
 ulangi perintah tersebut setiap habis recreate.
 
 Port `20128` masih dipublikasikan ke `0.0.0.0`, artinya API-nya bisa diakses
-langsung lewat IP tanpa HTTPS. Setelah `adptr.web.id` jalan, jalankan ulang
+langsung lewat IP tanpa HTTPS. Setelah `adptr.my.id` jalan, jalankan ulang
 container dengan `-p 127.0.0.1:20128:20128`; akses via Caddy tetap hidup karena
 lewat network `edge`, bukan port host. Perlu dicatat: `ufw deny 20128` tidak
 memblokir port publikasi Docker — Docker menulis aturannya sendiri di chain
