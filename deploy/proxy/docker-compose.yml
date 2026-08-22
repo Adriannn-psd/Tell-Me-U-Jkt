@@ -16,7 +16,13 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      # Yang di-mount direktorinya, bukan Caddyfile-nya langsung. Bind mount satu
+      # file mengikat inode: `git pull` dan `sed -i` menulis file baru lalu
+      # rename, jadi container tetap membaca isi lama dan `caddy reload` melapor
+      # "config is unchanged". Mount direktori bikin perubahan langsung terlihat.
+      # Caddy hanya membaca /etc/caddy/Caddyfile; docker-compose.yml yang ikut
+      # terbawa ke dalamnya tidak dipakai.
+      - ./:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:

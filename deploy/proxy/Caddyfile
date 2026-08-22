@@ -6,6 +6,6 @@ tellmeujkt.web.id {
     reverse_proxy tellmeu-web:3000
 }
 
-adptr.web.id {
+adptr.my.id {
     reverse_proxy 9router:20128
 }
