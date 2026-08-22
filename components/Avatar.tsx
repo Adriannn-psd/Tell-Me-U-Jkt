@@ -56,9 +56,18 @@ export default function Avatar({
   const [hot, setHot] = useState(false);
   const [animatedReady, setAnimatedReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  // URL yang sudah terbukti gagal dimuat — bukan boolean, supaya statusnya
+  // otomatis lupa sendiri begitu `src` berganti (mis. user baru mengunggah
+  // avatar baru) tanpa perlu useEffect penyetel-ulang.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   // Sentuhan tidak punya "keluar dari area" yang wajar: sekali di-tap, biarkan
   // terus bergerak — user memang sengaja menyuruhnya bergerak.
   const latchedRef = useRef(false);
+
+  // Dihitung sebelum semua early-return karena useEffect di bawah butuh ini
+  // sebagai dependensi. avatarSrc() aman dipanggil dengan src kosong.
+  const staticSrc = hasRealSrc(src) ? avatarSrc(src, { size }) : "";
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -68,18 +77,50 @@ export default function Avatar({
     return () => query.removeEventListener("change", sync);
   }, []);
 
+  /**
+   * `onError` saja TIDAK cukup, dan ini sudah dibuktikan gagal sekali: halaman
+   * ini dirender di server, jadi <img>-nya sudah ada di HTML dan browser sempat
+   * gagal memuatnya SEBELUM React hydrate. Event error-nya lewat sebelum ada
+   * yang mendengarkan, dan gambar rusaknya bertahan di layar.
+   *
+   * Jadi begitu node-nya terpasang, statusnya diperiksa sekali secara langsung:
+   * `complete` tapi `naturalWidth === 0` cuma mungkin berarti pemuatannya sudah
+   * selesai dengan gagal. Kalau ternyata masih dalam perjalanan, `onError`
+   * yang mengambil alih.
+   */
+  useEffect(() => {
+    const node = imgRef.current;
+    if (node && node.complete && node.naturalWidth === 0) setFailedSrc(staticSrc);
+  }, [staticSrc]);
+
   if (!hasRealSrc(src)) return <>{fallback}</>;
 
   const imgClassName = `h-full w-full object-cover ${className}`.trim();
-  const staticSrc = avatarSrc(src, { size });
+
+  /**
+   * URL yang ada tapi mati harus jatuh ke `fallback` juga, bukan cuma URL yang
+   * kosong. Tanpa ini browser melukis teks `alt` mentah di atas cincin gradien
+   * pemanggilnya — itu yang terjadi pada avatar Discord yang hash-nya sudah
+   * basi: pemiliknya ganti foto, hash lama langsung 404, dan `users.avatar_url`
+   * baru diperbarui saat dia login lagi (callback `signIn` di auth.ts).
+   *
+   * Yang dipantau cukup versi statisnya. Versi bergerak berasal dari hash yang
+   * sama, jadi kalau yang statis 404 yang bergerak pasti ikut; dan sebaliknya
+   * kalau cuma yang bergerak gagal, yang statis tetap terlihat karena memang
+   * tidak pernah dilepas dari DOM.
+   */
+  if (failedSrc === staticSrc) return <>{fallback}</>;
+
   // `always` hanya dipakai di avatar besar yang pasti terlihat (header profil,
   // modal preview) — jangan ditunda-tunda.
   const loading = animate === "always" ? "eager" : "lazy";
+  const markFailed = () => setFailedSrc(staticSrc);
 
-  // Avatar statis (mayoritas): satu <img> biasa, tanpa state & tanpa handler.
+  // Avatar statis (mayoritas): satu <img> biasa, tanpa lapisan kedua.
   if (!isAnimatedAvatar(src)) {
     return (
       <img
+        ref={imgRef}
         src={staticSrc}
         alt={alt}
         title={title}
@@ -87,6 +128,7 @@ export default function Avatar({
         height={size}
         loading={loading}
         decoding="async"
+        onError={markFailed}
         onClick={onClick}
         className={imgClassName}
       />
@@ -122,6 +164,7 @@ export default function Avatar({
         karena file animasinya sudah masuk cache browser.
       */}
       <img
+        ref={imgRef}
         src={staticSrc}
         alt={alt}
         title={title}
@@ -129,6 +172,7 @@ export default function Avatar({
         height={size}
         loading={loading}
         decoding="async"
+        onError={markFailed}
         onClick={onClick}
         className={imgClassName}
       />
