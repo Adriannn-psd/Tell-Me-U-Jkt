@@ -41,7 +41,9 @@ Update aplikasi — harus dari root repo karena build context-nya relatif
 cd /opt/tellmeu && docker compose up -d --build
 ```
 
-Reload konfigurasi Caddy setelah mengubah `Caddyfile` (tanpa downtime):
+Reload konfigurasi Caddy setelah mengubah `Caddyfile` (tanpa downtime). Cukup
+`reload` walau file-nya baru datang dari `git pull`, karena yang di-mount adalah
+direktorinya — lihat komentar di [proxy/docker-compose.yml](proxy/docker-compose.yml):
 
 ```bash
 docker compose -f /opt/tellmeu/deploy/proxy/docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
