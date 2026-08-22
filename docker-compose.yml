@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   tellmeu-app:
     build:
       context: .
+      target: web
       # Diteruskan dari .env di folder ini (bukan env_file): NEXT_PUBLIC_* harus
       # sudah ada saat `npm run build`, karena nilainya ditanam ke hasil build.
       args:
@@ -20,8 +19,8 @@ services:
   radar-scraper:
     build:
       context: .
-      args:
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+      # Stage `scraper` berhenti sebelum npm: daemon ini cuma perlu Python.
+      target: scraper
     container_name: radar-scraper-daemon
     restart: always
     command: ["python3", "radar_daemon.py"]
