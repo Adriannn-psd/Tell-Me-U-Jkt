@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
 import Avatar from "@/components/Avatar";
+import DiscardConfirm from "@/components/DiscardConfirm";
 
 export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
@@ -436,45 +437,12 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
           </button>
         )}
 
-        {/*
-          Konfirmasi buang, digambar DI DALAM kartu supaya jelas yang ditanyakan
-          adalah isian ini, bukan halaman di belakangnya. Latarnya menutup penuh
-          dan menyerap sentuhan, jadi ketukan nyasar berikutnya tidak menembus ke
-          latar gelap dan memicu pertanyaan yang sama berulang.
-
-          Tombol batal ditaruh sebagai pilihan utama (lebar penuh, warna merek)
-          dan "buang" cuma teks: yang tidak sengaja sampai ke sini hampir selalu
-          mau kembali mengisi.
-        */}
         {confirmDiscard && (
-          <div
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 rounded-[24px] bg-[var(--color-bg)]/95 px-8 text-center"
-            role="alertdialog"
-            aria-modal="true"
-          >
-            <div className="flex flex-col gap-2">
-              <h3 className="text-lg font-bold text-white">Buang isian ini?</h3>
-              <p className="text-sm leading-relaxed text-[var(--color-text-2)]">
-                Judul, deskripsi, tag, dan file yang sudah dipilih akan hilang dan
-                harus diisi dari awal.
-              </p>
-            </div>
-
-            <div className="flex w-full flex-col gap-2">
-              <button
-                onClick={() => setConfirmDiscard(false)}
-                className="w-full rounded-xl bg-[var(--color-brand-red)] py-3.5 font-bold text-white transition hover:bg-red-600"
-              >
-                Lanjut mengisi
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full rounded-xl py-3 text-sm font-semibold text-[var(--color-text-3)] transition hover:text-white"
-              >
-                Buang saja
-              </button>
-            </div>
-          </div>
+          <DiscardConfirm
+            onKeep={() => setConfirmDiscard(false)}
+            onDiscard={onClose}
+            description="Judul, deskripsi, tag, dan file yang sudah dipilih akan hilang dan harus diisi dari awal."
+          />
         )}
       </div>
     </div>

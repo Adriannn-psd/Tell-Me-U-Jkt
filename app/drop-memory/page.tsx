@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { useGuest } from "@/components/GuestProvider";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
+import DiscardConfirm from "@/components/DiscardConfirm";
 
 interface Memory {
   id: string;
@@ -63,8 +64,47 @@ function DropMemoryContent() {
   const [description, setDescription] = useState("");
   const [privacy, setPrivacy] = useState<"Publik" | "Khusus Kelas Saya" | "Khusus Prodi Saya">("Khusus Kelas Saya");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const { isComplete, missingInfo } = useProfileCheck();
   const [showLock, setShowLock] = useState(false);
+
+  /*
+   * Menutup modal "Drop Memory Baru".
+   *
+   * Latar gelapnya dulu memanggil `setShowCreateModal(false)` langsung, jadi satu
+   * sentuhan di area kosong di sekeliling kartu membuat form yang sudah diisi
+   * lenyap dari layar tanpa satu pun pertanyaan. Sekarang keduanya — latar dan
+   * tombol X — lewat sini: kalau belum ada isian modal tetap tertutup seketika,
+   * kalau sudah ada isian yang muncul pertanyaannya dulu.
+   *
+   * Pilihan sengaja tidak diberikan selama `isSubmitting`, sama seperti di modal
+   * upload karya: menutup di tengah pengiriman menyisakan pekerjaan setengah
+   * jalan yang tidak bisa diapa-apakan user.
+   */
+  const isCreateDirty = Boolean(title.trim() || description.trim());
+
+  const requestCloseCreate = () => {
+    if (isSubmitting) return;
+    if (isCreateDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    setShowCreateModal(false);
+  };
+
+  /*
+   * State form-nya milik halaman, bukan modalnya, jadi menutup modal saja tidak
+   * mengosongkan apa pun — isiannya akan muncul lagi utuh saat modal dibuka
+   * ulang. Itu justru bagus, tapi berarti "Buang saja" harus benar-benar
+   * membuang, kalau tidak pertanyaan di atasnya jadi bohong.
+   */
+  const discardCreate = () => {
+    setConfirmDiscard(false);
+    setShowCreateModal(false);
+    setTitle("");
+    setDescription("");
+    setPrivacy("Khusus Kelas Saya");
+  };
 
   // Filter state
   const [activeTab, setActiveTab] = useState<"Semua" | "Kelas Saya" | "Prodi Saya">("Semua");
@@ -142,7 +182,7 @@ function DropMemoryContent() {
             <p className="text-[var(--color-text-2)] text-sm">Bagikan momen serumu ke kelas atau prodi kamu secara eksklusif.</p>
           </div>
           
-          <button 
+          <button
             onClick={() => {
               if (isGuest) {
                 showLoginPopup();
@@ -222,11 +262,11 @@ function DropMemoryContent() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={requestCloseCreate} />
           <div className="relative bg-[#1c1c1e] w-full max-w-lg rounded-2xl md:rounded-3xl border border-[#2a2a30] shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-8 duration-300">
             <div className="p-5 md:p-6 border-b border-[#2a2a30] flex justify-between items-center bg-[#1c1c1e] sticky top-0 z-10">
               <h2 className="text-lg md:text-xl font-bold text-white">Drop Memory Baru</h2>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 bg-[#2a2a30] hover:bg-white/20 rounded-full text-white transition">
+              <button onClick={requestCloseCreate} disabled={isSubmitting} className="p-2 bg-[#2a2a30] hover:bg-white/20 rounded-full text-white transition disabled:opacity-40 disabled:cursor-not-allowed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -290,6 +330,15 @@ function DropMemoryContent() {
                 </div>
               </div>
             </form>
+
+            {confirmDiscard && (
+              <DiscardConfirm
+                onKeep={() => setConfirmDiscard(false)}
+                onDiscard={discardCreate}
+                description="Judul dan cerita yang sudah kamu tulis akan hilang dan harus diisi dari awal."
+                radiusClass="rounded-2xl md:rounded-3xl"
+              />
+            )}
           </div>
         </div>
       )}

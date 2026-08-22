@@ -11,6 +11,7 @@ import useSWR from "swr";
 import FeaturedEventCard from "@/components/fase3/FeaturedEventCard";
 import { useGuest } from "@/components/GuestProvider";
 import ProfileLockOverlay, { useProfileCheck } from "@/components/ProfileLockOverlay";
+import DiscardConfirm from "@/components/DiscardConfirm";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -30,6 +31,7 @@ function DokumentasiContent() {
   const [category, setCategory] = useState("Umum");
   const [uploadPermission, setUploadPermission] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [activeTab, setActiveTab] = useState("Semua");
   const [viewMode, setViewMode] = useState<"featured" | "grid">("featured");
   const [currentPage, setCurrentPage] = useState(1);
@@ -136,6 +138,43 @@ function DokumentasiContent() {
     } else {
       setViewMode("grid");
     }
+  };
+
+  /*
+   * Menutup modal "Buat Kegiatan Baru".
+   *
+   * Berbeda dari modal lain, latar gelap di sini memang tidak pernah bisa
+   * menutup — jadi yang perlu dijaga cuma tombol X. Tetap dijaga: satu ketukan
+   * di situ dulu langsung membuat form yang sudah diisi hilang dari layar, dan
+   * di HP tombolnya duduk persis di jalur jempol yang sedang menggeser form.
+   */
+  const isCreateDirty = Boolean(
+    title.trim() || description.trim() || className.trim()
+  );
+
+  const requestCloseCreate = () => {
+    if (isSubmitting) return;
+    if (isCreateDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    setShowCreateModal(false);
+  };
+
+  /*
+   * Isian form-nya disimpan di halaman, bukan di modalnya, jadi menutup modal
+   * saja tidak menghapus apa pun — semuanya muncul lagi saat modal dibuka ulang.
+   * Karena itu "Buang saja" harus mengosongkannya sendiri, biar sesuai dengan
+   * yang dijanjikan pertanyaannya.
+   */
+  const discardCreate = () => {
+    setConfirmDiscard(false);
+    setShowCreateModal(false);
+    setTitle("");
+    setDescription("");
+    setClassName("");
+    setCategory("Umum");
+    setUploadPermission("all");
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -422,10 +461,10 @@ function DokumentasiContent() {
       {/* Create Event Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1c1c1e] w-full max-w-md rounded-2xl border border-[var(--color-border-color)] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="relative bg-[#1c1c1e] w-full max-w-md rounded-2xl border border-[var(--color-border-color)] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-[var(--color-border-color)] flex items-center justify-between shrink-0">
               <h2 className="text-lg font-bold text-white">Buat Kegiatan Baru</h2>
-              <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface-2)] text-white hover:bg-[var(--color-text-3)] transition">
+              <button onClick={requestCloseCreate} disabled={isSubmitting} className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface-2)] text-white hover:bg-[var(--color-text-3)] transition disabled:opacity-40 disabled:cursor-not-allowed">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
@@ -513,6 +552,15 @@ function DokumentasiContent() {
                 </button>
               </div>
             </form>
+
+            {confirmDiscard && (
+              <DiscardConfirm
+                onKeep={() => setConfirmDiscard(false)}
+                onDiscard={discardCreate}
+                description="Nama event, deskripsi, dan nama kelas yang sudah kamu tulis akan hilang dan harus diisi dari awal."
+                radiusClass="rounded-2xl"
+              />
+            )}
           </div>
         </div>
       )}
