@@ -44,12 +44,22 @@ fi
 
 # 4. Menjalankan Docker Compose
 echo "[4/4] Menjalankan Docker Compose..."
+
+# Network bersama tempat reverse proxy menemukan container app. Harus ada lebih
+# dulu: compose menolak start kalau network `external` belum dibuat.
+sudo docker network inspect edge &> /dev/null || sudo docker network create edge
+
 # Memastikan plugin compose digunakan
 if docker compose version &> /dev/null; then
-    sudo docker compose up -d --build
+    COMPOSE="sudo docker compose"
 else
     # Fallback ke docker-compose lama jika docker compose (v2) tidak ada
-    sudo docker-compose up -d --build
+    COMPOSE="sudo docker-compose"
 fi
+
+$COMPOSE up -d --build
+# Reverse proxy adalah project terpisah (lihat deploy/proxy) supaya rebuild app
+# tidak pernah menurunkan TLS untuk domain lain di VPS ini.
+$COMPOSE -f deploy/proxy/docker-compose.yml up -d
 
 echo "Setup selesai! Aplikasi sedang berjalan dan akan diakses lewat https://tellmeujkt.web.id"
