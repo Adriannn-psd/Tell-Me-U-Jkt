@@ -31,6 +31,13 @@ const FPS = 30;
  */
 const TELKOM_FPS = 60;
 
+/**
+ * 00000-frame.webp .. 00153-frame.webp. Diangkat jadi konstanta karena bukan
+ * cuma dipakai sebagai frameCount: durasi opening dihitung darinya untuk
+ * menentukan kapan tombol lewati muncul.
+ */
+const OPENING_FRAMES = 154;
+
 const OUTRO_FRAMES = 115;
 const T1_FRAMES = 179;
 const T2_FRAMES = 177;
@@ -68,8 +75,20 @@ const TELKOM_CUE_AT = SIDES_AT + 10 / TELKOM_FPS;
  */
 const REDIRECT_AFTER_MS = 3000;
 
-/** Tombol "Lewati" muncul setelah animasi berjalan sekian lama. */
-const SKIP_AFTER_MS = 3000;
+/**
+ * Tombol "Lewati" muncul saat gedung kiri & kanan mulai naik — 8,97 detik
+ * setelah animasi jalan — bukan tiga detik seperti sebelumnya, yang membuatnya
+ * nongkrong di atas opening dan sepanjang outro.
+ *
+ * Angkanya dihitung dari jumlah frame, bukan ditulis bulat: opening 154/30 s
+ * ditambah panjang outro (SIDES_AT, titik gedung samping muncul di jam
+ * timeline). Kalau salah satu sekuens diganti, titik munculnya ikut pindah
+ * sendiri dan tidak pernah melenceng ke tengah outro lagi.
+ *
+ * Sisa animasi setelah itu masih ~7 detik, jadi tombolnya tetap ada cukup lama
+ * untuk yang memang tidak mau menonton sampai habis.
+ */
+const SKIP_AFTER_MS = (OPENING_FRAMES / FPS + SIDES_AT) * 1000;
 
 /**
  * Suara menempel pada jam animasi, bukan pada timer sendiri.
@@ -95,7 +114,7 @@ const oneIndexed = (index: number) => `${(index + 1).toString().padStart(4, "0")
 const INTRO_LAYERS: AnimationLayer[] = [
   {
     folderPath: "/opening-frames",
-    frameCount: 154, // 00000-frame.webp .. 00153-frame.webp (0-indexed)
+    frameCount: OPENING_FRAMES,
     filenameFormat: (index) => `${index.toString().padStart(5, "0")}-frame.webp`,
     zIndex: 10,
     fit: "cover",
@@ -436,9 +455,9 @@ function LandingContent() {
       */}
 
       {/*
-        Lewati animasi. Muncul 3 detik setelah animasi mulai dan hilang begitu
-        layar loading akhir mengambil alih — di titik itu halaman sudah menuju
-        /login sendiri, jadi tombolnya tidak ada gunanya lagi.
+        Lewati animasi. Muncul saat gedung mulai naik dan hilang begitu layar
+        loading akhir mengambil alih — di titik itu halaman sudah menuju /login
+        sendiri, jadi tombolnya tidak ada gunanya lagi.
       */}
       {canSkip && !finished && (
         <motion.div
