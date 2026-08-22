@@ -5,6 +5,7 @@ import { GuestProvider } from "@/components/GuestProvider";
 import GlobalScrollRestorer from "@/components/GlobalScrollRestorer";
 import LowFxFlag from "@/components/LowFxFlag";
 import ToastHost from "@/components/ToastHost";
+import ConfirmHost from "@/components/ConfirmHost";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tell-me-u-jkt.vercel.app'),
@@ -45,6 +46,8 @@ export default function RootLayout({
           tumpuk melawan modal tanpa perlu menaikkan z-index lebih jauh.
         */}
         <ToastHost />
+        {/* Menunggu jawaban, jadi digambar paling akhir dan paling atas. */}
+        <ConfirmHost />
       </body>
     </html>
   );
