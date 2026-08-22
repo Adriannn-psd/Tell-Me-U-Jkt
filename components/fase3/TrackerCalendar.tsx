@@ -252,13 +252,13 @@ export default function TrackerCalendar({
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setViewingMoreStatus(null)}></div>
           <div className="relative w-full max-w-5xl max-h-[90vh] bg-[#1c1c1e] border border-[#2a2a30] rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col">
-            <div className="flex items-center justify-between mb-6 shrink-0">
-              <h2 className="text-white font-bold text-xl uppercase">
+            <div className="flex items-center justify-between gap-3 mb-6 shrink-0">
+              <h2 className="min-w-0 text-white font-bold text-lg sm:text-xl uppercase">
                 Semua Tugas: {viewingMoreStatus.replace('_', ' ')}
               </h2>
-              <button 
+              <button
                 onClick={() => setViewingMoreStatus(null)}
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition"
+                className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
