@@ -165,6 +165,20 @@ export function primeLandingVoice() {
   });
 }
 
+/**
+ * Apakah dokumen ini SUDAH punya izin memutar suara.
+ *
+ * Dipakai app/page.tsx untuk memutuskan apakah tombol "Mulai" perlu ditampilkan
+ * sama sekali. Kalau izinnya sudah didapat lebih dulu — jalur keluar akun
+ * memanggil `primeLandingVoice()` di dalam handler klik lalu soft-navigate ke
+ * "/" — tombolnya dilewati dan animasinya jalan sendiri seperti sebelumnya.
+ * Hanya pengunjung yang membuka "/" dari nol, yang memang tidak punya izin apa
+ * pun, yang melihat tombolnya.
+ */
+export function landingVoiceUnlocked() {
+  return primed;
+}
+
 function playVoice(name: VoiceName) {
   const els = ensureElements();
   const el = els[name];

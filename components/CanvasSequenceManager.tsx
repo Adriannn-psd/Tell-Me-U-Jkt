@@ -54,6 +54,17 @@ interface CanvasSequenceManagerProps {
    * punya bar sendiri, jadi loading-nya terlihat dua kali.
    */
   onLoadProgress?: (ratio: number) => void;
+  /**
+   * Izin memulai. Unduhan dan decode frame pertama tetap jalan sejak mount, tapi
+   * jam animasi (dan `onIntroStart`, yang membunyikan suara pembuka) menunggu ini
+   * true.
+   *
+   * Gunanya cuma satu: menempelkan frame pertama pada ketukan user, supaya
+   * `play()` terjadi di dalam dokumen yang sudah punya aktivasi dan suaranya
+   * tidak ditolak browser. Default true — pemanggil yang tidak peduli tidak perlu
+   * tahu apa-apa soal ini.
+   */
+  startRequested?: boolean;
   /** Dipanggil sekali, tepat sebelum frame pertama opening digambar. */
   onIntroStart?: () => void;
   /** Dipanggil sekali setelah frame terakhir opening digambar. */
@@ -100,6 +111,7 @@ export default function CanvasSequenceManager({
   timelineLayers,
   cues,
   onLoadProgress,
+  startRequested = true,
   onIntroStart,
   onIntroComplete,
   onCue,
@@ -143,6 +155,15 @@ export default function CanvasSequenceManager({
       onTimelineComplete,
     };
   }, [onLoadProgress, onIntroStart, onIntroComplete, onCue, onTimelineComplete]);
+
+  // Sama alasannya dengan `cb` di atas: dibaca lewat ref, jadi berubahnya dari
+  // false ke true TIDAK ikut memicu effect unduhan dijalankan ulang. Kalau ia
+  // masuk dependency, ketukan "Mulai" akan membatalkan unduhan yang sedang
+  // berjalan dan memulainya lagi dari nol.
+  const startAllowed = useRef(startRequested);
+  useEffect(() => {
+    startAllowed.current = startRequested;
+  }, [startRequested]);
 
   // Ditentukan sekali saat mount. Sengaja tidak ikut berubah saat window
   // di-resize: mengganti set frame di tengah animasi membuang yang sudah
@@ -487,6 +508,19 @@ export default function CanvasSequenceManager({
       });
       await waitReady(waitFor);
       if (cancelled) return;
+
+      // Semua sudah siap digambar; yang ditunggu sekarang cuma izin dari user.
+      // Menunggunya DI SINI, bukan sebelum unduhan, adalah intinya: waktu tunggu
+      // jaringan sudah habis di belakang layar selagi tombolnya dibaca, jadi
+      // ketukannya langsung disambut frame pertama.
+      //
+      // Polling 50 ms, pola yang sama dengan waitReady di bawah — bukan promise
+      // yang di-resolve dari luar, supaya tidak ada resolver yang harus dijaga
+      // identitasnya lintas render.
+      while (!startAllowed.current) {
+        await sleep(50);
+        if (cancelled) return;
+      }
 
       // Suara pembuka dipicu di sini, bukan saat bar loading penuh: frame
       // pertama baru benar-benar digambar setelah decode selesai, dan suara yang
