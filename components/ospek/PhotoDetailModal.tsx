@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 
 interface PhotoDetail {
   id: string;
@@ -31,10 +32,10 @@ export default function PhotoDetailModal({
       if (res.ok && data.success) {
         onDeleted(photo.id);
       } else {
-        alert(data.error || "Gagal menghapus foto");
+        toast.error(data.error || "Gagal menghapus foto");
       }
     } catch {
-      alert("Terjadi kesalahan jaringan");
+      toast.error("Terjadi kesalahan jaringan");
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
