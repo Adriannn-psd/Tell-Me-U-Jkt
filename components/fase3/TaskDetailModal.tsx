@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Task } from "./TrackerCalendar";
 import { toast } from "@/lib/toast";
+import { confirmAction } from "@/lib/confirm";
 
 export default function TaskDetailModal({ 
   task, 
@@ -36,7 +37,14 @@ export default function TaskDetailModal({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Apakah Anda yakin ingin menghapus tugas ini?")) return;
+    const setuju = await confirmAction({
+      title: "Hapus tugas ini?",
+      description: `"${task.title}" akan hilang dari tracker dan tidak bisa dikembalikan.`,
+      confirmLabel: "Hapus tugas",
+      destructive: true,
+    });
+    if (!setuju) return;
+
     setLoading(true);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
