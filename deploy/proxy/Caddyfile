@@ -1,0 +1,11 @@
+# Upstream ditulis pakai nama container, bukan nama service: keduanya milik
+# compose project lain, dan yang terdaftar di DNS network `edge` adalah nama
+# container. Container yang belum jalan cuma menghasilkan 502, tidak bikin Caddy
+# gagal start.
+tellmeujkt.web.id {
+    reverse_proxy tellmeu-web:3000
+}
+
+adptr.web.id {
+    reverse_proxy 9router:20128
+}

@@ -1,0 +1,33 @@
+# Reverse proxy bersama untuk semua app di VPS ini (tellmeu, 9router, dst).
+# Sengaja dipisah jadi compose project sendiri: `docker compose up -d --build` di
+# repo tellmeu jadi tidak pernah menyentuh port 80/443 maupun sertifikat TLS.
+#
+# Network `edge` dibuat sekali di luar compose:
+#   docker network create edge
+name: proxy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+
+volumes:
+  # caddy_data menyimpan sertifikat + account ACME. Jangan dihapus sembarangan:
+  # hilang berarti semua domain minta sertifikat baru ke Let's Encrypt.
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    external: true

@@ -14,7 +14,10 @@ services:
     env_file:
       - .env
     networks:
+      # webnet: internal antar service repo ini. edge: tempat caddy-proxy
+      # (deploy/proxy) menemukan container ini lewat nama `tellmeu-web`.
       - webnet
+      - edge
 
   radar-scraper:
     build:
@@ -29,26 +32,9 @@ services:
     networks:
       - webnet
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: caddy-proxy
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - webnet
-    depends_on:
-      - tellmeu-app
-
-volumes:
-  caddy_data:
-  caddy_config:
-
 networks:
   webnet:
+  # Reverse proxy tinggal di deploy/proxy sebagai compose project sendiri, jadi
+  # network ini dibuat di luar: docker network create edge
+  edge:
+    external: true
