@@ -68,11 +68,27 @@ html[data-lowfx] *:where([class*="backdrop-blur"]):where([class*="bg-black/6"], 
   background-color: rgb(0 0 0 / 0.88) !important;
 }
 
-html[data-lowfx] *:where([class*="backdrop-blur"]):where([class*="bg-[#1c1c1e]/90"]) {
+/*
+ * Dua yang berikut memaksa warna gelap yang ditulis langsung, jadi HARUS
+ * mengecualikan mode terang — beda dengan dua aturan di atas dan di bawah, yang
+ * memakai scrim hitam (tugasnya tetap gelap) atau token `--color-bg` (yang ikut
+ * berubah sendiri saat modenya terang).
+ *
+ * Alasan `:not(...)`-nya: aturan pemetaan di app/theme-light.css sudah membuat
+ * panel ini `var(--color-surface)` yang solid, tapi bobot kedua selectornya
+ * sama-sama (0,1,1) — `:where()` tidak menambah bobot — dan berkas itu
+ * di-@import di baris 8, jadi kalau seri begini yang menang adalah yang
+ * posisinya lebih bawah, yaitu blok ini. Tanpa pengecualian, dua kartu Widget
+ * Dinamis di /home tetap hitam di mode terang, di HP yang kena data-lowfx.
+ *
+ * Mematikan blur-nya sendiri (aturan paling atas) tetap berlaku di mode terang:
+ * di sana latarnya sudah solid, jadi tidak ada yang hilang.
+ */
+html[data-lowfx]:not([data-theme="light"]) *:where([class*="backdrop-blur"]):where([class*="bg-[#1c1c1e]/90"]) {
   background-color: #1c1c1e !important;
 }
 
-html[data-lowfx] *:where([class*="backdrop-blur"]):where([class*="bg-[#111112]/90"]) {
+html[data-lowfx]:not([data-theme="light"]) *:where([class*="backdrop-blur"]):where([class*="bg-[#111112]/90"]) {
   background-color: #111112 !important;
 }
 

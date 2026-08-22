@@ -615,6 +615,76 @@ html[data-theme="light"] *:where([class*="bg-black"][class*="inset-0"]) *:where(
   border-color: #ffffff !important;
 }
 
+/* ---------------------------------------------------------------------------
+   12. Kotak yang tetap gelap karena lapisannya bersaudara (`tmuj-dark-tile`)
+   ---------------------------------------------------------------------------
+   Pengecualian B di bagian 4 menahan teks putih tetap putih kalau latar
+   gelapnya ada di salah satu LELUHUR-nya. Empat tempat di app ini tidak
+   begitu: foto, gradien merek, kabut hitam, dan teksnya bertumpuk sebagai
+   SAUDARA di dalam kotak yang sama (beberapa `absolute inset-0` bersebelahan
+   dengan satu `relative z-10`), dan CSS tidak punya cara melihat saudara yang
+   menutupi. Jadi teksnya dibalik jadi tinta — tinta di atas gambar yang tetap
+   digelapkan:
+
+     - kartu mini radar di widget /home (components/fase3/DynamicWidgets.tsx)
+     - kartu Unggulan di /karya (components/fase3/FeaturedEventCard.tsx)
+     - hero + 15 kotak layanan /portal (app/portal/page.tsx)
+     - kartu bertumpuk modal Portal Kampus (components/fase3/PortalKampusModal.tsx)
+
+   Kotaknya diberi kelas pegangan, bukan ditambal per-warna, karena yang
+   menentukan bukan warna teksnya melainkan apa yang ada di belakangnya:
+   selama isinya foto atau gradien merek, SEMUA lapisan terang di dalamnya
+   harus tetap terang. Isi kotak ini praktis "mode gelap di dalam mode terang",
+   jadi aturan di bawah membatalkan bagian 3, 4, dan 5 di dalamnya.
+
+   Bobot selectornya (0,2,1) — `:is(.kelas, .kelas *)` mengambil bobot argumen
+   terberatnya, dan argumen pertama membuat kotaknya sendiri ikut kena — jadi
+   menang atas bagian 3/4/5 (0,1,1) tanpa bergantung pada urutan berkas.
+   --------------------------------------------------------------------------- */
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class~="text-white"], [class*="text-white/"]) {
+  color: #ffffff !important;
+}
+
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *) svg:where([stroke="white"], [stroke="#fff"]) {
+  stroke: #ffffff !important;
+}
+
+/* Dua tingkat abu, arahnya sama dengan mode gelap (bukan dibalik seperti
+   bagian 3): di dalam kotak ini abu cerah tetap teks pendukung yang penting,
+   abu redup tetap label. Nilainya dipatok masing-masing satu — alasannya sama
+   dengan bagian 10, yang penting jaraknya ke putih tetap terjaga. */
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where(
+  [class~="text-[#a0a0ab]"], [class~="text-[#a1a1aa]"],
+  [class~="text-[#9c9ca3]"], [class~="text-[#8e8e93]"]
+) {
+  color: #a0a0ab !important;
+}
+
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class~="text-[#6c6c72]"], [class~="text-[#5a5a5f]"]) {
+  color: #6c6c72 !important;
+}
+
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="text-[#ebebf5]/7"], [class*="text-[#ebebf5]/8"]) {
+  color: rgb(235 235 245 / 0.75) !important;
+}
+
+/* Lapisan putih tipis: pil kaca, garis pemisah, tepi kartu. Nilainya dipatok
+   karena tidak bisa dibaca dari nama kelas — sama seperti bagian 10. */
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="bg-white/"]) {
+  background-color: rgb(255 255 255 / 0.1) !important;
+}
+
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="border-white/"], [class~="border-white"]) {
+  border-color: rgb(255 255 255 / 0.15) !important;
+}
+
+/* Tepi yang menyala saat kartunya disentuh. Tanpa ini bagian 5 menggelapkannya
+   dan kartunya justru kelihatan mati saat di-hover. */
+html[data-theme="light"] :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="hover:border-white"]):hover,
+html[data-theme="light"] .group:hover :is(.tmuj-dark-tile, .tmuj-dark-tile *):where([class*="group-hover:border-white"]) {
+  border-color: rgb(255 255 255 / 0.3) !important;
+}
+
 /* Yang SENGAJA tidak diubah:
    - `bg-black/40`…`bg-black/95`: itu scrim di belakang modal. Gelap adalah
      tugasnya, di mode apa pun.
@@ -624,11 +694,13 @@ html[data-theme="light"] *:where([class*="bg-black"][class*="inset-0"]) *:where(
      gradien abu-gelap pun dibiarkan gelap (hero app/portal, dan 15 kotak
      layanan di app/portal + modal Portal Kampus yang dua di antaranya memang
      abu-gelap karena itu warna mereknya), dan teks putih di atasnya tetap putih
-     (lihat pengecualian B). Yang diratakan cuma yang perannya permukaan:
-     dock bawah (bagian 8), dua panel app/about (bagian 9), serta avatar
-     cadangan, kotak gambar kartu radar, dan kabut modal Portal Kampus
-     (bagian 11).
-   - foto, video, avatar, dan logo.
+     — lewat pengecualian B kalau gradiennya ada di leluhur teksnya, lewat
+     bagian 12 kalau gradiennya cuma bersaudara. Yang diratakan cuma yang
+     perannya permukaan: dock bawah (bagian 8), dua panel app/about (bagian 9),
+     serta avatar cadangan, kotak gambar kartu radar, dan kabut modal Portal
+     Kampus (bagian 11).
+   - foto, video, avatar, dan logo — beserta semua lapisan terang di atasnya
+     kalau kotaknya ditandai `tmuj-dark-tile` (bagian 12).
    - layar /login penuh (`.login-container`, lihat bagian 6) dan layar pembuka
      app/page.tsx (`.page`, lihat bagian 10). */
 

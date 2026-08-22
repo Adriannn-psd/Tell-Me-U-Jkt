@@ -17,7 +17,12 @@ export default function FeaturedEventCard({ event }: { event: EventData }) {
   };
 
   return (
-    <Link href={`/dokumentasi/${event.id}`} onClick={handleCardClick} className="bg-[#1c1c1e] border border-[#2a2a30] rounded-2xl overflow-hidden flex flex-col hover:border-[var(--color-brand-red)] transition group relative h-[320px] md:h-[400px]">
+    /*
+      `tmuj-dark-tile`: seluruh kartu ini adalah foto, dan kabut penggelapnya
+      (baris di bawah) bersaudara dengan tulisannya — bukan leluhurnya. Lihat
+      bagian 12 app/theme-light.css; di mode gelap kelasnya tanpa gaya apa pun.
+    */
+    <Link href={`/dokumentasi/${event.id}`} onClick={handleCardClick} className="tmuj-dark-tile bg-[#1c1c1e] border border-[#2a2a30] rounded-2xl overflow-hidden flex flex-col hover:border-[var(--color-brand-red)] transition group relative h-[320px] md:h-[400px]">
       {/* Background Thumbnail */}
       <div className="absolute inset-0 z-0">
         {isGrid ? (

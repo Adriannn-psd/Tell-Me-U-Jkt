@@ -169,11 +169,11 @@ export default function DynamicWidgets() {
                   );
 
                   return isGuest ? (
-                    <div onClick={showLoginPopup} key={post.id} className="w-[80px] md:w-[150px] h-[80px] md:h-[210px] rounded-[10px] md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-1.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0 cursor-pointer">
+                    <div onClick={showLoginPopup} key={post.id} className="tmuj-dark-tile w-[80px] md:w-[150px] h-[80px] md:h-[210px] rounded-[10px] md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-1.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0 cursor-pointer">
                       {content}
                     </div>
                   ) : (
-                    <Link key={post.id} href={`/radar#post-${post.id}`} className="w-[80px] md:w-[150px] h-[80px] md:h-[210px] rounded-[10px] md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-1.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0">
+                    <Link key={post.id} href={`/radar#post-${post.id}`} className="tmuj-dark-tile w-[80px] md:w-[150px] h-[80px] md:h-[210px] rounded-[10px] md:rounded-[20px] relative overflow-hidden flex flex-col justify-end p-1.5 md:p-4 snap-center border border-white/10 group-hover:border-white/30 transition duration-300 shadow-lg shrink-0">
                       {content}
                     </Link>
                   );

@@ -155,7 +155,10 @@ export default function PortalKampusPage() {
         )}
         
         {/* Premium Hero Banner */}
-        <header className="relative w-full rounded-[2rem] overflow-hidden mb-12 min-h-[260px] flex items-end p-8 md:p-10 shadow-2xl border border-white/5 group">
+        {/* `tmuj-dark-tile`: gradien gelapnya bersaudara dengan tulisannya, bukan
+            leluhurnya — lihat bagian 12 app/theme-light.css. Tanpa itu teks
+            pendukungnya jadi abu tua di atas gradien yang tetap hitam. */}
+        <header className="tmuj-dark-tile relative w-full rounded-[2rem] overflow-hidden mb-12 min-h-[260px] flex items-end p-8 md:p-10 shadow-2xl border border-white/5 group">
           {/* Animated Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-black to-[#0a0a0a] z-0" />
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 group-hover:bg-red-500/30 transition-colors duration-700 pointer-events-none" />
@@ -178,7 +181,7 @@ export default function PortalKampusPage() {
               href={item.url}
               target="_blank"
               rel="noreferrer"
-              className="relative w-full h-[150px] md:h-[320px] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-xl group block transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(220,38,38,0.3)] border border-white/5 hover:border-white/20"
+              className="tmuj-dark-tile relative w-full h-[150px] md:h-[320px] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-xl group block transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(220,38,38,0.3)] border border-white/5 hover:border-white/20"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Background Color & Image */}
