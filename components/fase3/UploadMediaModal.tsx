@@ -117,6 +117,43 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
 
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  /**
+   * Apakah ada yang akan hilang kalau modal ini ditutup sekarang.
+   *
+   * File ikut dihitung, dan justru yang paling mahal: gambarnya sudah dikompres
+   * dan videonya sudah dipilih dari galeri, jadi kehilangannya berarti mengulang
+   * seluruh proses itu, bukan cuma mengetik ulang judul.
+   */
+  const isDirty = Boolean(
+    file ||
+    title.trim() ||
+    description.trim() ||
+    tags.trim() ||
+    collaboratorUsername.trim()
+  );
+
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  /**
+   * Satu-satunya jalan keluar dari modal ini, dipakai latar gelap maupun tombol
+   * X. Dulu keduanya memanggil `onClose` langsung, jadi satu sentuhan nyasar di
+   * pinggir layar — area kosong di atas/bawah kartu, yang di HP lebarnya penuh —
+   * menghapus judul, deskripsi, tag, dan file yang sudah dipilih tanpa satu pun
+   * pertanyaan.
+   *
+   * Saat upload sedang jalan tidak ada jalan keluar sama sekali: membatalkannya
+   * di tengah jalan menyisakan file yang sudah masuk Cloudinary tanpa baris di
+   * database, dan tidak ada yang bisa dilakukan user dengan itu.
+   */
+  const requestClose = () => {
+    if (loading) return;
+    if (isDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    onClose();
+  };
+
   const handleUpload = async () => {
     if (!title || !file) return alert("Judul dan Foto wajib diisi!");
     setLoading(true);
@@ -228,16 +265,17 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-5 pointer-events-auto">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={requestClose}
       />
       
       <div className="relative w-full max-w-lg bg-[var(--color-bg)] border border-[var(--color-border-color)] rounded-[24px] p-6 animate-in zoom-in-95 duration-300 shadow-2xl flex flex-col max-h-[90vh]">
         
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Upload Karya</h2>
-          <button 
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition"
+          <button
+            onClick={requestClose}
+            disabled={loading}
+            className="w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-2)] hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
@@ -396,6 +434,47 @@ export default function UploadMediaModal({ onClose }: { onClose: () => void }) {
           >
             Upload Sekarang
           </button>
+        )}
+
+        {/*
+          Konfirmasi buang, digambar DI DALAM kartu supaya jelas yang ditanyakan
+          adalah isian ini, bukan halaman di belakangnya. Latarnya menutup penuh
+          dan menyerap sentuhan, jadi ketukan nyasar berikutnya tidak menembus ke
+          latar gelap dan memicu pertanyaan yang sama berulang.
+
+          Tombol batal ditaruh sebagai pilihan utama (lebar penuh, warna merek)
+          dan "buang" cuma teks: yang tidak sengaja sampai ke sini hampir selalu
+          mau kembali mengisi.
+        */}
+        {confirmDiscard && (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 rounded-[24px] bg-[var(--color-bg)]/95 px-8 text-center"
+            role="alertdialog"
+            aria-modal="true"
+          >
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg font-bold text-white">Buang isian ini?</h3>
+              <p className="text-sm leading-relaxed text-[var(--color-text-2)]">
+                Judul, deskripsi, tag, dan file yang sudah dipilih akan hilang dan
+                harus diisi dari awal.
+              </p>
+            </div>
+
+            <div className="flex w-full flex-col gap-2">
+              <button
+                onClick={() => setConfirmDiscard(false)}
+                className="w-full rounded-xl bg-[var(--color-brand-red)] py-3.5 font-bold text-white transition hover:bg-red-600"
+              >
+                Lanjut mengisi
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-[var(--color-text-3)] transition hover:text-white"
+              >
+                Buang saja
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
